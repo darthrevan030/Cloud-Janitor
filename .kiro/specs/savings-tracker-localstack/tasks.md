@@ -15,7 +15,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Use `findings_store.json` → `scan_id` as `run_id` and `completed_at` as `timestamp`
     - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 1.2 Write property test: RunEntry schema and field correctness
+  - [-] 1.2 Write property test: RunEntry schema and field correctness
     - **Property 1: RunEntry schema and field correctness**
     - **Validates: Requirements 1.2, 2.1**
 
