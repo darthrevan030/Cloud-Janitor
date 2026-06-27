@@ -64,3 +64,43 @@
 {"timestamp":"2026-06-27T13:26:26.579280+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
 {"timestamp":"2026-06-27T13:26:26.581804+00:00","agent":"secops_guard","event_type":"check","resource_id":"cache-prod-legacy","message":"Checking encryption for elasticache resource cache-prod-legacy"}
 {"timestamp":"2026-06-27T13:26:26.582363+00:00","agent":"secops_guard","event_type":"finding","resource_id":"cache-prod-legacy","message":"Violation: cache-prod-legacy lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:38:55.631813+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:38:55.633204+00:00","agent":"remediation_architect","event_type":"check","resource_id":"vol-0abc123def456789a","message":"Checking dependencies for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:38:55.633709+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"CLEAR: No dependencies for vol-0abc123def456789a, generating HCL"}
+{"timestamp":"2026-06-27T13:38:55.633709+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"Generated remediation + rollback HCL for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:38:55.635984+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:38:55.638070+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:38:55.638070+00:00","agent":"remediation_architect","event_type":"check","resource_id":"sg-prod-redis","message":"Checking dependencies for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:38:55.639075+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"CLEAR: No dependencies for sg-prod-redis, generating HCL"}
+{"timestamp":"2026-06-27T13:38:55.639075+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"Generated remediation + rollback HCL for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:38:55.639865+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:38:55.641537+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:38:55.642537+00:00","agent":"remediation_architect","event_type":"check","resource_id":"cache-prod-legacy-01","message":"Checking dependencies for cache-prod-legacy-01"}
+{"timestamp":"2026-06-27T13:38:55.642537+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"CLEAR: No dependencies for cache-prod-legacy-01, generating HCL"}
+{"timestamp":"2026-06-27T13:38:55.642537+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"Generated remediation + rollback HCL for cache-prod-legacy-01"}
+{"timestamp":"2026-06-27T13:38:55.643756+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:38:55.645373+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:38:55.646477+00:00","agent":"remediation_architect","event_type":"check","resource_id":"vol-0abc123def456789a","message":"Checking dependencies for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:38:55.646477+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"CLEAR: No dependencies for vol-0abc123def456789a, generating HCL"}
+{"timestamp":"2026-06-27T13:38:55.646477+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"Generated remediation + rollback HCL for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:38:55.648259+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:38:55.651478+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:38:55.651982+00:00","agent":"remediation_architect","event_type":"check","resource_id":"sg-prod-redis","message":"Checking dependencies for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:38:55.651982+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"CLEAR: No dependencies for sg-prod-redis, generating HCL"}
+{"timestamp":"2026-06-27T13:38:55.651982+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"Generated remediation + rollback HCL for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:38:55.653051+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:38:55.657071+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:38:55.657071+00:00","agent":"remediation_architect","event_type":"check","resource_id":"sg-prod-redis","message":"Checking dependencies for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:38:55.657790+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"BLOCKED: sg-prod-redis has dependencies: cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:38:55.657790+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 0 remediated, 1 blocked"}
+{"timestamp":"2026-06-27T13:38:55.659966+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:38:55.661114+00:00","agent":"remediation_architect","event_type":"check","resource_id":"vol-0abc123def456789a","message":"Checking dependencies for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:38:55.661114+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"CLEAR: No dependencies for vol-0abc123def456789a, generating HCL"}
+{"timestamp":"2026-06-27T13:38:55.661114+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"Generated remediation + rollback HCL for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:38:55.661638+00:00","agent":"remediation_architect","event_type":"check","resource_id":"sg-prod-redis","message":"Checking dependencies for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:38:55.662161+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"CLEAR: No dependencies for sg-prod-redis, generating HCL"}
+{"timestamp":"2026-06-27T13:38:55.662161+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"Generated remediation + rollback HCL for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:38:55.662785+00:00","agent":"remediation_architect","event_type":"check","resource_id":"cache-prod-legacy-01","message":"Checking dependencies for cache-prod-legacy-01"}
+{"timestamp":"2026-06-27T13:38:55.662785+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"CLEAR: No dependencies for cache-prod-legacy-01, generating HCL"}
+{"timestamp":"2026-06-27T13:38:55.662785+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"Generated remediation + rollback HCL for cache-prod-legacy-01"}
+{"timestamp":"2026-06-27T13:38:55.663992+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 3 remediated, 0 blocked"}
