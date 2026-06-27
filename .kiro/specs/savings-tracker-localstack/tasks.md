@@ -150,8 +150,8 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Verify savings tracker errors don't block approval
     - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 6. Update .gitignore and project configuration
-  - [ ] 6.1 Add runtime files to `.gitignore`
+- [x] 6. Update .gitignore and project configuration
+  - [x] 6.1 Add runtime files to `.gitignore`
     - Add `savings_ledger.json` to `.gitignore`
     - Add `agent_reasoning.log` to `.gitignore`
     - _Requirements: 1.4, 9.8_
