@@ -47,6 +47,8 @@ def findings_store(tmp_project):
     """Write a findings_store.json with entries from both agents."""
     store = {
         "scan_id": "error-state-test",
+        "started_at": "2025-01-20T00:00:00Z",
+        "completed_at": "2025-01-20T00:01:00Z",
         "findings": [
             {
                 "id": "f1",
