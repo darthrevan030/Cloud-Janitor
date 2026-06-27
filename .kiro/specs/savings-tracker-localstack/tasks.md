@@ -15,23 +15,23 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Use `findings_store.json` → `scan_id` as `run_id` and `completed_at` as `timestamp`
     - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 4.1, 4.2, 4.3, 4.4_
 
-  - [ ]* 1.2 Write property test: RunEntry schema and field correctness
+  - [ ] 1.2 Write property test: RunEntry schema and field correctness
     - **Property 1: RunEntry schema and field correctness**
     - **Validates: Requirements 1.2, 2.1**
 
-  - [ ]* 1.3 Write property test: Monthly savings computation
+  - [ ] 1.3 Write property test: Monthly savings computation
     - **Property 2: Monthly savings computation**
     - **Validates: Requirements 2.2**
 
-  - [ ]* 1.4 Write property test: Recalculate-from-source invariant
+  - [ ] 1.4 Write property test: Recalculate-from-source invariant
     - **Property 3: Recalculate-from-source invariant**
     - **Validates: Requirements 2.3, 2.4**
 
-  - [ ]* 1.5 Write property test: Duplicate run idempotency
+  - [ ] 1.5 Write property test: Duplicate run idempotency
     - **Property 4: Duplicate run idempotency**
     - **Validates: Requirements 3.1, 3.3**
 
-  - [ ]* 1.6 Write property test: Savings summary correctness
+  - [ ] 1.6 Write property test: Savings summary correctness
     - **Property 5: Savings summary correctness**
     - **Validates: Requirements 4.1, 4.2, 4.4**
 
@@ -64,12 +64,12 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Add `emit("remediation_architect", "handoff", ...)` at planning complete
     - _Requirements: 9.3_
 
-  - [ ]* 2.5 Write property test: Reasoning logger emits valid structured JSON
+  - [ ] 2.5 Write property test: Reasoning logger emits valid structured JSON
     - **Property 8: Reasoning logger emits valid structured JSON**
     - Use `st.text(alphabet=st.characters(blacklist_categories=('Cs',)))` for message and agent fields — must cover quotes, backslashes, and unicode characters, NOT just default ASCII
     - **Validates: Requirements 9.4, 9.9**
 
-  - [ ]* 2.6 Write property test: Reasoning logger sequential append
+  - [ ] 2.6 Write property test: Reasoning logger sequential append
     - **Property 9: Reasoning logger sequential append**
     - **Validates: Requirements 9.6**
 
@@ -144,7 +144,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Pass the shared logger instance to each agent
     - _Requirements: 9.5_
 
-  - [ ]* 5.3 Write unit tests for Orchestrator → SavingsTracker wiring
+  - [ ] 5.3 Write unit tests for Orchestrator → SavingsTracker wiring
     - Verify `record_run()` is called from `approve()` with correct arguments
     - Verify `record_run()` is NOT called from `_run_post_remediation_hook`
     - Verify savings tracker errors don't block approval
@@ -173,11 +173,11 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Make the hook executable
     - _Requirements: 8.6_
 
-  - [ ]* 8.3 Write property test: Compliance generator parsing and mapping
+  - [ ] 8.3 Write property test: Compliance generator parsing and mapping
     - **Property 6: Compliance generator parsing and mapping**
     - **Validates: Requirements 8.2, 8.3**
 
-  - [ ]* 8.4 Write property test: Compliance generator output format
+  - [ ] 8.4 Write property test: Compliance generator output format
     - **Property 7: Compliance generator output format**
     - Verify output is a valid 4-column Markdown table with headers: `#`, `Task`, `Status`, `Artifact Verified`
     - **Validates: Requirements 8.4**
@@ -193,11 +193,11 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Clear previous reasoning display when new audit starts
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
-  - [ ]* 9.2 Write property test: Agent section header transitions
+  - [ ] 9.2 Write property test: Agent section header transitions
     - **Property 10: Agent section header transitions**
     - **Validates: Requirements 10.3**
 
-  - [ ]* 9.3 Write property test: Malformed line resilience
+  - [ ] 9.3 Write property test: Malformed line resilience
     - **Property 11: Malformed line resilience**
     - **Validates: Requirements 10.6**
 
