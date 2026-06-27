@@ -6,7 +6,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 
 ## Tasks
 
-- [ ] 1. Implement Savings Tracker core module
+- [x] 1. Implement Savings Tracker core module
   - [x] 1.1 Create `savings.py` with SavingsTracker class
     - Implement `__init__`, `_load_ledger`, `_write_ledger`, `_compute_monthly_savings`, `_recalculate_total` methods
     - Implement `record_run(resources_remediated)` with duplicate detection via `run_id` matching
@@ -31,7 +31,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 4: Duplicate run idempotency**
     - **Validates: Requirements 3.1, 3.3**
 
-  - [ ] 1.6 Write property test: Savings summary correctness
+  - [x] 1.6 Write property test: Savings summary correctness
     - **Property 5: Savings summary correctness**
     - **Validates: Requirements 4.1, 4.2, 4.4**
 
