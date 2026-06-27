@@ -12,6 +12,8 @@ Usage:
     python -m agents.secops_guard
 """
 
+from __future__ import annotations
+
 import json
 import sys
 import uuid
@@ -21,6 +23,8 @@ from pathlib import Path
 # Import MCP tool directly (no network transport needed for demo)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp_server.aws_janitor_mcp import get_security_data
+
+from agents.reasoning_logger import ReasoningLogger
 
 
 # Sensitive ports that must be VPC-only (never open to 0.0.0.0/0)
@@ -43,8 +47,13 @@ class SecOpsGuard:
     Appends findings to findings_store.json alongside FinOps findings.
     """
 
-    def __init__(self, findings_store_path: Path | None = None):
+    def __init__(
+        self,
+        findings_store_path: Path | None = None,
+        reasoning_logger: ReasoningLogger | None = None,
+    ):
         self.findings_store_path = findings_store_path or FINDINGS_STORE_PATH
+        self._logger = reasoning_logger or ReasoningLogger()
 
     def scan(self) -> list[dict]:
         """
@@ -53,6 +62,11 @@ class SecOpsGuard:
         Returns:
             List of all security findings detected.
         """
+        self._logger.emit(
+            "secops_guard", "check", "",
+            "Starting security audit: checking security groups and encryption",
+        )
+
         findings: list[dict] = []
 
         # Check security groups for open sensitive ports
@@ -68,6 +82,11 @@ class SecOpsGuard:
 
         # Append to findings_store.json
         self._append_findings_to_store(findings)
+
+        self._logger.emit(
+            "secops_guard", "handoff", "",
+            f"Security audit complete: {len(findings)} finding(s) detected",
+        )
 
         return findings
 
