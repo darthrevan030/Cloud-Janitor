@@ -1,0 +1,2 @@
+#!/bin/sh
+python3 generate_spec_compliance.py && git add SPEC_COMPLIANCE.md
