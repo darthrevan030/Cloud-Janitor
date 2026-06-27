@@ -1,12 +1,12 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T14:48:31Z
+Generated: 2026-06-27T14:49:47Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
 | 1 | 1. Create .kiro/ directory structure and commit | ✅ Done | no mapping |
-| 2 | 2. Write requirements.md with all user stories | ✅ Done | .kiro\specs\cloud-janitor\requirements.md exists |
-| 3 | 3. Write design.md with architecture + data flow | ✅ Done | .kiro\specs\cloud-janitor\design.md exists |
+| 2 | 2. Write requirements.md with all user stories | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
+| 3 | 3. Write design.md with architecture + data flow | ✅ Done | .kiro/specs/cloud-janitor/design.md exists |
 | 4 | 4. Write fixture JSON for Cost Explorer (3 resources, 2 flaggable) | ✅ Done | fixtures/ exists |
 | 5 | 5. Write fixture JSON for Config/Inspector (2 security findings) | ✅ Done | fixtures/ exists |
 | 6 | 1. Implement aws_janitor_mcp.py with MCP protocol | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
