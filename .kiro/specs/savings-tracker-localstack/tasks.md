@@ -203,7 +203,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 
 - [ ] 10. Final checkpoint — test quality audit
 
-  - [ ] 10.1 Run full test suite and confirm all tests pass
+  - [x] 10.1 Run full test suite and confirm all tests pass
     - Run `pytest` from project root
     - All tests must pass before proceeding to 10.2
 

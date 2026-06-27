@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-fixture_path = Path(__file__).parent / "fixtures" / "aws_cost_explorer.json"
+fixture_path = Path(__file__).parent.parent / "fixtures" / "aws_cost_explorer.json"
 with open(fixture_path) as f:
     data = json.load(f)
 
