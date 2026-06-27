@@ -59,7 +59,7 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 - [x] 1. Approval gate — parse "APPROVE \<id\>", reject malformed input
 - [x] 2. Rollback gate — parse "ROLLBACK \<id\>" + "CONFIRM ROLLBACK \<id\>"
 - [x] 3. Audit log writer (append-only)
-- [ ] 4. Error states: dependency found, validate fails, malformed approval
+- [x] 4. Error states: dependency found, validate fails, malformed approval
 
 ### Phase 6: UI
 
