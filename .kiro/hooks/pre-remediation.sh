@@ -9,7 +9,7 @@ REMEDIATION_FILE="${1:-/tmp/remediation.tf}"
 ROLLBACK_FILE="${2:-/tmp/rollback.tf}"
 
 # validate_hcl copies a .tf file to an isolated temp directory,
-# runs terraform init + validate, then cleans up.
+# runs tflocal init + validate, then cleans up.
 # Returns 0 on success, 1 on validation failure.
 validate_hcl() {
     local hcl_file="$1"
@@ -26,14 +26,14 @@ validate_hcl() {
 
     cp "$hcl_file" "$tmp_dir/main.tf"
 
-    echo "[pre-remediation] Initializing terraform for $label..."
-    if ! terraform -chdir="$tmp_dir" init -backend=false -input=false >/dev/null 2>&1; then
-        echo "[pre-remediation] BLOCKED: terraform init failed for $label"
+    echo "[pre-remediation] Initializing tflocal for $label..."
+    if ! tflocal -chdir="$tmp_dir" init -backend=false -input=false >/dev/null 2>&1; then
+        echo "[pre-remediation] BLOCKED: tflocal init failed for $label"
         return 1
     fi
 
     echo "[pre-remediation] Validating $label..."
-    if ! terraform -chdir="$tmp_dir" validate; then
+    if ! tflocal -chdir="$tmp_dir" validate; then
         echo "[pre-remediation] BLOCKED: $label failed validation"
         return 1
     fi
