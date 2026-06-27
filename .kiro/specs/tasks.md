@@ -67,7 +67,7 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 - [x] 2. Agent activity feed with live status dots
 - [x] 3. Side-by-side diff view (remediation HCL vs rollback HCL)
 - [x] 4. Approval input field + confirmation display
-- [ ] 5. Savings counter
+- [x] 5. Savings counter
 
 ### Phase 7: Polish + Demo
 
