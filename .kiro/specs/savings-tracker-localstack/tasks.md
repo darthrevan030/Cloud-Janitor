@@ -201,7 +201,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 11: Malformed line resilience**
     - **Validates: Requirements 10.6**
 
-- [-] 10. Final checkpoint — test quality audit
+- [x] 10. Final checkpoint — test quality audit
 
   - [x] 10.1 Run full test suite and confirm all tests pass
     - Run `pytest` from project root
