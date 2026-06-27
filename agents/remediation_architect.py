@@ -24,6 +24,8 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp_server.aws_janitor_mcp import check_dependencies, validate_hcl
 
+from agents.reasoning_logger import ReasoningLogger
+
 
 # Project root for output files
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -83,10 +85,12 @@ class RemediationArchitect:
         findings_store_path: Path | None = None,
         output_dir: Path | None = None,
         rollbacks_dir: Path | None = None,
+        reasoning_logger: ReasoningLogger | None = None,
     ):
         self.findings_store_path = findings_store_path or FINDINGS_STORE_PATH
         self.output_dir = output_dir or OUTPUT_DIR
         self.rollbacks_dir = rollbacks_dir or ROLLBACKS_DIR
+        self._logger = reasoning_logger or ReasoningLogger()
 
     def check_resource_dependencies(self, finding: dict) -> DependencyReport:
         """
@@ -192,6 +196,8 @@ class RemediationArchitect:
         if findings is None:
             findings = self._load_findings()
 
+        self._logger.emit("remediation_architect", "check", "", "Starting remediation planning...")
+
         # Ensure output directories exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.rollbacks_dir.mkdir(parents=True, exist_ok=True)
@@ -202,10 +208,13 @@ class RemediationArchitect:
             resource_id = finding["resource_id"]
 
             # Step 1: Check dependencies
+            self._logger.emit("remediation_architect", "check", resource_id, f"Checking dependencies for {resource_id}")
             dep_report = self.check_resource_dependencies(finding)
 
             if dep_report.has_dependencies:
                 # Blocked — produce warning, no HCL generated
+                deps = ", ".join(dep_report.dependencies)
+                self._logger.emit("remediation_architect", "decision", resource_id, f"BLOCKED: {resource_id} has dependencies: {deps}")
                 plan = RemediationPlan(
                     resource_id=resource_id,
                     finding=finding,
@@ -219,8 +228,11 @@ class RemediationArchitect:
                 continue
 
             # Step 2: Generate remediation + rollback HCL (side by side)
+            self._logger.emit("remediation_architect", "decision", resource_id, f"CLEAR: No dependencies for {resource_id}, generating HCL")
             remediation_hcl = self.generate_remediation(finding)
             rollback_hcl = self.generate_rollback(finding)
+
+            self._logger.emit("remediation_architect", "decision", resource_id, f"Generated remediation + rollback HCL for {resource_id}")
 
             plan = RemediationPlan(
                 resource_id=resource_id,
@@ -242,6 +254,10 @@ class RemediationArchitect:
             combined_remediation = "\n\n".join(remediation_parts)
             remediation_path = self.output_dir / "remediation.tf"
             remediation_path.write_text(combined_remediation)
+
+        remediated = len([p for p in plans if not p.blocked])
+        blocked = len([p for p in plans if p.blocked])
+        self._logger.emit("remediation_architect", "handoff", "", f"Remediation planning complete: {remediated} remediated, {blocked} blocked")
 
         return plans
 
