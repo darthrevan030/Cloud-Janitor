@@ -132,7 +132,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - _Requirements: 6.2_
 
 - [ ] 5. Orchestrator integration with SavingsTracker
-  - [ ] 5.1 Wire SavingsTracker into Orchestrator
+  - [-] 5.1 Wire SavingsTracker into Orchestrator
     - Import and instantiate `SavingsTracker` in `Orchestrator.__init__`
     - Call `self._savings_tracker.record_run(resources_remediated=[resource_id])` in `approve()` method after successful execution, after `_run_post_remediation_hook`
     - Ensure `record_run` is NOT called from `_run_post_remediation_hook` to avoid double-counting
