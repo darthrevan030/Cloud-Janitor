@@ -1,0 +1,29 @@
+{
+  "findings": [
+    {
+      "check_type": "security_group",
+      "resource_id": "sg-0abc123def456a1b2",
+      "severity": "CRITICAL",
+      "port": 6379,
+      "cidr": "0.0.0.0/0",
+      "current_state": "open_to_world",
+      "required_state": "vpc_only",
+      "title": "Redis port open to internet",
+      "description": "Security group allows inbound traffic from 0.0.0.0/0 on port 6379 (Redis). Database and cache ports must be restricted to VPC CIDR only."
+    },
+    {
+      "check_type": "encryption",
+      "resource_id": "vol-0xyz789abc123def0",
+      "severity": "HIGH",
+      "encryption_at_rest": false,
+      "current_state": "unencrypted",
+      "required_state": "encrypted",
+      "title": "EBS volume without encryption at rest",
+      "description": "EBS volume vol-0xyz789abc123def0 does not have encryption at rest enabled. All block storage must be encrypted to protect data at rest."
+    }
+  ],
+  "dependencies": {
+    "vol-0xyz789abc123def0": [],
+    "sg-0abc123def456a1b2": ["cache-prod-legacy", "i-0fed987cba654xyz1"]
+  }
+}

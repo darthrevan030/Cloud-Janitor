@@ -1,0 +1,44 @@
+{
+  "resources": [
+    {
+      "id": "cache-prod-legacy-01",
+      "type": "elasticache",
+      "idle_days": 42,
+      "monthly_cost": 45.6,
+      "instance_type": "cache.t3.medium",
+      "engine": "redis",
+      "engine_version": "7.0.7",
+      "availability_zone": "us-east-1a",
+      "cluster_mode": "disabled",
+      "num_cache_nodes": 1,
+      "active_connections": 0,
+      "description": "Legacy session cache — app migrated to DynamoDB 42 days ago, zero connections since"
+    },
+    {
+      "id": "vol-0abc123def456789a",
+      "type": "ebs",
+      "idle_days": 35,
+      "monthly_cost": 12.0,
+      "volume_type": "gp3",
+      "size_gb": 100,
+      "availability_zone": "us-east-1b",
+      "encrypted": true,
+      "state": "available",
+      "attached_instance": null,
+      "description": "Detached from terminated dev instance i-0fed987654321 on 2025-05-10"
+    },
+    {
+      "id": "vol-0def456abc789012b",
+      "type": "ebs",
+      "idle_days": 5,
+      "monthly_cost": 8.0,
+      "volume_type": "gp2",
+      "size_gb": 50,
+      "availability_zone": "us-east-1c",
+      "encrypted": true,
+      "state": "available",
+      "attached_instance": "i-0a1b2c3d4e5f67890",
+      "description": "Snapshot restore 5 days ago — pending re-attach to staging instance"
+    }
+  ]
+}
