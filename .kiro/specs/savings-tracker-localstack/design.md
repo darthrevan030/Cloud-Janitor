@@ -209,6 +209,10 @@ services:
 
 ### 5. Makefile (`Makefile`)
 
+**IMPORTANT**: The `make demo` target does NOT call `tflocal apply` directly. The orchestrator already invokes `tflocal` internally when the user approves a remediation via the Streamlit UI. Calling it again from the Makefile would double-apply.
+
+The correct sequence is: start LocalStack → health check → launch Streamlit app. The `tflocal apply` happens inside `orchestrator.py` when the user types `APPROVE <resource-id>`.
+
 ```makefile
 .PHONY: demo
 
@@ -226,8 +230,7 @@ demo:
  if [ $$i -eq 30 ]; then \
   echo "\nERROR: LocalStack failed to start within 60 seconds"; exit 1; \
  fi
- python -m orchestrator
- tflocal apply -auto-approve
+ streamlit run app.py
 ```
 
 ### 6. Compliance Generator (`generate_spec_compliance.py`)
@@ -237,7 +240,9 @@ A standalone Python script that:
 1. Reads `.kiro/specs/tasks.md`
 2. Parses checkbox lines (`- [x]`, `- [ ]`, `- [-]`)
 3. For each "done" task, verifies existence of mapped artifact
-4. Outputs `SPEC_COMPLIANCE.md` as a Markdown table
+4. Outputs `SPEC_COMPLIANCE.md` as a 4-column Markdown table: `#`, `Task`, `Status`, `Artifact Verified`
+
+The output format uses the 4-column table shown in the Data Models section below (not a 3-column format).
 
 ### 7. Streamlit Reasoning Panel (in `app.py`)
 
@@ -318,3 +323,170 @@ Generated: 2026-06-28T12:00:00Z
 | 2 | Write design document | ✅ Done | .kiro/specs/design.md exists |
 | 3 | Add streaming UI | ❌ Pending | app.py missing expected content |
 ```
+
+## Correctness Properties
+
+*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+
+### Property 1: RunEntry schema and field correctness
+
+*For any* valid findings_store.json (containing a scan_id, completed_at, and findings with cost_estimate_monthly) and *for any* non-empty list of resources_remediated whose IDs appear in findings, after calling `record_run()`, the appended RunEntry SHALL contain all required keys (`run_id`, `timestamp`, `resources_remediated`, `monthly_savings_added`, `cumulative_at_time`) with `run_id` equal to the findings_store `scan_id` and `timestamp` equal to `completed_at`.
+
+**Validates: Requirements 1.2, 2.1**
+
+### Property 2: Monthly savings computation
+
+*For any* findings_store.json containing N findings with arbitrary `cost_estimate_monthly` values and *for any* subset S of resource IDs from those findings passed to `record_run()`, the resulting RunEntry's `monthly_savings_added` SHALL equal the sum of `cost_estimate_monthly` for exactly those findings whose `resource_id` is in S.
+
+**Validates: Requirements 2.2**
+
+### Property 3: Recalculate-from-source invariant
+
+*For any* sequence of K calls to `record_run()` (each with distinct run_ids), after the K-th write, both `total_lifetime_savings` and the K-th entry's `cumulative_at_time` SHALL equal the sum of `monthly_savings_added` across all K entries in the `runs` array. Neither value shall be computed by incremental addition from a prior stored total.
+
+**Validates: Requirements 2.3, 2.4**
+
+### Property 4: Duplicate run idempotency
+
+*For any* ledger containing one or more RunEntry objects, calling `record_run()` with a `run_id` that already exists in the `runs` array SHALL leave the file completely unmodified — the file's modification time (mtime) SHALL be identical before and after the call, and the `runs` array length SHALL remain unchanged.
+
+**Validates: Requirements 3.1, 3.3**
+
+### Property 5: Savings summary correctness
+
+*For any* ledger state with N ≥ 1 runs, `get_savings_summary()` SHALL return a dictionary where: `total_lifetime_annual` equals `total_lifetime_monthly * 12`, `total_runs` equals the number of entries in the `runs` array, and `last_run_savings` equals the `monthly_savings_added` value of the most recent (last) RunEntry.
+
+**Validates: Requirements 4.1, 4.2, 4.4**
+
+### Property 6: Compliance generator parsing and mapping
+
+*For any* tasks.md file containing lines with `- [x]`, `- [ ]`, or `- [-]` checkbox markers and task descriptions containing any of the defined keywords (e.g., "savings", "FinOps", "remediation"), the compliance generator SHALL correctly identify the checkbox state AND map the task to the correct artifact path according to the keyword-to-file mapping table.
+
+**Validates: Requirements 8.2, 8.3**
+
+### Property 7: Compliance generator output format
+
+*For any* set of parsed tasks (with varying checkbox states and artifact existence results), the compliance generator output SHALL be a valid Markdown table containing columns for task number, task description, status indicator, and artifact verification result.
+
+**Validates: Requirements 8.4**
+
+### Property 8: Reasoning logger emits valid structured JSON
+
+*For any* combination of agent name (string, 0–64 chars), event_type ∈ {check, finding, skip, decision, handoff}, resource_id (string), and message (string, 0–500 chars), calling `emit()` SHALL append exactly one line to the log file that passes `json.loads()` and contains all required keys: `timestamp`, `agent`, `event_type`, `resource_id`, `message`.
+
+**Validates: Requirements 9.4, 9.9**
+
+### Property 9: Reasoning logger sequential append
+
+*For any* sequence of N calls to `emit()` within a single run (after a single `truncate()` call), the log file SHALL contain exactly N lines, and reading them back in order SHALL yield the same sequence of (agent, event_type, resource_id, message) tuples as the input sequence.
+
+**Validates: Requirements 9.6**
+
+### Property 10: Agent section header transitions
+
+*For any* sequence of reasoning log events where the `agent` field changes between consecutive entries, the rendering function SHALL insert a section header containing the new agent name at each transition point. Events with the same agent as their predecessor SHALL NOT produce a section header.
+
+**Validates: Requirements 10.3**
+
+### Property 11: Malformed line resilience
+
+*For any* sequence of lines read from agent_reasoning.log where some lines are valid JSON and others are arbitrary non-JSON strings, the log consumer SHALL yield exactly the set of valid JSON lines (in order) and SHALL NOT raise an exception or halt processing.
+
+**Validates: Requirements 10.6**
+
+## Error Handling
+
+### Savings Tracker Errors
+
+| Scenario | Behavior |
+|----------|----------|
+| `findings_store.json` missing or unreadable | `record_run()` raises `FileNotFoundError` — caller (orchestrator) handles gracefully, logs warning, does not block approval flow |
+| `savings_ledger.json` corrupted (invalid JSON) | `_load_ledger()` returns empty structure `{"total_lifetime_savings": 0.0, "runs": []}`, effectively resetting the ledger |
+| Disk full / write permission denied | `_write_ledger()` raises `OSError` — orchestrator logs error to audit trail, approval still succeeds (savings tracking is non-blocking to remediation) |
+| `cost_estimate_monthly` missing from a finding | Treated as 0.0 (uses `.get("cost_estimate_monthly", 0.0)`) |
+
+### Reasoning Logger Errors
+
+| Scenario | Behavior |
+|----------|----------|
+| Cannot open `agent_reasoning.log` for writing | Print error to stderr, continue agent execution without interruption |
+| `truncate()` fails (permission denied) | Print error to stderr, continue — events will append to existing content |
+| Agent passes message > 500 chars | Truncate to 500 chars silently |
+| Agent passes agent name > 64 chars | Truncate to 64 chars silently |
+| Invalid event_type passed | Emit with event_type="unknown" or skip — do not crash |
+
+### LocalStack / tflocal Errors
+
+| Scenario | Behavior |
+|----------|----------|
+| `tflocal` binary not found | `validate_hcl()` returns `{"valid": False, "error": "tflocal not found..."}` |
+| `tflocal init` fails | Return error with stderr content, block approval |
+| `tflocal validate` fails | Return error with stderr content, block approval |
+| `tflocal apply` non-zero exit | Surface stderr as error message, halt pipeline |
+| LocalStack not running | `tflocal` commands fail with connection error — surfaced as error |
+
+### Compliance Generator Errors
+
+| Scenario | Behavior |
+|----------|----------|
+| `.kiro/specs/tasks.md` missing | Exit with error message to stderr, non-zero exit code |
+| Artifact path doesn't exist | Mark task as "Pending" in output table (not an error) |
+| Output write fails | Raise exception (script fails visibly) |
+
+### Streamlit Reasoning Panel Errors
+
+| Scenario | Behavior |
+|----------|----------|
+| `agent_reasoning.log` doesn't exist | Show "No reasoning events yet" placeholder |
+| Line fails `json.loads()` | Skip silently, continue processing next line |
+| Background thread crashes | Set `session_state["audit_running"] = False`, display error in UI |
+
+## Testing Strategy
+
+### Unit Tests (pytest)
+
+Unit tests cover specific examples, edge cases, and integration points:
+
+- **Savings Tracker**: Empty ledger initialization, specific savings computations with known values, error cases (missing files, corrupt JSON)
+- **Reasoning Logger**: Specific event emission, truncation behavior, filesystem error handling
+- **Compliance Generator**: Known task files with expected outputs, edge cases (empty files, missing artifacts)
+- **Orchestrator integration**: Mock SavingsTracker to verify `record_run()` is called from `approve()` and NOT from `_run_post_remediation_hook()`
+
+### Property-Based Tests (Hypothesis)
+
+Property tests verify universal correctness guarantees using the `hypothesis` library (already in requirements.txt):
+
+- **Library**: `hypothesis` (Python)
+- **Minimum iterations**: 100 per property test
+- **Tag format**: `# Feature: savings-tracker-localstack, Property {N}: {title}`
+
+Each correctness property (1–11) maps to a single Hypothesis test function:
+
+| Property | Test Target | Generator Strategy |
+|----------|------------|-------------------|
+| 1: RunEntry schema | `SavingsTracker.record_run()` | Random findings dicts + random resource ID subsets |
+| 2: Monthly savings computation | `_compute_monthly_savings()` | Random cost floats + random resource ID sets |
+| 3: Recalculate-from-source | `record_run()` called K times | Random sequences of 1–10 runs with random costs |
+| 4: Duplicate idempotency | `record_run()` with existing ID | Random ledger states + re-invocation |
+| 5: Summary correctness | `get_savings_summary()` | Random ledger states with 1–20 runs |
+| 6: Parsing and mapping | `parse_tasks()` + `map_artifact()` | Random checkbox lines with keyword combinations |
+| 7: Output format | `generate_compliance_table()` | Random task+artifact existence combinations |
+| 8: Logger valid JSON | `ReasoningLogger.emit()` | `st.text(alphabet=st.characters(blacklist_categories=('Cs',)))` for message/agent — must cover quotes, backslashes, unicode. NOT just default ASCII. |
+| 9: Sequential append | Multiple `emit()` calls | Random sequences of 1–50 events |
+| 10: Section headers | `render_events()` | Random event sequences with varying agent names |
+| 11: Malformed resilience | Log line parser | Random mix of valid JSON + arbitrary bytes |
+
+### Integration Tests
+
+- **Orchestrator → SavingsTracker wiring**: Verify `approve()` triggers `record_run()` with correct arguments
+- **Agent → ReasoningLogger wiring**: Verify each agent emits expected event types during scan/plan
+- **LocalStack demo**: End-to-end `make demo` (requires Docker, run in CI only)
+
+### Smoke Tests
+
+- `.gitignore` contains `savings_ledger.json` and `agent_reasoning.log`
+- `requirements.txt` contains `terraform-local`
+- `docker-compose.yml` defines `localstack` service on port 4566
+- `Makefile` contains `demo:` target
+- `generate_spec_compliance.py` exists and runs without error
+- No bare `terraform` calls remain in `mcp_server/aws_janitor_mcp.py` or `.kiro/hooks/pre-remediation.sh`
