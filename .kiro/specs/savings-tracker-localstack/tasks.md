@@ -101,8 +101,29 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
   - [ ] 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow
-    - In `orchestrator.py`, after successful approval gate validation, invoke `subprocess.run(["tflocal", "apply", "-auto-approve"], cwd=output_dir)` against LocalStack
-    - If `tflocal apply` returns non-zero exit code, surface stderr as error message and halt pipeline without proceeding
+    - In `orchestrator.py` `approve()` method, insert the `tflocal apply` call AFTER `_run_pre_remediation_hook()` returns None (success) and BEFORE `_run_post_remediation_hook()` is called
+    - The execution sequence in `approve()` is: (1) validate input → (2) `_run_pre_remediation_hook()` (tflocal validate) → (3) **INSERT `tflocal apply -auto-approve` HERE** → (4) `_run_post_remediation_hook()` (audit.log) → (5) `_savings_tracker.record_run()`
+    - Output directory for `tflocal apply` is `self.project_root / "output"` (where `remediation.tf` lives)
+    - Code to insert:
+
+      ```python
+      apply_result = subprocess.run(
+          ["tflocal", "apply", "-auto-approve"],
+          capture_output=True,
+          text=True,
+          timeout=120,
+          cwd=str(self.project_root / "output"),
+      )
+      if apply_result.returncode != 0:
+          error = apply_result.stderr.strip() or apply_result.stdout.strip()
+          return ApprovalResult(
+              success=False,
+              message=f"tflocal apply failed: {error}",
+              resource_id=plan.resource_id,
+          )
+      ```
+
+    - If `tflocal apply` returns non-zero exit code, surface stderr as error message and halt pipeline without proceeding to post-remediation hook or savings tracking
     - This is triggered exclusively by the user typing `APPROVE <resource-id>` in the UI, NOT by the Makefile
     - _Requirements: 6.4, 6.5_
 
