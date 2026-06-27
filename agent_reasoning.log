@@ -104,3 +104,109 @@
 {"timestamp":"2026-06-27T13:38:55.662785+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"CLEAR: No dependencies for cache-prod-legacy-01, generating HCL"}
 {"timestamp":"2026-06-27T13:38:55.662785+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"Generated remediation + rollback HCL for cache-prod-legacy-01"}
 {"timestamp":"2026-06-27T13:38:55.663992+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 3 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:51:01.816193+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:51:01.816193+00:00","agent":"remediation_architect","event_type":"check","resource_id":"vol-0abc123def456789a","message":"Checking dependencies for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:51:01.816193+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"CLEAR: No dependencies for vol-0abc123def456789a, generating HCL"}
+{"timestamp":"2026-06-27T13:51:01.816193+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"Generated remediation + rollback HCL for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:51:01.818240+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:51:01.822409+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:51:01.822937+00:00","agent":"remediation_architect","event_type":"check","resource_id":"sg-prod-redis","message":"Checking dependencies for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:51:01.822937+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"CLEAR: No dependencies for sg-prod-redis, generating HCL"}
+{"timestamp":"2026-06-27T13:51:01.822937+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"Generated remediation + rollback HCL for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:51:01.824088+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:51:01.826268+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:51:01.827274+00:00","agent":"remediation_architect","event_type":"check","resource_id":"cache-prod-legacy-01","message":"Checking dependencies for cache-prod-legacy-01"}
+{"timestamp":"2026-06-27T13:51:01.827274+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"CLEAR: No dependencies for cache-prod-legacy-01, generating HCL"}
+{"timestamp":"2026-06-27T13:51:01.828273+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"Generated remediation + rollback HCL for cache-prod-legacy-01"}
+{"timestamp":"2026-06-27T13:51:01.828273+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:51:01.832918+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:51:01.833639+00:00","agent":"remediation_architect","event_type":"check","resource_id":"vol-0abc123def456789a","message":"Checking dependencies for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:51:01.833639+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"CLEAR: No dependencies for vol-0abc123def456789a, generating HCL"}
+{"timestamp":"2026-06-27T13:51:01.834244+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"Generated remediation + rollback HCL for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:51:01.834747+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:51:01.839442+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:51:01.840134+00:00","agent":"remediation_architect","event_type":"check","resource_id":"sg-prod-redis","message":"Checking dependencies for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:51:01.840134+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"CLEAR: No dependencies for sg-prod-redis, generating HCL"}
+{"timestamp":"2026-06-27T13:51:01.840727+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"Generated remediation + rollback HCL for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:51:01.841232+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 1 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:51:01.845294+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:51:01.845294+00:00","agent":"remediation_architect","event_type":"check","resource_id":"sg-prod-redis","message":"Checking dependencies for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:51:01.846299+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"BLOCKED: sg-prod-redis has dependencies: cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:51:01.846299+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 0 remediated, 1 blocked"}
+{"timestamp":"2026-06-27T13:51:01.848423+00:00","agent":"remediation_architect","event_type":"check","resource_id":"","message":"Starting remediation planning..."}
+{"timestamp":"2026-06-27T13:51:01.849258+00:00","agent":"remediation_architect","event_type":"check","resource_id":"vol-0abc123def456789a","message":"Checking dependencies for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:51:01.849763+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"CLEAR: No dependencies for vol-0abc123def456789a, generating HCL"}
+{"timestamp":"2026-06-27T13:51:01.849763+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"vol-0abc123def456789a","message":"Generated remediation + rollback HCL for vol-0abc123def456789a"}
+{"timestamp":"2026-06-27T13:51:01.850475+00:00","agent":"remediation_architect","event_type":"check","resource_id":"sg-prod-redis","message":"Checking dependencies for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:51:01.850475+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"CLEAR: No dependencies for sg-prod-redis, generating HCL"}
+{"timestamp":"2026-06-27T13:51:01.850475+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"sg-prod-redis","message":"Generated remediation + rollback HCL for sg-prod-redis"}
+{"timestamp":"2026-06-27T13:51:01.851232+00:00","agent":"remediation_architect","event_type":"check","resource_id":"cache-prod-legacy-01","message":"Checking dependencies for cache-prod-legacy-01"}
+{"timestamp":"2026-06-27T13:51:01.851232+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"CLEAR: No dependencies for cache-prod-legacy-01, generating HCL"}
+{"timestamp":"2026-06-27T13:51:01.851232+00:00","agent":"remediation_architect","event_type":"decision","resource_id":"cache-prod-legacy-01","message":"Generated remediation + rollback HCL for cache-prod-legacy-01"}
+{"timestamp":"2026-06-27T13:51:01.852238+00:00","agent":"remediation_architect","event_type":"handoff","resource_id":"","message":"Remediation planning complete: 3 remediated, 0 blocked"}
+{"timestamp":"2026-06-27T13:51:33.336051+00:00","agent":"secops_guard","event_type":"check","resource_id":"","message":"Starting security audit: checking security groups and encryption"}
+{"timestamp":"2026-06-27T13:51:33.336678+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-prod-redis","message":"Checking security group sg-prod-redis: port=6379, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.336678+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-prod-redis","message":"Violation: sg-prod-redis open to 0.0.0.0/0 on port 6379"}
+{"timestamp":"2026-06-27T13:51:33.337183+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-web-servers","message":"Checking security group sg-web-servers: port=22, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.337183+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
+{"timestamp":"2026-06-27T13:51:33.337183+00:00","agent":"secops_guard","event_type":"check","resource_id":"cache-prod-legacy","message":"Checking encryption for elasticache resource cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:51:33.337717+00:00","agent":"secops_guard","event_type":"finding","resource_id":"cache-prod-legacy","message":"Violation: cache-prod-legacy lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.337717+00:00","agent":"secops_guard","event_type":"check","resource_id":"vol-data-001","message":"Checking encryption for ebs resource vol-data-001"}
+{"timestamp":"2026-06-27T13:51:33.337717+00:00","agent":"secops_guard","event_type":"finding","resource_id":"vol-data-001","message":"Violation: vol-data-001 lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.338269+00:00","agent":"secops_guard","event_type":"handoff","resource_id":"","message":"Security audit complete: 4 finding(s) detected"}
+{"timestamp":"2026-06-27T13:51:33.341017+00:00","agent":"secops_guard","event_type":"check","resource_id":"","message":"Starting security audit: checking security groups and encryption"}
+{"timestamp":"2026-06-27T13:51:33.341562+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-prod-redis","message":"Checking security group sg-prod-redis: port=6379, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.341562+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-prod-redis","message":"Violation: sg-prod-redis open to 0.0.0.0/0 on port 6379"}
+{"timestamp":"2026-06-27T13:51:33.341562+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-web-servers","message":"Checking security group sg-web-servers: port=22, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.342092+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
+{"timestamp":"2026-06-27T13:51:33.342092+00:00","agent":"secops_guard","event_type":"check","resource_id":"cache-prod-legacy","message":"Checking encryption for elasticache resource cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:51:33.342092+00:00","agent":"secops_guard","event_type":"finding","resource_id":"cache-prod-legacy","message":"Violation: cache-prod-legacy lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.342619+00:00","agent":"secops_guard","event_type":"check","resource_id":"vol-data-001","message":"Checking encryption for ebs resource vol-data-001"}
+{"timestamp":"2026-06-27T13:51:33.342619+00:00","agent":"secops_guard","event_type":"finding","resource_id":"vol-data-001","message":"Violation: vol-data-001 lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.343141+00:00","agent":"secops_guard","event_type":"handoff","resource_id":"","message":"Security audit complete: 4 finding(s) detected"}
+{"timestamp":"2026-06-27T13:51:33.366174+00:00","agent":"secops_guard","event_type":"check","resource_id":"","message":"Starting security audit: checking security groups and encryption"}
+{"timestamp":"2026-06-27T13:51:33.367174+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-prod-redis","message":"Checking security group sg-prod-redis: port=6379, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.367174+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-prod-redis","message":"Violation: sg-prod-redis open to 0.0.0.0/0 on port 6379"}
+{"timestamp":"2026-06-27T13:51:33.367174+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-web-servers","message":"Checking security group sg-web-servers: port=22, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.367704+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
+{"timestamp":"2026-06-27T13:51:33.367704+00:00","agent":"secops_guard","event_type":"check","resource_id":"cache-prod-legacy","message":"Checking encryption for elasticache resource cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:51:33.367704+00:00","agent":"secops_guard","event_type":"finding","resource_id":"cache-prod-legacy","message":"Violation: cache-prod-legacy lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.368451+00:00","agent":"secops_guard","event_type":"check","resource_id":"vol-data-001","message":"Checking encryption for ebs resource vol-data-001"}
+{"timestamp":"2026-06-27T13:51:33.368451+00:00","agent":"secops_guard","event_type":"finding","resource_id":"vol-data-001","message":"Violation: vol-data-001 lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.371275+00:00","agent":"secops_guard","event_type":"handoff","resource_id":"","message":"Security audit complete: 4 finding(s) detected"}
+{"timestamp":"2026-06-27T13:51:33.396650+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-prod-redis","message":"Checking security group sg-prod-redis: port=6379, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.397650+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-prod-redis","message":"Violation: sg-prod-redis open to 0.0.0.0/0 on port 6379"}
+{"timestamp":"2026-06-27T13:51:33.397650+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-web-servers","message":"Checking security group sg-web-servers: port=22, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.397650+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
+{"timestamp":"2026-06-27T13:51:33.400659+00:00","agent":"secops_guard","event_type":"check","resource_id":"cache-prod-legacy","message":"Checking encryption for elasticache resource cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:51:33.400659+00:00","agent":"secops_guard","event_type":"finding","resource_id":"cache-prod-legacy","message":"Violation: cache-prod-legacy lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.403128+00:00","agent":"secops_guard","event_type":"check","resource_id":"vol-data-001","message":"Checking encryption for ebs resource vol-data-001"}
+{"timestamp":"2026-06-27T13:51:33.403128+00:00","agent":"secops_guard","event_type":"finding","resource_id":"vol-data-001","message":"Violation: vol-data-001 lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.406167+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-prod-redis","message":"Checking security group sg-prod-redis: port=6379, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.406673+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-prod-redis","message":"Violation: sg-prod-redis open to 0.0.0.0/0 on port 6379"}
+{"timestamp":"2026-06-27T13:51:33.406673+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-web-servers","message":"Checking security group sg-web-servers: port=22, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.406673+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
+{"timestamp":"2026-06-27T13:51:33.409891+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-prod-redis","message":"Checking security group sg-prod-redis: port=6379, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.409891+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-prod-redis","message":"Violation: sg-prod-redis open to 0.0.0.0/0 on port 6379"}
+{"timestamp":"2026-06-27T13:51:33.409891+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-web-servers","message":"Checking security group sg-web-servers: port=22, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.409891+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
+{"timestamp":"2026-06-27T13:51:33.413105+00:00","agent":"secops_guard","event_type":"check","resource_id":"cache-prod-legacy","message":"Checking encryption for elasticache resource cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:51:33.413105+00:00","agent":"secops_guard","event_type":"finding","resource_id":"cache-prod-legacy","message":"Violation: cache-prod-legacy lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.413669+00:00","agent":"secops_guard","event_type":"check","resource_id":"vol-data-001","message":"Checking encryption for ebs resource vol-data-001"}
+{"timestamp":"2026-06-27T13:51:33.413669+00:00","agent":"secops_guard","event_type":"finding","resource_id":"vol-data-001","message":"Violation: vol-data-001 lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.415345+00:00","agent":"secops_guard","event_type":"check","resource_id":"","message":"Starting security audit: checking security groups and encryption"}
+{"timestamp":"2026-06-27T13:51:33.416226+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-prod-redis","message":"Checking security group sg-prod-redis: port=6379, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.416226+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-prod-redis","message":"Violation: sg-prod-redis open to 0.0.0.0/0 on port 6379"}
+{"timestamp":"2026-06-27T13:51:33.416732+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-web-servers","message":"Checking security group sg-web-servers: port=22, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.416732+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
+{"timestamp":"2026-06-27T13:51:33.416732+00:00","agent":"secops_guard","event_type":"check","resource_id":"cache-prod-legacy","message":"Checking encryption for elasticache resource cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:51:33.417418+00:00","agent":"secops_guard","event_type":"finding","resource_id":"cache-prod-legacy","message":"Violation: cache-prod-legacy lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.417990+00:00","agent":"secops_guard","event_type":"check","resource_id":"vol-data-001","message":"Checking encryption for ebs resource vol-data-001"}
+{"timestamp":"2026-06-27T13:51:33.417990+00:00","agent":"secops_guard","event_type":"finding","resource_id":"vol-data-001","message":"Violation: vol-data-001 lacks encryption at rest"}
+{"timestamp":"2026-06-27T13:51:33.419201+00:00","agent":"secops_guard","event_type":"handoff","resource_id":"","message":"Security audit complete: 4 finding(s) detected"}
+{"timestamp":"2026-06-27T13:51:33.421349+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-prod-redis","message":"Checking security group sg-prod-redis: port=6379, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.421881+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-prod-redis","message":"Violation: sg-prod-redis open to 0.0.0.0/0 on port 6379"}
+{"timestamp":"2026-06-27T13:51:33.421881+00:00","agent":"secops_guard","event_type":"check","resource_id":"sg-web-servers","message":"Checking security group sg-web-servers: port=22, cidr=0.0.0.0/0"}
+{"timestamp":"2026-06-27T13:51:33.422433+00:00","agent":"secops_guard","event_type":"finding","resource_id":"sg-web-servers","message":"Violation: sg-web-servers open to 0.0.0.0/0 on port 22"}
+{"timestamp":"2026-06-27T13:51:33.424605+00:00","agent":"secops_guard","event_type":"check","resource_id":"cache-prod-legacy","message":"Checking encryption for elasticache resource cache-prod-legacy"}
+{"timestamp":"2026-06-27T13:51:33.425136+00:00","agent":"secops_guard","event_type":"finding","resource_id":"cache-prod-legacy","message":"Violation: cache-prod-legacy lacks encryption at rest"}
