@@ -29,24 +29,24 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 - [x] 1. Create .kiro/ directory structure and commit
 - [x] 2. Write requirements.md with all user stories
 - [x] 3. Write design.md with architecture + data flow
-- [ ] 4. Write fixture JSON for Cost Explorer (3 resources, 2 flaggable)
-- [ ] 5. Write fixture JSON for Config/Inspector (2 security findings)
+- [x] 4. Write fixture JSON for Cost Explorer (3 resources, 2 flaggable)
+- [x] 5. Write fixture JSON for Config/Inspector (2 security findings)
 
 ### Phase 2: MCP Server
 
-- [ ] 1. Implement aws_janitor_mcp.py with MCP protocol
-- [ ] 2. Implement get_cost_data() → reads Cost Explorer fixture
-- [ ] 3. Implement get_security_data() → reads Inspector fixture
-- [ ] 4. Implement validate_hcl() → shells to terraform validate
-- [ ] 5. Write mcp_server/README.md
+- [x] 1. Implement aws_janitor_mcp.py with MCP protocol
+- [x] 2. Implement get_cost_data() → reads Cost Explorer fixture
+- [x] 3. Implement get_security_data() → reads Inspector fixture
+- [x] 4. Implement validate_hcl() → shells to terraform validate
+- [-] 5. Write mcp_server/README.md
 
 ### Phase 3: Agents
 
-- [ ] 1. FinOps Auditor — calls MCP, produces findings[], writes findings_store.json
-- [ ] 2. SecOps Guard — calls MCP, appends to findings_store.json
+- [-] 1. FinOps Auditor — calls MCP, produces findings[], writes findings_store.json
+- [-] 2. SecOps Guard — calls MCP, appends to findings_store.json
 - [ ] 3. Remediation Architect — reads findings, dependency check, generates HCL
 - [ ] 4. Rollback HCL generation (alongside remediation, not after)
-- [ ] 5. findings_store.json schema validation
+- [-] 5. findings_store.json schema validation
 
 ### Phase 4: Hooks
 
