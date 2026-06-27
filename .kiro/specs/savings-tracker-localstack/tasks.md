@@ -76,23 +76,23 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 - [x] 3. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. LocalStack wiring and demo infrastructure
-  - [ ] 4.1 Replace `terraform` with `tflocal` in `mcp_server/aws_janitor_mcp.py`
+- [-] 4. LocalStack wiring and demo infrastructure
+  - [x] 4.1 Replace `terraform` with `tflocal` in `mcp_server/aws_janitor_mcp.py`
     - Change `["terraform", "init", "-backend=false"]` to `["tflocal", "init", "-backend=false"]`
     - Change `["terraform", "validate"]` to `["tflocal", "validate"]`
     - _Requirements: 6.1_
 
-  - [ ] 4.2 Replace `terraform` with `tflocal` in `.kiro/hooks/pre-remediation.sh`
+  - [x] 4.2 Replace `terraform` with `tflocal` in `.kiro/hooks/pre-remediation.sh`
     - Replace all occurrences of `terraform -chdir=` with `tflocal -chdir=`
     - _Requirements: 6.1_
 
-  - [ ] 4.3 Create `docker-compose.yml` at project root
+  - [x] 4.3 Create `docker-compose.yml` at project root
     - Define `localstack` service with `localstack/localstack:latest` image
     - Expose port 4566, set SERVICES=ec2,elasticache,s3,ebs, DEFAULT_REGION=us-east-1
     - Mount Docker socket volume
     - _Requirements: 6.3_
 
-  - [ ] 4.4 Create `Makefile` at project root with `demo` target
+  - [-] 4.4 Create `Makefile` at project root with `demo` target
     - Run `docker-compose up -d` to start LocalStack
     - Poll LocalStack health endpoint (`http://localhost:4566/_localstack/health`) every 2s, max 30 attempts with progress dots
     - Launch Streamlit dashboard via `streamlit run app.py` as the final step
@@ -100,7 +100,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Exit non-zero with error message if health check exceeds 60 seconds
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-  - [ ] 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow
+  - [-] 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow
     - In `orchestrator.py` `approve()` method, insert the `tflocal apply` call AFTER `_run_pre_remediation_hook()` returns None (success) and BEFORE `_run_post_remediation_hook()` is called
     - The execution sequence in `approve()` is: (1) validate input → (2) `_run_pre_remediation_hook()` (tflocal validate) → (3) **INSERT `tflocal apply -auto-approve` HERE** → (4) `_run_post_remediation_hook()` (audit.log) → (5) `_savings_tracker.record_run()`
     - Output directory for `tflocal apply` is `self.project_root / "output"` (where `remediation.tf` lives)
@@ -127,40 +127,40 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - This is triggered exclusively by the user typing `APPROVE <resource-id>` in the UI, NOT by the Makefile
     - _Requirements: 6.4, 6.5_
 
-  - [ ] 4.6 Update `requirements.txt` to add `terraform-local`
+  - [x] 4.6 Update `requirements.txt` to add `terraform-local`
     - Add `terraform-local>=0.18.0` to requirements.txt
     - _Requirements: 6.2_
 
 - [ ] 5. Orchestrator integration with SavingsTracker
-  - [ ] 5.1 Wire SavingsTracker into Orchestrator
+  - [~] 5.1 Wire SavingsTracker into Orchestrator
     - Import and instantiate `SavingsTracker` in `Orchestrator.__init__`
     - Call `self._savings_tracker.record_run(resources_remediated=[resource_id])` in `approve()` method after successful execution, after `_run_post_remediation_hook`
     - Ensure `record_run` is NOT called from `_run_post_remediation_hook` to avoid double-counting
     - Handle `FileNotFoundError` and `OSError` from savings tracker gracefully (log warning, don't block approval)
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [ ] 5.2 Add ReasoningLogger truncation at audit start in Orchestrator
+  - [~] 5.2 Add ReasoningLogger truncation at audit start in Orchestrator
     - Instantiate ReasoningLogger in Orchestrator and call `truncate()` at the beginning of `execute_audit()`
     - Pass the shared logger instance to each agent
     - _Requirements: 9.5_
 
-  - [ ] 5.3 Write unit tests for Orchestrator → SavingsTracker wiring
+  - [~] 5.3 Write unit tests for Orchestrator → SavingsTracker wiring
     - Verify `record_run()` is called from `approve()` with correct arguments
     - Verify `record_run()` is NOT called from `_run_post_remediation_hook`
     - Verify savings tracker errors don't block approval
     - _Requirements: 5.1, 5.2, 5.3_
 
 - [ ] 6. Update .gitignore and project configuration
-  - [ ] 6.1 Add runtime files to `.gitignore`
+  - [~] 6.1 Add runtime files to `.gitignore`
     - Add `savings_ledger.json` to `.gitignore`
     - Add `agent_reasoning.log` to `.gitignore`
     - _Requirements: 1.4, 9.8_
 
-- [ ] 7. Checkpoint
+- [~] 7. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. Implement SPEC_COMPLIANCE.md generator
-  - [ ] 8.1 Create `generate_spec_compliance.py` at project root
+  - [~] 8.1 Create `generate_spec_compliance.py` at project root
     - Read and parse `.kiro/specs/tasks.md` for checkbox lines (`- [x]`, `- [ ]`, `- [-]`)
     - Implement keyword-to-file mapping table per requirements 8.3
     - Verify file existence for done tasks
@@ -168,22 +168,22 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Exit with non-zero code if tasks.md is missing
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-  - [ ] 8.2 Create Git post-commit hook
+  - [~] 8.2 Create Git post-commit hook
     - Create `.git/hooks/post-commit` that runs `python3 generate_spec_compliance.py && git add SPEC_COMPLIANCE.md`
     - Make the hook executable
     - _Requirements: 8.6_
 
-  - [ ] 8.3 Write property test: Compliance generator parsing and mapping
+  - [~] 8.3 Write property test: Compliance generator parsing and mapping
     - **Property 6: Compliance generator parsing and mapping**
     - **Validates: Requirements 8.2, 8.3**
 
-  - [ ] 8.4 Write property test: Compliance generator output format
+  - [~] 8.4 Write property test: Compliance generator output format
     - **Property 7: Compliance generator output format**
     - Verify output is a valid 4-column Markdown table with headers: `#`, `Task`, `Status`, `Artifact Verified`
     - **Validates: Requirements 8.4**
 
 - [ ] 9. Implement Streamlit Reasoning Panel
-  - [ ] 9.1 Add reasoning log panel to `app.py`
+  - [~] 9.1 Add reasoning log panel to `app.py`
     - Implement `reasoning_log_panel()` using `@st.fragment(run_every=1)` for Streamlit >= 1.33
     - Implement fallback polling with background thread for older Streamlit
     - Read `agent_reasoning.log`, parse JSONL, skip malformed lines silently
@@ -193,15 +193,15 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Clear previous reasoning display when new audit starts
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
-  - [ ] 9.2 Write property test: Agent section header transitions
+  - [~] 9.2 Write property test: Agent section header transitions
     - **Property 10: Agent section header transitions**
     - **Validates: Requirements 10.3**
 
-  - [ ] 9.3 Write property test: Malformed line resilience
+  - [~] 9.3 Write property test: Malformed line resilience
     - **Property 11: Malformed line resilience**
     - **Validates: Requirements 10.6**
 
-- [ ] 10. Final checkpoint
+- [~] 10. Final checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
