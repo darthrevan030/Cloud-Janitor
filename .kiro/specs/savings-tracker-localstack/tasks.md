@@ -168,7 +168,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Exit with non-zero code if tasks.md is missing
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-  - [ ] 8.2 Create Git post-commit hook
+  - [-] 8.2 Create Git post-commit hook
     - Create `.git/hooks/post-commit` that runs `python3 generate_spec_compliance.py && git add SPEC_COMPLIANCE.md`
     - Make the hook executable
     - _Requirements: 8.6_
