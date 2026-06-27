@@ -152,7 +152,7 @@ This feature adds multiple capabilities to the Cloud Janitor project: (1) a pers
 
 #### Acceptance Criteria
 
-1. THE Streamlit_Dashboard SHALL poll `agent_reasoning.log` for new lines using a `st.empty()` container with a `time.sleep(1)` loop, rendering new events within 2 seconds of their emission. THE Streamlit_Dashboard SHALL NOT use `st.rerun()` for polling as it resets application state.
+1. THE Streamlit_Dashboard SHALL poll `agent_reasoning.log` for new lines and render new events within 2 seconds of their emission. IF Streamlit >= 1.33 is available, THE Streamlit_Dashboard SHALL use `@st.fragment(run_every=1)` on the reasoning panel function so that only the panel reruns without resetting the rest of the app. IF Streamlit < 1.33, THE Streamlit_Dashboard SHALL run the audit pipeline in a background thread (`threading.Thread`, `daemon=True`) and poll from the main thread using `st.empty()` + `time.sleep(1)` inside a loop that checks a `session_state` flag. THE Streamlit_Dashboard SHALL NOT block the main Streamlit thread during polling.
 2. THE Streamlit_Dashboard SHALL color-code events by type: `check` in grey (#9e9e9e), `finding` in amber (#ff9800), `skip` in light grey (#bdbdbd), `decision` in blue (#2196f3), and `handoff` in bold text
 3. WHEN the emitting agent name in a new log event differs from the agent name in the immediately preceding displayed event, THE Streamlit_Dashboard SHALL display the new agent name as a section header above that event
 4. WHILE the audit pipeline is executing, THE Streamlit_Dashboard SHALL auto-scroll the reasoning log display to the latest event
