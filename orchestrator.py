@@ -280,6 +280,24 @@ class Orchestrator:
 
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
+
+        # Execute tflocal apply against LocalStack
+        apply_result = subprocess.run(
+            ["tflocal", "apply", "-auto-approve"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.project_root / "output"),
+        )
+        if apply_result.returncode != 0:
+            error = apply_result.stderr.strip() or apply_result.stdout.strip()
+            self._log_action("execution", resource_id, "failure", f"tflocal apply failed: {error}")
+            return ApprovalResult(
+                success=False,
+                error=f"tflocal apply failed: {error}",
+                resource_id=resource_id,
+            )
+
         self._log_action("execution", resource_id, "success", "Remediation executed")
 
         # Run post-remediation hook
