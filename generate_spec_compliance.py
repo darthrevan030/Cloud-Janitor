@@ -58,9 +58,9 @@ def parse_tasks(content: str) -> list[dict]:
     where status is 'done', 'pending', or 'partial'.
     """
     tasks = []
-    # Match top-level task lines (not sub-tasks indented with spaces)
-    # Pattern: lines starting with "- [x]", "- [ ]", or "- [-]"
-    pattern = re.compile(r"^- \[([ x\-])\]\s+(.+)$", re.MULTILINE)
+    # Match all checkbox task lines (including indented sub-tasks)
+    # Pattern: lines with "- [x]", "- [ ]", or "- [-]" with optional leading whitespace
+    pattern = re.compile(r"^\s*- \[([ x\-])\]\s+(.+)$", re.MULTILINE)
 
     for match in pattern.finditer(content):
         marker = match.group(1)
