@@ -13,6 +13,7 @@ Usage:
 
 from __future__ import annotations
 
+import difflib
 import json
 import time
 from pathlib import Path
@@ -193,6 +194,85 @@ def render_agent_status_html(agent_name: str, status: str) -> str:
         f'<span class="agent-status">{label}</span>'
         f'</div>'
     )
+
+
+def render_diff_html(left_text: str, right_text: str) -> tuple[str, str, bool]:
+    """Compute a side-by-side diff and return color-coded HTML for left and right panels.
+
+    Returns (left_html, right_html, is_identical).
+    Green highlight = line added in that panel's version.
+    Red highlight = line removed (present in the other panel's version).
+    """
+    left_lines = left_text.splitlines()
+    right_lines = right_text.splitlines()
+
+    matcher = difflib.SequenceMatcher(None, left_lines, right_lines)
+    opcodes = matcher.get_opcodes()
+
+    if all(tag == "equal" for tag, *_ in opcodes):
+        return "", "", True
+
+    left_html_lines: list[str] = []
+    right_html_lines: list[str] = []
+
+    def _escape(text: str) -> str:
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    line_style_base = (
+        "margin:0;padding:2px 6px;font-family:monospace;font-size:0.82rem;"
+        "white-space:pre;line-height:1.5;"
+    )
+    style_neutral = f'{line_style_base}background:transparent;'
+    style_add = f'{line_style_base}background:#d4edda;color:#155724;'
+    style_remove = f'{line_style_base}background:#f8d7da;color:#721c24;'
+    style_change_left = f'{line_style_base}background:#fff3cd;color:#856404;'
+    style_change_right = f'{line_style_base}background:#cce5ff;color:#004085;'
+    style_blank = f'{line_style_base}background:#f5f5f5;color:#aaa;'
+
+    for tag, i1, i2, j1, j2 in opcodes:
+        if tag == "equal":
+            for line in left_lines[i1:i2]:
+                escaped = _escape(line)
+                left_html_lines.append(f'<div style="{style_neutral}">{escaped}</div>')
+                right_html_lines.append(f'<div style="{style_neutral}">{escaped}</div>')
+        elif tag == "replace":
+            max_len = max(i2 - i1, j2 - j1)
+            for idx in range(max_len):
+                if idx < (i2 - i1):
+                    escaped = _escape(left_lines[i1 + idx])
+                    left_html_lines.append(f'<div style="{style_change_left}">- {escaped}</div>')
+                else:
+                    left_html_lines.append(f'<div style="{style_blank}"> </div>')
+                if idx < (j2 - j1):
+                    escaped = _escape(right_lines[j1 + idx])
+                    right_html_lines.append(f'<div style="{style_change_right}">+ {escaped}</div>')
+                else:
+                    right_html_lines.append(f'<div style="{style_blank}"> </div>')
+        elif tag == "delete":
+            for line in left_lines[i1:i2]:
+                escaped = _escape(line)
+                left_html_lines.append(f'<div style="{style_remove}">- {escaped}</div>')
+                right_html_lines.append(f'<div style="{style_blank}"> </div>')
+        elif tag == "insert":
+            for line in right_lines[j1:j2]:
+                escaped = _escape(line)
+                left_html_lines.append(f'<div style="{style_blank}"> </div>')
+                right_html_lines.append(f'<div style="{style_add}">+ {escaped}</div>')
+
+    left_html = (
+        '<div style="border:1px solid #ddd;border-radius:4px;padding:8px;'
+        'overflow-x:auto;max-height:400px;overflow-y:auto;background:#fafafa;">'
+        + "".join(left_html_lines)
+        + "</div>"
+    )
+    right_html = (
+        '<div style="border:1px solid #ddd;border-radius:4px;padding:8px;'
+        'overflow-x:auto;max-height:400px;overflow-y:auto;background:#fafafa;">'
+        + "".join(right_html_lines)
+        + "</div>"
+    )
+
+    return left_html, right_html, False
 
 
 def render_agent_feed_html(statuses: dict[str, str]) -> str:
@@ -406,7 +486,7 @@ with top_right:
 # ──────────────────────────────────────────────────────────────────────
 
 with bottom_left:
-    st.subheader("📝 Remediation & Rollback HCL")
+    st.subheader("📝 Remediation vs Rollback Diff")
 
     with st.container(border=True):
         # Remediation HCL
@@ -418,21 +498,42 @@ with bottom_left:
 
         if resource_ids:
             selected_resource = st.selectbox(
-                "Select resource for side-by-side view:",
+                "Select resource to compare:",
                 options=resource_ids,
                 key="diff_resource_select",
             )
 
-            diff_left, diff_right = st.columns([1, 1])
+            rollback_hcl = load_rollback_hcl(selected_resource)
 
-            with diff_left:
-                st.markdown("**Remediation HCL**")
+            # Compute diff
+            left_html, right_html, is_identical = render_diff_html(
+                remediation_hcl, rollback_hcl
+            )
+
+            if is_identical:
+                st.success("No differences — remediation and rollback HCL are identical.")
                 st.code(remediation_hcl, language="hcl")
+            else:
+                # Legend
+                st.markdown(
+                    '<div style="font-size:0.8rem;margin-bottom:8px;">'
+                    '<span style="background:#fff3cd;padding:2px 6px;border-radius:3px;">changed (remediation)</span> '
+                    '<span style="background:#cce5ff;padding:2px 6px;border-radius:3px;">changed (rollback)</span> '
+                    '<span style="background:#f8d7da;padding:2px 6px;border-radius:3px;">removed</span> '
+                    '<span style="background:#d4edda;padding:2px 6px;border-radius:3px;">added</span>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
 
-            with diff_right:
-                st.markdown("**Rollback HCL**")
-                rollback_hcl = load_rollback_hcl(selected_resource)
-                st.code(rollback_hcl, language="hcl")
+                diff_left, diff_right = st.columns([1, 1])
+
+                with diff_left:
+                    st.markdown("**Remediation HCL**")
+                    st.markdown(left_html, unsafe_allow_html=True)
+
+                with diff_right:
+                    st.markdown("**Rollback HCL**")
+                    st.markdown(right_html, unsafe_allow_html=True)
         else:
             st.info("No remediation or rollback plans available yet.")
             st.code(remediation_hcl, language="hcl")
