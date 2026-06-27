@@ -8,7 +8,6 @@ report as a 4-column Markdown table.
 Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
 """
 
-import glob
 import os
 import re
 import sys
@@ -36,20 +35,21 @@ KEYWORD_MAPPING = [
 ]
 
 
-def find_tasks_md(project_root: Path) -> Path | None:
-    """Find tasks.md, trying the literal path first then subdirectories."""
+def find_tasks_md_files(project_root: Path) -> list[Path]:
+    """Find tasks.md file(s), trying the literal path first then subdirectories."""
     # Try literal path from requirement
     literal = project_root / ".kiro" / "specs" / "tasks.md"
     if literal.exists():
-        return literal
+        return [literal]
 
     # Search subdirectories of .kiro/specs/
     specs_dir = project_root / ".kiro" / "specs"
     if specs_dir.exists():
-        for tasks_file in sorted(specs_dir.rglob("tasks.md")):
-            return tasks_file
+        found = sorted(specs_dir.rglob("tasks.md"))
+        if found:
+            return found
 
-    return None
+    return []
 
 
 def parse_tasks(content: str) -> list[dict]:
@@ -154,12 +154,16 @@ def verify_artifact(task_text: str, project_root: Path) -> str:
         # File or directory check
         artifact_path = project_root / target
         if artifact_path.exists():
-            if artifact_path.is_dir():
-                return f"{target} exists"
-            else:
-                return f"{target} exists"
-        else:
-            return f"{target} missing"
+            return f"{target} exists"
+
+        # For files under .kiro/specs/, also check subdirectories
+        if target.startswith(".kiro/specs/") and not artifact_path.is_dir():
+            filename = Path(target).name
+            specs_dir = project_root / ".kiro" / "specs"
+            for found in specs_dir.rglob(filename):
+                return f"{found.relative_to(project_root)} exists"
+
+        return f"{target} missing"
 
     return "no mapping"
 
@@ -204,26 +208,28 @@ def main():
     project_root = Path(__file__).resolve().parent
 
     # Find tasks.md
-    tasks_md_path = find_tasks_md(project_root)
-    if tasks_md_path is None:
+    tasks_md_files = find_tasks_md_files(project_root)
+    if not tasks_md_files:
         print("ERROR: tasks.md not found in .kiro/specs/", file=sys.stderr)
         sys.exit(1)
 
-    # Read and parse
-    content = tasks_md_path.read_text(encoding="utf-8")
-    tasks = parse_tasks(content)
+    # Read and parse all found tasks.md files
+    all_tasks = []
+    for tasks_md_path in tasks_md_files:
+        content = tasks_md_path.read_text(encoding="utf-8")
+        all_tasks.extend(parse_tasks(content))
 
-    if not tasks:
+    if not all_tasks:
         print("WARNING: No task checkboxes found in tasks.md", file=sys.stderr)
 
     # Generate report
-    report = generate_report(tasks, project_root)
+    report = generate_report(all_tasks, project_root)
 
     # Write output
     output_path = project_root / "SPEC_COMPLIANCE.md"
     output_path.write_text(report, encoding="utf-8")
 
-    print(f"Generated {output_path} ({len(tasks)} tasks)")
+    print(f"Generated {output_path} ({len(all_tasks)} tasks from {len(tasks_md_files)} file(s))")
 
 
 if __name__ == "__main__":
