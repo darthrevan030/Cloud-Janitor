@@ -64,7 +64,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Add `emit("remediation_architect", "handoff", ...)` at planning complete
     - _Requirements: 9.3_
 
-  - [ ] 2.5 Write property test: Reasoning logger emits valid structured JSON
+  - [x] 2.5 Write property test: Reasoning logger emits valid structured JSON
     - **Property 8: Reasoning logger emits valid structured JSON**
     - Use `st.text(alphabet=st.characters(blacklist_categories=('Cs',)))` for message and agent fields — must cover quotes, backslashes, and unicode characters, NOT just default ASCII
     - **Validates: Requirements 9.4, 9.9**
