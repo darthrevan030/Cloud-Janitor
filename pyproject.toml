@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "hypothesis>=6.155.7",
     "mcp>=1.28.1",
+    "pyyaml>=6.0.3",
     "streamlit>=1.45.0",
 ]
 
