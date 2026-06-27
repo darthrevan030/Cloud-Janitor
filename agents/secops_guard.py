@@ -109,10 +109,21 @@ class SecOpsGuard:
         for raw in raw_findings:
             port = raw.get("port", 0)
             cidr = raw.get("cidr", "")
+            resource_id = raw.get("resource_id", "unknown")
+
+            self._logger.emit(
+                "secops_guard", "check", resource_id,
+                f"Checking security group {resource_id}: port={port}, cidr={cidr}",
+            )
 
             # Only flag if open to 0.0.0.0/0 on a sensitive port
             if cidr == "0.0.0.0/0" and port in SENSITIVE_PORTS:
-                findings.append(self._build_finding(raw))
+                finding = self._build_finding(raw)
+                findings.append(finding)
+                self._logger.emit(
+                    "secops_guard", "finding", resource_id,
+                    f"Violation: {resource_id} open to 0.0.0.0/0 on port {port}",
+                )
 
         return findings
 
