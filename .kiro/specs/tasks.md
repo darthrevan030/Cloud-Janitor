@@ -52,7 +52,7 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 
 - [x] 1. pre-remediation.sh — terraform validate gate
 - [x] 2. post-remediation.sh — audit.log append
-- [ ] 3. Wire hooks into orchestrator call sequence
+- [x] 3. Wire hooks into orchestrator call sequence
 
 ### Phase 5: Approval + Execution
 
