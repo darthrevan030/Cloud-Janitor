@@ -156,7 +156,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Add `agent_reasoning.log` to `.gitignore`
     - _Requirements: 1.4, 9.8_
 
-- [ ] 7. Checkpoint
+- [x] 7. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. Implement SPEC_COMPLIANCE.md generator
