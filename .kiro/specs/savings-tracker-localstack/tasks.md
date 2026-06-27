@@ -27,7 +27,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 3: Recalculate-from-source invariant**
     - **Validates: Requirements 2.3, 2.4**
 
-  - [ ] 1.5 Write property test: Duplicate run idempotency
+  - [x] 1.5 Write property test: Duplicate run idempotency
     - **Property 4: Duplicate run idempotency**
     - **Validates: Requirements 3.1, 3.3**
 
