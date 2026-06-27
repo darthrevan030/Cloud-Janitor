@@ -33,6 +33,7 @@ from agents.approval_gate import (
 )
 from agents.audit_logger import AuditLogger
 from agents.finops_auditor import FinOpsAuditor
+from agents.reasoning_logger import ReasoningLogger
 from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
 from savings import SavingsTracker
@@ -129,13 +130,25 @@ class Orchestrator:
         self.audit_log_path = self.project_root / "audit.log"
         self.approver = approver
 
+        # Reasoning logger (shared across all agents)
+        self._reasoning_logger = ReasoningLogger(
+            log_path=self.project_root / "agent_reasoning.log"
+        )
+
         # Agent instances
-        self._finops = FinOpsAuditor(findings_store_path=self.findings_store_path)
-        self._secops = SecOpsGuard(findings_store_path=self.findings_store_path)
+        self._finops = FinOpsAuditor(
+            findings_store_path=self.findings_store_path,
+            reasoning_logger=self._reasoning_logger,
+        )
+        self._secops = SecOpsGuard(
+            findings_store_path=self.findings_store_path,
+            reasoning_logger=self._reasoning_logger,
+        )
         self._architect = RemediationArchitect(
             findings_store_path=self.findings_store_path,
             output_dir=self.output_dir,
             rollbacks_dir=self.rollbacks_dir,
+            reasoning_logger=self._reasoning_logger,
         )
 
         # Audit logger (append-only, file-based)
@@ -170,6 +183,9 @@ class Orchestrator:
         Returns:
             AuditResult with findings, plans, and any errors.
         """
+        # Truncate reasoning log at the start of each new audit run
+        self._reasoning_logger.truncate()
+
         # Step 1: FinOps Auditor scan
         self._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
         finops_findings = self._finops.scan()
