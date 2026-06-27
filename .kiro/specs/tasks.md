@@ -44,8 +44,8 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 
 - [x] 1. FinOps Auditor — calls MCP, produces findings[], writes findings_store.json
 - [x] 2. SecOps Guard — calls MCP, appends to findings_store.json
-- [-] 3. Remediation Architect — reads findings, dependency check, generates HCL
-- [-] 4. Rollback HCL generation (alongside remediation, not after)
+- [x] 3. Remediation Architect — reads findings, dependency check, generates HCL
+- [x] 4. Rollback HCL generation (alongside remediation, not after)
 - [x] 5. findings_store.json schema validation
 
 ### Phase 4: Hooks
@@ -56,7 +56,7 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 
 ### Phase 5: Approval + Execution
 
-- [-] 1. Approval gate — parse "APPROVE \<id\>", reject malformed input
+- [ ] 1. Approval gate — parse "APPROVE \<id\>", reject malformed input
 - [ ] 2. Rollback gate — parse "ROLLBACK \<id\>" + "CONFIRM ROLLBACK \<id\>"
 - [ ] 3. Audit log writer (append-only)
 - [ ] 4. Error states: dependency found, validate fails, malformed approval

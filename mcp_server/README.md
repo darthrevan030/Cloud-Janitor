@@ -69,18 +69,27 @@ Fixtures live in `fixtures/` at the project root.
 {
   "resources": [
     {
-      "id": "string",
+      "id": "cache-prod-legacy-01",
       "type": "elasticache | ebs | ec2",
-      "idle_days": "int",
-      "monthly_cost": "float",
-      "description": "string",
-      ...
+      "name": "human-readable-name",
+      "idle_days": 42,
+      "monthly_cost": 45.6,
+      "status": "available | in-use",
+      "description": "Why this resource is flagged",
+      "availability_zone": "us-east-1a",
+      "created_at": "2024-08-15T09:30:00Z"
     }
   ]
 }
 ```
 
-Each resource includes type-specific fields (e.g. `volume_type`, `engine`, `instance_type`).
+Type-specific fields:
+
+| Type | Extra Fields |
+|------|-------------|
+| `elasticache` | `connections`, `instance_type`, `engine`, `engine_version`, `cluster_mode`, `num_cache_nodes` |
+| `ebs` | `attached`, `volume_type`, `size_gb`, `encrypted` |
+| `ec2` | `instance_type`, `state` |
 
 ### `aws_config_inspector.json`
 
@@ -88,13 +97,15 @@ Each resource includes type-specific fields (e.g. `volume_type`, `engine`, `inst
 {
   "findings": [
     {
-      "id": "string",
-      "resource_id": "string",
+      "id": "finding-sg-redis-001",
+      "resource_id": "sg-prod-redis",
+      "resource_type": "aws_security_group",
       "check_type": "security_group | encryption | public_access",
       "severity": "CRITICAL | HIGH | MEDIUM | LOW",
-      "current_state": "string",
-      "required_state": "string",
-      ...
+      "current_state": "open_to_world",
+      "required_state": "vpc_only",
+      "title": "Short description of the finding",
+      "description": "Detailed explanation and remediation guidance"
     }
   ],
   "dependencies": {
@@ -103,6 +114,21 @@ Each resource includes type-specific fields (e.g. `volume_type`, `engine`, `inst
 }
 ```
 
+Finding-specific fields:
+
+| Check Type | Extra Fields |
+|------------|-------------|
+| `security_group` | `port`, `cidr` |
+| `encryption` | `encryption_at_rest` |
+
+The `dependencies` map drives `check_dependencies()` — keys are resource IDs, values are lists of resources that reference them. An empty list means safe to remediate without cascading impact.
+
 ## Architecture Note
 
 This is a genuine MCP server built with FastMCP — it implements the real MCP protocol and can be consumed by any MCP-compatible client. The data layer uses static fixture JSON files instead of live AWS API calls, making it fully self-contained for demo and development purposes.
+
+## Adding New Fixtures
+
+1. Add or edit JSON files in `fixtures/`.
+2. Follow the schema above — `get_cost_data` expects a top-level `resources` array; `get_security_data` expects `findings` + `dependencies`.
+3. Restart the server to pick up changes (fixture files are read on each tool invocation, so no restart is actually needed for data changes).
