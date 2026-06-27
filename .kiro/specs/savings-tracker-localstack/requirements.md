@@ -87,7 +87,7 @@ This feature adds multiple capabilities to the Cloud Janitor project: (1) a pers
 1. THE Terraform_Executor SHALL invoke `tflocal` in place of `terraform` for ALL subprocess calls in the codebase — this includes `terraform init`, `terraform validate`, and `terraform apply`. Specifically: (a) `mcp_server/aws_janitor_mcp.py` `validate_hcl()` function, and (b) `.kiro/hooks/pre-remediation.sh` which currently calls `terraform -chdir=... init` and `terraform -chdir=... validate`. No subprocess call in the codebase shall invoke the bare `terraform` binary.
 2. THE Terraform_Executor SHALL depend on the `terraform-local` Python package (added to requirements.txt)
 3. THE Docker_Compose_Configuration SHALL define a `localstack` service in `docker-compose.yml` that exposes port 4566 to the host and configures the `SERVICES` environment variable to include EC2, ElastiCache, S3, and EBS
-4. THE Terraform_Executor SHALL invoke `tflocal apply -auto-approve` (not just `tflocal plan`) against the LocalStack_Environment during execution of the `make demo` target
+4. THE Terraform_Executor SHALL invoke `tflocal apply -auto-approve` (not just `tflocal plan`) against the LocalStack_Environment when the user approves a remediation through the orchestrator. THE Terraform_Executor SHALL NOT be invoked directly by the Makefile — the apply is triggered inside `orchestrator.py` via the approval flow.
 5. IF `tflocal apply` returns a non-zero exit code, THEN THE Terraform_Executor SHALL surface the stderr output as an error message and halt the pipeline without proceeding to the approval gate
 
 ### Requirement 7: Make Demo Target
@@ -99,7 +99,7 @@ This feature adds multiple capabilities to the Cloud Janitor project: (1) a pers
 1. THE Makefile SHALL define a `demo` target in a `Makefile` at the project root
 2. WHEN `make demo` is executed, THE Makefile SHALL start the LocalStack_Environment via `docker-compose up -d`
 3. WHEN `make demo` is executed, THE Makefile SHALL poll the LocalStack health endpoint (`http://localhost:4566/_localstack/health`) every 2 seconds, up to 30 attempts (60 seconds total), printing a dot (`.`) to stdout on each attempt so the user sees progress
-4. WHEN `make demo` is executed, THE Makefile SHALL run the full Cloud Janitor audit-and-remediation pipeline against LocalStack, including `tflocal apply -auto-approve`
+4. WHEN `make demo` is executed, THE Makefile SHALL launch the Streamlit dashboard via `streamlit run app.py`. THE Makefile SHALL NOT invoke `tflocal apply` directly — the apply happens inside `orchestrator.py` when the user types `APPROVE <resource-id>` through the UI.
 5. IF the LocalStack health check does not return HTTP 200 within 30 attempts (60 seconds), THEN THE Makefile SHALL exit with a non-zero status and print an error message indicating the LocalStack_Environment failed to start
 
 ### Requirement 8: SPEC_COMPLIANCE.md Generator Script
