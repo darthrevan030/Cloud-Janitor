@@ -35,6 +35,7 @@ from agents.audit_logger import AuditLogger
 from agents.finops_auditor import FinOpsAuditor
 from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
+from savings import SavingsTracker
 
 
 PROJECT_ROOT = Path(__file__).parent
@@ -139,6 +140,12 @@ class Orchestrator:
 
         # Audit logger (append-only, file-based)
         self._audit_logger = AuditLogger(self.audit_log_path)
+
+        # Savings tracker
+        self._savings_tracker = SavingsTracker(
+            ledger_path=self.project_root / "savings_ledger.json",
+            findings_store_path=self.findings_store_path,
+        )
 
         # Approval gates per resource (keyed by resource_id)
         self._approval_gates: dict[str, ApprovalGate] = {}
@@ -302,6 +309,15 @@ class Orchestrator:
 
         # Run post-remediation hook
         self._run_post_remediation_hook(resource_id, "remediate", "success")
+
+        # Record savings (non-blocking — errors are logged but don't fail approval)
+        try:
+            self._savings_tracker.record_run(resources_remediated=[resource_id])
+        except (FileNotFoundError, OSError) as e:
+            self._log_action(
+                "savings", resource_id, "warning",
+                f"Savings tracking failed: {e}",
+            )
 
         return ApprovalResult(success=True, resource_id=resource_id)
 
