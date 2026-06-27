@@ -201,7 +201,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 11: Malformed line resilience**
     - **Validates: Requirements 10.6**
 
-- [ ] 10. Final checkpoint — test quality audit
+- [-] 10. Final checkpoint — test quality audit
 
   - [x] 10.1 Run full test suite and confirm all tests pass
     - Run `pytest` from project root
@@ -292,7 +292,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Run: `git check-ignore -v savings_ledger.json agent_reasoning.log`
     - Both files must be ignored
 
-  - [ ] 10.5 Run generate_spec_compliance.py and commit output
+  - [-] 10.5 Run generate_spec_compliance.py and commit output
     - Run: `python3 generate_spec_compliance.py`
     - Verify SPEC_COMPLIANCE.md is generated without errors
     - Commit SPEC_COMPLIANCE.md

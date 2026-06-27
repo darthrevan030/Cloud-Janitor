@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T18:18:52Z
+Generated: 2026-06-27T18:21:06Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -93,9 +93,9 @@ Generated: 2026-06-27T18:18:52Z
 | 87 | 9.1 Add reasoning log panel to `app.py` | ✅ Done | app.py exists |
 | 88 | 9.2 Write property test: Agent section header transitions | ✅ Done | no mapping |
 | 89 | 9.3 Write property test: Malformed line resilience | ✅ Done | no mapping |
-| 90 | 10. Final checkpoint — test quality audit | ❌ Pending | — |
+| 90 | 10. Final checkpoint — test quality audit | ⏳ Partial | no mapping |
 | 91 | 10.1 Run full test suite and confirm all tests pass | ✅ Done | no mapping |
 | 92 | 10.2 Run test quality audit on all test files | ✅ Done | no mapping |
 | 93 | 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain | ✅ Done | no mapping |
-| 94 | 10.4 Verify runtime files excluded from git | ⏳ Partial | no mapping |
-| 95 | 10.5 Run generate_spec_compliance.py and commit output | ❌ Pending | — |
+| 94 | 10.4 Verify runtime files excluded from git | ✅ Done | no mapping |
+| 95 | 10.5 Run generate_spec_compliance.py and commit output | ⏳ Partial | no mapping |
