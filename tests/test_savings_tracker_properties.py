@@ -127,3 +127,71 @@ def test_run_entry_schema_and_field_correctness(scan_id, completed_at, findings,
         # Verify cumulative_at_time is a non-negative float
         assert isinstance(entry["cumulative_at_time"], (int, float))
         assert entry["cumulative_at_time"] >= 0.0
+
+
+# --- Property 2: Monthly savings computation ---
+# Feature: savings-tracker-localstack, Property 2: Monthly savings computation
+
+@settings(max_examples=100)
+@given(
+    scan_id=scan_id_strategy,
+    completed_at=completed_at_strategy,
+    findings=findings_strategy,
+    data=st.data(),
+)
+def test_monthly_savings_computation(scan_id, completed_at, findings, data):
+    """
+    Property 2: Monthly savings computation
+
+    For any findings_store.json containing N findings with arbitrary
+    cost_estimate_monthly values and for any subset S of resource IDs from
+    those findings passed to record_run(), the resulting RunEntry's
+    monthly_savings_added SHALL equal the sum of cost_estimate_monthly for
+    exactly those findings whose resource_id is in S.
+
+    **Validates: Requirements 2.2**
+    """
+    # Draw a random subset of resource_ids from findings (can be empty)
+    resource_ids = [f["resource_id"] for f in findings]
+    subset = data.draw(
+        st.lists(st.sampled_from(resource_ids), unique=True, min_size=0, max_size=len(resource_ids))
+    )
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        # Set up findings_store.json
+        findings_store = {
+            "scan_id": scan_id,
+            "completed_at": completed_at,
+            "findings": findings,
+        }
+        findings_path = tmp_path / "findings_store.json"
+        findings_path.write_text(json.dumps(findings_store), encoding="utf-8")
+
+        # Set up empty ledger
+        ledger_path = tmp_path / "savings_ledger.json"
+
+        # Create tracker and record a run
+        tracker = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+        result = tracker.record_run(subset)
+
+        # The run should be recorded successfully
+        assert result is True
+
+        # Read back the ledger
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        entry = ledger["runs"][0]
+
+        # Compute expected monthly savings: sum of cost_estimate_monthly
+        # for findings whose resource_id is in the subset
+        expected_savings = sum(
+            f["cost_estimate_monthly"]
+            for f in findings
+            if f["resource_id"] in subset
+        )
+
+        # Verify monthly_savings_added equals the expected sum
+        assert abs(entry["monthly_savings_added"] - expected_savings) < 1e-9, (
+            f"Expected {expected_savings}, got {entry['monthly_savings_added']}"
+        )
