@@ -38,20 +38,20 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 - [x] 2. Implement get_cost_data() → reads Cost Explorer fixture
 - [x] 3. Implement get_security_data() → reads Inspector fixture
 - [x] 4. Implement validate_hcl() → shells to terraform validate
-- [-] 5. Write mcp_server/README.md
+- [x] 5. Write mcp_server/README.md
 
 ### Phase 3: Agents
 
 - [-] 1. FinOps Auditor — calls MCP, produces findings[], writes findings_store.json
 - [-] 2. SecOps Guard — calls MCP, appends to findings_store.json
-- [ ] 3. Remediation Architect — reads findings, dependency check, generates HCL
-- [ ] 4. Rollback HCL generation (alongside remediation, not after)
+- [~] 3. Remediation Architect — reads findings, dependency check, generates HCL
+- [~] 4. Rollback HCL generation (alongside remediation, not after)
 - [-] 5. findings_store.json schema validation
 
 ### Phase 4: Hooks
 
-- [ ] 1. pre-remediation.sh — terraform validate gate
-- [ ] 2. post-remediation.sh — audit.log append
+- [x] 1. pre-remediation.sh — terraform validate gate
+- [-] 2. post-remediation.sh — audit.log append
 - [ ] 3. Wire hooks into orchestrator call sequence
 
 ### Phase 5: Approval + Execution
