@@ -3,6 +3,7 @@
     {
       "id": "finding-sg-redis-001",
       "resource_id": "sg-prod-redis",
+      "resource_type": "aws_security_group",
       "check_type": "security_group",
       "severity": "CRITICAL",
       "port": 6379,
@@ -15,6 +16,7 @@
     {
       "id": "finding-enc-cache-001",
       "resource_id": "cache-prod-legacy",
+      "resource_type": "aws_elasticache_cluster",
       "check_type": "encryption",
       "severity": "HIGH",
       "encryption_at_rest": false,
@@ -26,6 +28,7 @@
     {
       "id": "finding-sg-ssh-001",
       "resource_id": "sg-web-servers",
+      "resource_type": "aws_security_group",
       "check_type": "security_group",
       "severity": "HIGH",
       "port": 22,
@@ -38,6 +41,7 @@
     {
       "id": "finding-enc-ebs-001",
       "resource_id": "vol-data-001",
+      "resource_type": "aws_ebs_volume",
       "check_type": "encryption",
       "severity": "MEDIUM",
       "encryption_at_rest": false,
