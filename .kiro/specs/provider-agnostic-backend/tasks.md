@@ -21,7 +21,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - Handle missing fixture files gracefully with error dict
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10_
 
-  - [ ]* 1.3 Write property tests for FixtureProvider
+  - [ ] 1.3 Write property tests for FixtureProvider
     - **Property 2: Cost data structural invariants** — verify total_monthly_waste == round(sum of costs, 2) and filtering correctness for any resource_type/min_idle_days
     - **Property 3: Security data critical count consistency** — verify critical_count matches CRITICAL findings count and check_type filtering
     - **Property 4: Dependency response boolean consistency** — verify has_dependencies == (len(dependents) > 0)
@@ -57,7 +57,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - **IMPORTANT: Do NOT remove imports that `validate_hcl` still needs** (`tempfile`, `os`, `subprocess`). After refactoring, verify with: `python -c "from mcp_server.aws_janitor_mcp import validate_hcl; print('ok')"`
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3_
 
-  - [ ]* 3.3 Write property tests for provider selection
+  - [ ] 3.3 Write property tests for provider selection
     - **Property 5: Provider registry completeness** — for any valid backend name, _load_provider() returns a CloudProvider instance
     - **Property 6: Invalid backend rejection** — for any string not in registry, _load_provider() raises ValueError with the invalid name and valid options
     - **Validates: Requirements 5.3, 5.4, 5.5**
@@ -67,7 +67,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
   - Run `pytest` and verify no regressions
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ]* 5. Write backward compatibility property test
+- [ ] 5. Write backward compatibility property test
   - **Property 1: Fixture backend behavioral equivalence** — for any valid resource_type and min_idle_days, FixtureProvider output matches the original inline implementation output
   - Compare FixtureProvider results against a reference implementation using the same fixture data
   - **Validates: Requirements 8.1, 8.3**
