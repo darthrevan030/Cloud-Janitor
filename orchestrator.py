@@ -213,18 +213,29 @@ class Orchestrator:
             blocked_plans=blocked_plans,
         )
 
-    def approve(self, command: str) -> ApprovalResult:
+    def approve(self, command: str, resource_id: str | None = None) -> ApprovalResult:
         """
         Process an approval command: "APPROVE <resource-id>".
 
+        The resource_id parameter allows callers (e.g. the UI) to specify which
+        resource this approval attempt targets. This ensures all attempts — even
+        malformed ones — count against the gate for that resource.
+
+        If resource_id is not provided, it is extracted from the command string.
+        Commands that don't start with "APPROVE " and have no explicit resource_id
+        are rejected immediately.
+
         Args:
             command: The approval command string.
+            resource_id: Optional explicit resource ID this attempt targets.
 
         Returns:
             ApprovalResult indicating success or failure.
         """
-        # Extract resource_id from command for gate lookup
-        resource_id = self._extract_resource_id_from_command(command, "APPROVE")
+        # Determine target resource_id
+        if resource_id is None:
+            resource_id = self._extract_resource_id_from_command(command, "APPROVE")
+
         if not resource_id:
             return ApprovalResult(
                 success=False,
