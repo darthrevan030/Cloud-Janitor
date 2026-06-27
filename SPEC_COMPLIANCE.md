@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T18:04:04Z
+Generated: 2026-06-27T18:14:17Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -95,7 +95,7 @@ Generated: 2026-06-27T18:04:04Z
 | 89 | 9.3 Write property test: Malformed line resilience | ✅ Done | no mapping |
 | 90 | 10. Final checkpoint — test quality audit | ❌ Pending | — |
 | 91 | 10.1 Run full test suite and confirm all tests pass | ✅ Done | no mapping |
-| 92 | 10.2 Run test quality audit on all test files | ❌ Pending | — |
-| 93 | 10.3 Verify no bare `terraform` calls remain in codebase | ❌ Pending | — |
+| 92 | 10.2 Run test quality audit on all test files | ✅ Done | no mapping |
+| 93 | 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain | ❌ Pending | — |
 | 94 | 10.4 Verify runtime files excluded from git | ❌ Pending | — |
 | 95 | 10.5 Run generate_spec_compliance.py and commit output | ❌ Pending | — |

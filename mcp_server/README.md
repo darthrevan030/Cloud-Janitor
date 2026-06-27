@@ -6,7 +6,7 @@ Exposes AWS infrastructure data and Terraform validation via the [Model Context 
 
 - Python 3.12+
 - `mcp >= 1.28.1` (FastMCP)
-- `terraform` CLI on PATH (for HCL validation)
+- `tflocal` CLI on PATH (from `terraform-local` package; override via `TF_CMD=terraform` for real AWS)
 
 ## Environment Variables
 
@@ -47,7 +47,7 @@ Returns security findings from the Config/Inspector fixture.
 
 ### `validate_hcl(hcl_content)`
 
-Validates Terraform HCL by writing to a temp directory and running `terraform init -backend=false` + `terraform validate`.
+Validates Terraform HCL by writing to a temp directory and running `$TF_CMD init -backend=false` + `$TF_CMD validate` (where `TF_CMD` defaults to `tflocal`).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
