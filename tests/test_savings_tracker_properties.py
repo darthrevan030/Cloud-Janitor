@@ -282,3 +282,88 @@ def test_recalculate_from_source_invariant(run_sequence, data):
                 f"After run {k+1}: cumulative_at_time={ledger['runs'][k]['cumulative_at_time']} "
                 f"but sum of monthly_savings_added={expected_total}"
             )
+
+
+# --- Property 4: Duplicate run idempotency ---
+# Feature: savings-tracker-localstack, Property 4: Duplicate run idempotency
+
+import os
+import time
+
+
+@settings(max_examples=100)
+@given(
+    scan_id=scan_id_strategy,
+    completed_at=completed_at_strategy,
+    findings=findings_strategy,
+    data=st.data(),
+)
+def test_duplicate_run_idempotency(scan_id, completed_at, findings, data):
+    """
+    Property 4: Duplicate run idempotency
+
+    For any ledger containing one or more RunEntry objects, calling record_run()
+    with a run_id that already exists in the runs array SHALL leave the file
+    completely unmodified — the file's modification time (mtime) SHALL be
+    identical before and after the call, and the runs array length SHALL remain
+    unchanged.
+
+    **Validates: Requirements 3.1, 3.3**
+    """
+    # Select a non-empty subset of resource_ids from findings
+    resource_ids = [f["resource_id"] for f in findings]
+    subset = data.draw(
+        st.lists(
+            st.sampled_from(resource_ids),
+            min_size=1,
+            max_size=len(resource_ids),
+            unique=True,
+        )
+    )
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        # Set up findings_store.json
+        findings_store = {
+            "scan_id": scan_id,
+            "completed_at": completed_at,
+            "findings": findings,
+        }
+        findings_path = tmp_path / "findings_store.json"
+        findings_path.write_text(json.dumps(findings_store), encoding="utf-8")
+
+        # Set up ledger path
+        ledger_path = tmp_path / "savings_ledger.json"
+
+        # Record the first run successfully
+        tracker = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+        first_result = tracker.record_run(subset)
+        assert first_result is True
+
+        # Read the ledger after first write to get runs array length
+        ledger_after_first = json.loads(ledger_path.read_text(encoding="utf-8"))
+        assert len(ledger_after_first["runs"]) == 1
+
+        # Small sleep to ensure filesystem mtime would differ if file were rewritten
+        time.sleep(0.05)
+
+        # Get mtime after first write (before duplicate call)
+        mtime_before = os.path.getmtime(str(ledger_path))
+
+        # Call record_run() again with the same scan_id (duplicate)
+        tracker2 = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+        duplicate_result = tracker2.record_run(subset)
+
+        # Verify record_run() returns False (duplicate detected)
+        assert duplicate_result is False
+
+        # Verify the file's mtime has NOT changed
+        mtime_after = os.path.getmtime(str(ledger_path))
+        assert mtime_before == mtime_after, (
+            f"File was modified on duplicate run: mtime_before={mtime_before}, mtime_after={mtime_after}"
+        )
+
+        # Verify the runs array length is still 1
+        ledger_after_dup = json.loads(ledger_path.read_text(encoding="utf-8"))
+        assert len(ledger_after_dup["runs"]) == 1
