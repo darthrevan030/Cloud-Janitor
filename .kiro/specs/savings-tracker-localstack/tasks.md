@@ -193,7 +193,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Clear previous reasoning display when new audit starts
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
-  - [ ] 9.2 Write property test: Agent section header transitions
+  - [x] 9.2 Write property test: Agent section header transitions
     - **Property 10: Agent section header transitions**
     - **Validates: Requirements 10.3**
 
