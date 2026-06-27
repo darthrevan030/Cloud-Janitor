@@ -1,17 +1,12 @@
 """
 Remediation Architect Agent
 
-Reads findings_store.json (containing both FinOps and SecOps findings),
-runs dependency checks, and generates BOTH remediation HCL and rollback HCL
-simultaneously for each finding. Rollback is generated ALONGSIDE remediation,
-never as a separate step after.
+Reads findings_store.json (populated by FinOps + SecOps agents), runs dependency
+checks via MCP, generates remediation HCL + rollback HCL side by side, and writes
+output files.
 
-Produces:
-  - remediation.tf — Terraform plan to fix the finding
-  - rollbacks/<resource_id>.tf — Terraform plan to revert the remediation
-
-All generated resources include required tags:
-  ManagedBy, Environment, RemediatedAt, RollbackRef
+Must run AFTER FinOps Auditor and SecOps Guard — requires findings_store.json
+to contain entries from both prior agents.
 
 Usage:
     python -m agents.remediation_architect
@@ -25,383 +20,514 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+# Import MCP tools directly (same process, no network transport needed)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp_server.aws_janitor_mcp import check_dependencies, validate_hcl
 
+
+# Project root for output files
 PROJECT_ROOT = Path(__file__).parent.parent
 FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
+OUTPUT_DIR = PROJECT_ROOT / "output"
 ROLLBACKS_DIR = PROJECT_ROOT / "rollbacks"
-
-# Required tags for all generated Terraform resources
-REQUIRED_TAGS = """\
-    ManagedBy    = "Kiro-Janitor"
-    Environment  = var.environment
-    RemediatedAt = timestamp()
-    RollbackRef  = "rollbacks/{resource_id}.tf"\
-"""
 
 
 def _sanitize_id(resource_id: str) -> str:
-    """Sanitize a resource ID for use in Terraform resource names.
+    """
+    Sanitize a resource ID for use in Terraform resource names.
 
-    Replaces non-alphanumeric characters with underscores.
+    Terraform resource names only support alphanumeric and underscores.
+    Replaces dashes, dots, and other non-alphanumeric chars with underscores.
     """
     return re.sub(r"[^a-zA-Z0-9]", "_", resource_id)
-
-
-def _render_tags(resource_id: str) -> str:
-    """Render the required tags block for a given resource ID."""
-    return REQUIRED_TAGS.format(resource_id=resource_id)
 
 
 @dataclass
 class DependencyReport:
     """Result of a dependency check for a resource."""
+
     resource_id: str
     has_dependencies: bool
     dependencies: list[str] = field(default_factory=list)
-    recommendation: str = "proceed"
-    checked_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-    def to_dict(self) -> dict:
-        return {
-            "resource_id": self.resource_id,
-            "has_dependencies": self.has_dependencies,
-            "dependencies": self.dependencies,
-            "recommendation": self.recommendation,
-            "checked_at": self.checked_at,
-        }
+    recommendation: str = ""
+    checked_at: str = ""
 
 
 @dataclass
 class RemediationPlan:
-    """Complete remediation plan for a finding: includes both remediation and rollback."""
+    """Plan for a single finding — includes remediation HCL, rollback HCL, or blocked status."""
+
+    resource_id: str
     finding: dict
-    dependency_report: DependencyReport
+    blocked: bool = False
+    block_reason: str = ""
+    dependency_report: Optional[DependencyReport] = None
     remediation_hcl: Optional[str] = None
     rollback_hcl: Optional[str] = None
-    blocked: bool = False
-    block_reason: Optional[str] = None
-
-    def to_dict(self) -> dict:
-        return {
-            "resource_id": self.finding.get("resource_id"),
-            "resource_type": self.finding.get("resource_type"),
-            "dependency_report": self.dependency_report.to_dict(),
-            "remediation_hcl": self.remediation_hcl,
-            "rollback_hcl": self.rollback_hcl,
-            "blocked": self.blocked,
-            "block_reason": self.block_reason,
-        }
 
 
 class RemediationArchitect:
     """
-    Remediation Architect agent — generates Terraform remediation and rollback plans.
+    Remediation Architect agent — generates Terraform HCL for remediation and rollback.
 
-    For each finding:
-      1. Checks dependencies (blocks if any found)
-      2. Generates remediation HCL AND rollback HCL simultaneously
-      3. Writes rollback to rollbacks/<resource_id>.tf
+    Workflow:
+      1. Read findings_store.json (FinOps + SecOps findings)
+      2. For each finding, check dependencies via MCP check_dependencies()
+      3. If dependencies found: block remediation, produce warning
+      4. If no dependencies: generate remediation HCL AND rollback HCL
+      5. Write output/remediation.tf and rollbacks/<resource_id>.tf
     """
 
     def __init__(
         self,
         findings_store_path: Path | None = None,
+        output_dir: Path | None = None,
         rollbacks_dir: Path | None = None,
     ):
         self.findings_store_path = findings_store_path or FINDINGS_STORE_PATH
+        self.output_dir = output_dir or OUTPUT_DIR
         self.rollbacks_dir = rollbacks_dir or ROLLBACKS_DIR
 
-    def check_dependencies(self, finding: dict) -> DependencyReport:
+    def check_resource_dependencies(self, finding: dict) -> DependencyReport:
         """
-        Check whether any other resources depend on the target resource.
+        Check dependencies for a resource via MCP check_dependencies() tool.
 
-        If dependencies are found, remediation is blocked and manual review is recommended.
+        Args:
+            finding: A finding dict with at least 'resource_id'.
+
+        Returns:
+            DependencyReport with dependency status and recommendation.
         """
         resource_id = finding["resource_id"]
-        result = check_dependencies(resource_id)
+        result = check_dependencies(resource_id=resource_id)
 
         has_deps = result.get("has_dependencies", False)
         dependents = result.get("dependents", [])
+        checked_at = datetime.now(timezone.utc).isoformat()
+
+        if has_deps:
+            recommendation = (
+                f"BLOCKED: Resource {resource_id} has {len(dependents)} dependent(s): "
+                f"{', '.join(dependents)}. Manual review required before remediation."
+            )
+        else:
+            recommendation = f"CLEAR: No dependencies found for {resource_id}. Safe to remediate."
 
         return DependencyReport(
             resource_id=resource_id,
             has_dependencies=has_deps,
             dependencies=dependents,
-            recommendation="manual_review" if has_deps else "proceed",
+            recommendation=recommendation,
+            checked_at=checked_at,
         )
 
     def generate_remediation(self, finding: dict) -> str:
         """
-        Generate remediation HCL for a finding based on its resource type.
+        Generate remediation HCL for a finding based on resource type and category.
 
-        Supported resource types:
-          - ebs: Snapshot + destroy volume
-          - security_group: Restrict 0.0.0.0/0 to VPC CIDR
-          - elasticache: Snapshot + delete cluster
+        Args:
+            finding: A finding dict with resource_type, category, and metadata.
+
+        Returns:
+            HCL string for remediation.
         """
         resource_type = finding.get("resource_type", "")
-        # Normalize aws_ prefixed types
+        category = finding.get("category", "")
+
+        # Normalize resource_type (strip aws_ prefix)
         normalized_type = resource_type.replace("aws_", "", 1) if resource_type.startswith("aws_") else resource_type
 
-        if normalized_type == "ebs":
-            return self._generate_ebs_remediation(finding)
-        elif normalized_type == "security_group":
-            return self._generate_sg_remediation(finding)
-        elif normalized_type == "elasticache":
-            return self._generate_elasticache_remediation(finding)
+        if normalized_type == "ebs" and category == "waste":
+            return self._remediation_ebs_waste(finding)
+        elif normalized_type == "ebs" and category == "security":
+            return self._remediation_ebs_encryption(finding)
+        elif normalized_type == "security_group" and category == "security":
+            return self._remediation_security_group(finding)
+        elif normalized_type == "elasticache" and category == "waste":
+            return self._remediation_elasticache_waste(finding)
+        elif normalized_type == "elasticache" and category == "security":
+            return self._remediation_elasticache_encryption(finding)
         else:
-            return f'# Unsupported resource type: {resource_type}\n'
+            return self._remediation_generic(finding)
 
     def generate_rollback(self, finding: dict) -> str:
         """
-        Generate rollback HCL for a finding based on its resource type.
+        Generate rollback HCL for a finding based on resource type and category.
 
-        Rollback reverses the remediation action:
-          - EBS: Restore volume from snapshot
-          - Security Group: Restore 0.0.0.0/0 rule
-          - ElastiCache: Restore cluster from snapshot
+        Args:
+            finding: A finding dict with resource_type, category, and metadata.
+
+        Returns:
+            HCL string for rollback.
         """
         resource_type = finding.get("resource_type", "")
+        category = finding.get("category", "")
+
+        # Normalize resource_type (strip aws_ prefix)
         normalized_type = resource_type.replace("aws_", "", 1) if resource_type.startswith("aws_") else resource_type
 
-        if normalized_type == "ebs":
-            return self._generate_ebs_rollback(finding)
-        elif normalized_type == "security_group":
-            return self._generate_sg_rollback(finding)
-        elif normalized_type == "elasticache":
-            return self._generate_elasticache_rollback(finding)
+        if normalized_type == "ebs" and category == "waste":
+            return self._rollback_ebs_waste(finding)
+        elif normalized_type == "ebs" and category == "security":
+            return self._rollback_ebs_encryption(finding)
+        elif normalized_type == "security_group" and category == "security":
+            return self._rollback_security_group(finding)
+        elif normalized_type == "elasticache" and category == "waste":
+            return self._rollback_elasticache_waste(finding)
+        elif normalized_type == "elasticache" and category == "security":
+            return self._rollback_elasticache_encryption(finding)
         else:
-            return f'# Unsupported resource type for rollback: {resource_type}\n'
+            return self._rollback_generic(finding)
 
-    def plan(self, findings: list[dict]) -> list[RemediationPlan]:
+    def plan(self, findings: list[dict] | None = None) -> list[RemediationPlan]:
         """
-        Generate remediation plans for all findings.
+        Main planning method. Reads findings, checks dependencies, generates HCL.
 
-        For each finding:
-          1. Run dependency check
-          2. If blocked → mark plan as blocked
-          3. If clear → generate BOTH remediation AND rollback HCL simultaneously
-          4. Write rollback to rollbacks/<resource_id>.tf
+        Args:
+            findings: Optional list of findings. If None, reads from findings_store.json.
 
-        Remediation and rollback are generated together, not sequentially.
+        Returns:
+            List of RemediationPlan objects, one per finding.
         """
+        if findings is None:
+            findings = self._load_findings()
+
+        # Ensure output directories exist
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.rollbacks_dir.mkdir(parents=True, exist_ok=True)
+
         plans: list[RemediationPlan] = []
 
         for finding in findings:
-            # Step 1: Dependency check
-            dep_report = self.check_dependencies(finding)
+            resource_id = finding["resource_id"]
+
+            # Step 1: Check dependencies
+            dep_report = self.check_resource_dependencies(finding)
 
             if dep_report.has_dependencies:
-                # Blocked — do not generate HCL
+                # Blocked — produce warning, no HCL generated
                 plan = RemediationPlan(
+                    resource_id=resource_id,
                     finding=finding,
-                    dependency_report=dep_report,
                     blocked=True,
-                    block_reason=(
-                        f"Resource {finding['resource_id']} has dependencies: "
-                        f"{dep_report.dependencies}. Manual review required."
-                    ),
-                )
-            else:
-                # Step 2: Generate BOTH remediation and rollback TOGETHER
-                remediation_hcl = self.generate_remediation(finding)
-                rollback_hcl = self.generate_rollback(finding)
-
-                plan = RemediationPlan(
-                    finding=finding,
+                    block_reason=dep_report.recommendation,
                     dependency_report=dep_report,
-                    remediation_hcl=remediation_hcl,
-                    rollback_hcl=rollback_hcl,
+                    remediation_hcl=None,
+                    rollback_hcl=None,
                 )
+                plans.append(plan)
+                continue
 
-                # Step 3: Write rollback artifact
-                self._write_rollback(finding["resource_id"], rollback_hcl)
+            # Step 2: Generate remediation + rollback HCL (side by side)
+            remediation_hcl = self.generate_remediation(finding)
+            rollback_hcl = self.generate_rollback(finding)
 
+            plan = RemediationPlan(
+                resource_id=resource_id,
+                finding=finding,
+                blocked=False,
+                dependency_report=dep_report,
+                remediation_hcl=remediation_hcl,
+                rollback_hcl=rollback_hcl,
+            )
             plans.append(plan)
+
+            # Step 3: Write individual rollback file
+            rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
+            rollback_path.write_text(rollback_hcl)
+
+        # Step 4: Write combined remediation file
+        remediation_parts = [p.remediation_hcl for p in plans if p.remediation_hcl]
+        if remediation_parts:
+            combined_remediation = "\n\n".join(remediation_parts)
+            remediation_path = self.output_dir / "remediation.tf"
+            remediation_path.write_text(combined_remediation)
 
         return plans
 
-    # ────────────────────────────────────────────────────────────────────────────
-    # EBS Remediation & Rollback
-    # ────────────────────────────────────────────────────────────────────────────
+    # ──────────────────────────────────────────────────────────────────────
+    # Private: HCL generation per resource type
+    # ──────────────────────────────────────────────────────────────────────
 
-    def _generate_ebs_remediation(self, finding: dict) -> str:
-        """Generate remediation HCL for an unattached EBS volume: snapshot then destroy."""
+    def _tags_block(self, resource_id: str) -> str:
+        """Generate the standard tags block required on every resource."""
+        return (
+            "  tags = {\n"
+            '    ManagedBy    = "Kiro-Janitor"\n'
+            "    Environment  = var.environment\n"
+            "    RemediatedAt = timestamp()\n"
+            f'    RollbackRef  = "rollbacks/{resource_id}.tf"\n'
+            "  }"
+        )
+
+    def _remediation_ebs_waste(self, finding: dict) -> str:
+        """EBS volume waste: snapshot first, then schedule destroy."""
         resource_id = finding["resource_id"]
-        sanitized = _sanitize_id(resource_id)
-        tags = _render_tags(resource_id)
-
-        return f'''\
-resource "aws_ebs_snapshot" "pre_remediation_{sanitized}" {{
-  volume_id   = "{resource_id}"
-  description = "Pre-remediation snapshot for {resource_id}"
-
-  tags = {{
-{tags}
-  }}
-}}
-'''
-
-    def _generate_ebs_rollback(self, finding: dict) -> str:
-        """Generate rollback HCL for EBS: restore volume from snapshot."""
-        resource_id = finding["resource_id"]
-        sanitized = _sanitize_id(resource_id)
-        az = finding.get("metadata", {}).get("availability_zone", "us-east-1a")
-        tags = _render_tags(resource_id)
-
-        return f'''\
-resource "aws_ebs_volume" "restore_{sanitized}" {{
-  availability_zone = "{az}"
-  snapshot_id       = aws_ebs_snapshot.pre_remediation_{sanitized}.id
-
-  tags = {{
-{tags}
-  }}
-}}
-'''
-
-    # ────────────────────────────────────────────────────────────────────────────
-    # Security Group Remediation & Rollback
-    # ────────────────────────────────────────────────────────────────────────────
-
-    def _generate_sg_remediation(self, finding: dict) -> str:
-        """Generate remediation HCL for a security group: restrict CIDR to VPC."""
-        resource_id = finding["resource_id"]
-        sanitized = _sanitize_id(resource_id)
-        port = finding.get("metadata", {}).get("port", 0)
-        tags = _render_tags(resource_id)
-
-        return f'''\
-resource "aws_security_group_rule" "restrict_{sanitized}_port_{port}" {{
-  type              = "ingress"
-  from_port         = {port}
-  to_port           = {port}
-  protocol          = "tcp"
-  cidr_blocks       = [data.aws_vpc.current.cidr_block]
-  security_group_id = "{resource_id}"
-}}
-'''
-
-    def _generate_sg_rollback(self, finding: dict) -> str:
-        """Generate rollback HCL for a security group: restore 0.0.0.0/0 rule."""
-        resource_id = finding["resource_id"]
-        sanitized = _sanitize_id(resource_id)
-        port = finding.get("metadata", {}).get("port", 0)
-        tags = _render_tags(resource_id)
-
-        return f'''\
-resource "aws_security_group_rule" "restore_{sanitized}_port_{port}" {{
-  type              = "ingress"
-  from_port         = {port}
-  to_port           = {port}
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = "{resource_id}"
-
-  tags = {{
-{tags}
-  }}
-}}
-'''
-
-    # ────────────────────────────────────────────────────────────────────────────
-    # ElastiCache Remediation & Rollback
-    # ────────────────────────────────────────────────────────────────────────────
-
-    def _generate_elasticache_remediation(self, finding: dict) -> str:
-        """Generate remediation HCL for an idle ElastiCache cluster: snapshot then delete."""
-        resource_id = finding["resource_id"]
-        sanitized = _sanitize_id(resource_id)
-        tags = _render_tags(resource_id)
-
-        return f'''\
-resource "aws_elasticache_snapshot" "pre_remediation_{sanitized}" {{
-  cluster_id       = "{resource_id}"
-  snapshot_name    = "pre-remediation-{resource_id}"
-  description      = "Pre-remediation snapshot for {resource_id}"
-
-  tags = {{
-{tags}
-  }}
-}}
-'''
-
-    def _generate_elasticache_rollback(self, finding: dict) -> str:
-        """Generate rollback HCL for ElastiCache: restore cluster from snapshot."""
-        resource_id = finding["resource_id"]
-        sanitized = _sanitize_id(resource_id)
+        safe_id = _sanitize_id(resource_id)
         metadata = finding.get("metadata", {})
-        node_type = metadata.get("instance_type", "cache.t3.medium")
+
+        return (
+            f'# Remediation: EBS volume {resource_id} — snapshot then destroy\n'
+            f'resource "aws_ebs_snapshot" "pre_remediation_{safe_id}" {{\n'
+            f'  volume_id   = "{resource_id}"\n'
+            f'  description = "Pre-remediation snapshot for {resource_id}"\n'
+            f'\n'
+            f'{self._tags_block(resource_id)}\n'
+            f'}}\n'
+            f'\n'
+            f'resource "null_resource" "destroy_{safe_id}" {{\n'
+            f'  depends_on = [aws_ebs_snapshot.pre_remediation_{safe_id}]\n'
+            f'\n'
+            f'  provisioner "local-exec" {{\n'
+            f'    command = "aws ec2 delete-volume --volume-id {resource_id}"\n'
+            f'  }}\n'
+            f'}}'
+        )
+
+    def _rollback_ebs_waste(self, finding: dict) -> str:
+        """EBS volume rollback: restore from snapshot."""
+        resource_id = finding["resource_id"]
+        safe_id = _sanitize_id(resource_id)
+        metadata = finding.get("metadata", {})
+        az = metadata.get("availability_zone", "us-east-1a")
+        volume_type = metadata.get("volume_type", "gp3")
+        size_gb = metadata.get("size_gb", 100)
+
+        return (
+            f'# Rollback: Restore EBS volume {resource_id} from snapshot\n'
+            f'resource "aws_ebs_volume" "restore_{safe_id}" {{\n'
+            f'  availability_zone = "{az}"\n'
+            f'  snapshot_id       = aws_ebs_snapshot.pre_remediation_{safe_id}.id\n'
+            f'  size              = {size_gb}\n'
+            f'  type              = "{volume_type}"\n'
+            f'\n'
+            f'{self._tags_block(resource_id)}\n'
+            f'}}'
+        )
+
+    def _remediation_security_group(self, finding: dict) -> str:
+        """Security group: replace open rule with VPC-only CIDR."""
+        resource_id = finding["resource_id"]
+        safe_id = _sanitize_id(resource_id)
+        metadata = finding.get("metadata", {})
+        port = metadata.get("port", 0)
+
+        return (
+            f'# Remediation: Narrow {resource_id} port {port} to VPC-only\n'
+            f'data "aws_vpc" "current" {{\n'
+            f'  default = true\n'
+            f'}}\n'
+            f'\n'
+            f'resource "aws_security_group_rule" "remediate_{safe_id}_port_{port}" {{\n'
+            f'  type              = "ingress"\n'
+            f'  from_port         = {port}\n'
+            f'  to_port           = {port}\n'
+            f'  protocol          = "tcp"\n'
+            f'  cidr_blocks       = [data.aws_vpc.current.cidr_block]\n'
+            f'  security_group_id = "{resource_id}"\n'
+            f'  description       = "Kiro-Janitor: Narrowed from 0.0.0.0/0 to VPC CIDR"\n'
+            f'}}'
+        )
+
+    def _rollback_security_group(self, finding: dict) -> str:
+        """Security group rollback: restore original 0.0.0.0/0 rule."""
+        resource_id = finding["resource_id"]
+        safe_id = _sanitize_id(resource_id)
+        metadata = finding.get("metadata", {})
+        port = metadata.get("port", 0)
+
+        return (
+            f'# Rollback: Restore original 0.0.0.0/0 rule on {resource_id} port {port}\n'
+            f'resource "aws_security_group_rule" "restore_{safe_id}_port_{port}" {{\n'
+            f'  type              = "ingress"\n'
+            f'  from_port         = {port}\n'
+            f'  to_port           = {port}\n'
+            f'  protocol          = "tcp"\n'
+            f'  cidr_blocks       = ["0.0.0.0/0"]\n'
+            f'  security_group_id = "{resource_id}"\n'
+            f'  description       = "Kiro-Janitor: Rollback — restored original open rule"\n'
+            f'\n'
+            f'{self._tags_block(resource_id)}\n'
+            f'}}'
+        )
+
+    def _remediation_elasticache_waste(self, finding: dict) -> str:
+        """ElastiCache waste: snapshot then delete."""
+        resource_id = finding["resource_id"]
+        safe_id = _sanitize_id(resource_id)
+        metadata = finding.get("metadata", {})
+
+        return (
+            f'# Remediation: ElastiCache {resource_id} — snapshot then delete\n'
+            f'resource "aws_elasticache_snapshot" "pre_remediation_{safe_id}" {{\n'
+            f'  cluster_id       = "{resource_id}"\n'
+            f'  snapshot_name    = "pre-remediation-{resource_id}"\n'
+            f'}}\n'
+            f'\n'
+            f'resource "null_resource" "destroy_{safe_id}" {{\n'
+            f'  depends_on = [aws_elasticache_snapshot.pre_remediation_{safe_id}]\n'
+            f'\n'
+            f'  provisioner "local-exec" {{\n'
+            f'    command = "aws elasticache delete-cache-cluster --cache-cluster-id {resource_id} --final-snapshot-identifier final-{resource_id}"\n'
+            f'  }}\n'
+            f'\n'
+            f'{self._tags_block(resource_id)}\n'
+            f'}}'
+        )
+
+    def _rollback_elasticache_waste(self, finding: dict) -> str:
+        """ElastiCache rollback: restore from snapshot with same config."""
+        resource_id = finding["resource_id"]
+        safe_id = _sanitize_id(resource_id)
+        metadata = finding.get("metadata", {})
         engine = metadata.get("engine", "redis")
         engine_version = metadata.get("engine_version", "7.0.7")
-        num_cache_nodes = metadata.get("num_cache_nodes", 1)
-        tags = _render_tags(resource_id)
+        node_type = metadata.get("instance_type", "cache.t3.medium")
+        num_nodes = metadata.get("num_cache_nodes", 1)
 
-        return f'''\
-resource "aws_elasticache_cluster" "restore_{sanitized}" {{
-  cluster_id       = "{resource_id}"
-  snapshot_name    = aws_elasticache_snapshot.pre_remediation_{sanitized}.id
-  node_type        = "{node_type}"
-  engine           = "{engine}"
-  engine_version   = "{engine_version}"
-  num_cache_nodes  = {num_cache_nodes}
+        return (
+            f'# Rollback: Restore ElastiCache {resource_id} from snapshot\n'
+            f'resource "aws_elasticache_cluster" "restore_{safe_id}" {{\n'
+            f'  cluster_id           = "{resource_id}-restored"\n'
+            f'  engine               = "{engine}"\n'
+            f'  engine_version       = "{engine_version}"\n'
+            f'  node_type            = "{node_type}"\n'
+            f'  num_cache_nodes      = {num_nodes}\n'
+            f'  snapshot_name        = aws_elasticache_snapshot.pre_remediation_{safe_id}.snapshot_name\n'
+            f'\n'
+            f'{self._tags_block(resource_id)}\n'
+            f'}}'
+        )
 
-  tags = {{
-{tags}
-  }}
-}}
-'''
+    def _remediation_elasticache_encryption(self, finding: dict) -> str:
+        """ElastiCache encryption: document finding only (cannot enable in-place)."""
+        resource_id = finding["resource_id"]
 
-    # ────────────────────────────────────────────────────────────────────────────
-    # Rollback file writer
-    # ────────────────────────────────────────────────────────────────────────────
+        return (
+            f'# Remediation: ElastiCache {resource_id} — encryption at rest\n'
+            f'# NOTE: Cannot enable encryption in-place on existing cluster.\n'
+            f'# This finding is documented for manual review.\n'
+            f'# Recommended: Create new cluster with encryption_at_rest_enabled = true,\n'
+            f'# migrate data, then decommission the old cluster.\n'
+            f'#\n'
+            f'# resource "aws_elasticache_cluster" "encrypted_{_sanitize_id(resource_id)}" {{\n'
+            f'#   cluster_id                 = "{resource_id}-encrypted"\n'
+            f'#   engine                     = "redis"\n'
+            f'#   at_rest_encryption_enabled = true\n'
+            f'#   transit_encryption_enabled = true\n'
+            f'# }}'
+        )
 
-    def _write_rollback(self, resource_id: str, rollback_hcl: str) -> Path:
-        """Write rollback HCL to rollbacks/<resource_id>.tf and return the path."""
-        self.rollbacks_dir.mkdir(parents=True, exist_ok=True)
-        rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
-        rollback_path.write_text(rollback_hcl)
-        return rollback_path
+    def _rollback_elasticache_encryption(self, finding: dict) -> str:
+        """ElastiCache encryption rollback: N/A (in-place not possible)."""
+        resource_id = finding["resource_id"]
+
+        return (
+            f'# Rollback: ElastiCache {resource_id} — encryption\n'
+            f'# No rollback needed — encryption cannot be applied in-place.\n'
+            f'# Original cluster remains unchanged.'
+        )
+
+    def _remediation_ebs_encryption(self, finding: dict) -> str:
+        """EBS encryption: document finding only (cannot enable in-place on existing volume)."""
+        resource_id = finding["resource_id"]
+
+        return (
+            f'# Remediation: EBS volume {resource_id} — encryption at rest\n'
+            f'# NOTE: Cannot enable encryption in-place on existing EBS volume.\n'
+            f'# This finding is documented for manual review.\n'
+            f'# Recommended: Create encrypted snapshot copy, then restore to new\n'
+            f'# encrypted volume and swap the attachment.\n'
+            f'#\n'
+            f'# resource "aws_ebs_snapshot_copy" "encrypted_{_sanitize_id(resource_id)}" {{\n'
+            f'#   source_snapshot_id = "<original-snapshot-id>"\n'
+            f'#   encrypted         = true\n'
+            f'# }}'
+        )
+
+    def _rollback_ebs_encryption(self, finding: dict) -> str:
+        """EBS encryption rollback: N/A (in-place not possible)."""
+        resource_id = finding["resource_id"]
+
+        return (
+            f'# Rollback: EBS volume {resource_id} — encryption\n'
+            f'# No rollback needed — encryption cannot be applied in-place.\n'
+            f'# Original volume remains unchanged.'
+        )
+
+    def _remediation_generic(self, finding: dict) -> str:
+        """Generic remediation placeholder for unhandled resource types."""
+        resource_id = finding["resource_id"]
+        resource_type = finding.get("resource_type", "unknown")
+        category = finding.get("category", "unknown")
+
+        return (
+            f'# Remediation: {resource_type} {resource_id} ({category})\n'
+            f'# NOTE: No automated remediation template for this resource type.\n'
+            f'# Manual review required.'
+        )
+
+    def _rollback_generic(self, finding: dict) -> str:
+        """Generic rollback placeholder for unhandled resource types."""
+        resource_id = finding["resource_id"]
+        resource_type = finding.get("resource_type", "unknown")
+
+        return (
+            f'# Rollback: {resource_type} {resource_id}\n'
+            f'# NOTE: No automated rollback template for this resource type.\n'
+            f'# Manual review required.'
+        )
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Private: Data loading
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _load_findings(self) -> list[dict]:
+        """Load findings from findings_store.json."""
+        if not self.findings_store_path.exists():
+            print(
+                f"[Remediation Architect] ERROR: findings_store.json not found at "
+                f"{self.findings_store_path}",
+                file=sys.stderr,
+            )
+            return []
+
+        try:
+            with open(self.findings_store_path) as f:
+                data = json.load(f)
+            return data.get("findings", [])
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"[Remediation Architect] ERROR: Could not read findings_store.json: {e}", file=sys.stderr)
+            return []
 
 
 def main() -> None:
-    """Run the Remediation Architect: read findings, generate plans."""
+    """Run the Remediation Architect and generate HCL output."""
     print("[Remediation Architect] Starting remediation planning...")
 
-    if not FINDINGS_STORE_PATH.exists():
-        print("[Remediation Architect] ERROR: findings_store.json not found", file=sys.stderr)
-        print("  Run FinOps Auditor and SecOps Guard first.", file=sys.stderr)
-        sys.exit(1)
-
-    with open(FINDINGS_STORE_PATH) as f:
-        store = json.load(f)
-
-    findings = store.get("findings", [])
-
-    if not findings:
-        print("[Remediation Architect] No findings to remediate.")
-        return
-
     architect = RemediationArchitect()
-    plans = architect.plan(findings)
+    plans = architect.plan()
 
-    for plan in plans:
-        rid = plan.finding["resource_id"]
-        if plan.blocked:
-            print(f"  ⚠ [{rid}] BLOCKED — {plan.block_reason}")
-        else:
-            print(f"  ✓ [{rid}] Remediation + Rollback generated")
-            print(f"    Rollback saved to: rollbacks/{rid}.tf")
+    blocked = [p for p in plans if p.blocked]
+    remediated = [p for p in plans if not p.blocked]
 
-    blocked_count = sum(1 for p in plans if p.blocked)
-    generated_count = sum(1 for p in plans if not p.blocked)
-    print(
-        f"\n[Remediation Architect] Done: {generated_count} plan(s) generated, "
-        f"{blocked_count} blocked by dependencies"
-    )
+    print(f"[Remediation Architect] Processed {len(plans)} finding(s)")
+    print(f"[Remediation Architect] Remediated: {len(remediated)} resource(s)")
+    print(f"[Remediation Architect] Blocked: {len(blocked)} resource(s)")
+
+    if blocked:
+        print("\n  Blocked resources (dependencies found):")
+        for p in blocked:
+            print(f"    ⚠ {p.resource_id}: {p.block_reason}")
+
+    if remediated:
+        print("\n  Remediated resources:")
+        for p in remediated:
+            print(f"    ✓ {p.resource_id}")
+
+    if remediated:
+        print(f"\n[Remediation Architect] Wrote output/remediation.tf")
+        print(f"[Remediation Architect] Wrote rollback files to rollbacks/")
 
 
 if __name__ == "__main__":
