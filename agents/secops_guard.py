@@ -147,13 +147,23 @@ class SecOpsGuard:
 
         for raw in raw_findings:
             encryption_at_rest = raw.get("encryption_at_rest", True)
+            resource_id = raw.get("resource_id", "unknown")
 
             # Only flag if encryption is not enabled
             if not encryption_at_rest:
                 # Filter by resource_type
                 detected_type = self._determine_resource_type(raw)
                 if detected_type == resource_type:
-                    findings.append(self._build_finding(raw))
+                    self._logger.emit(
+                        "secops_guard", "check", resource_id,
+                        f"Checking encryption for {resource_type} resource {resource_id}",
+                    )
+                    finding = self._build_finding(raw)
+                    findings.append(finding)
+                    self._logger.emit(
+                        "secops_guard", "finding", resource_id,
+                        f"Violation: {resource_id} lacks encryption at rest",
+                    )
 
         return findings
 
