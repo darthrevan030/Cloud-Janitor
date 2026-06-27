@@ -1,9 +1,9 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T18:22:26Z
+Generated: 2026-06-27T18:23:10Z
 
 | # | Task | Status | Artifact Verified |
-|---|------|--------|-------------------|
+| --- | ------ | -------- | ------------------- |
 | 1 | 1. Create .kiro/ directory structure and commit | ✅ Done | no mapping |
 | 2 | 2. Write requirements.md with all user stories | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
 | 3 | 3. Write design.md with architecture + data flow | ✅ Done | .kiro/specs/cloud-janitor/design.md exists |
@@ -93,9 +93,9 @@ Generated: 2026-06-27T18:22:26Z
 | 87 | 9.1 Add reasoning log panel to `app.py` | ✅ Done | app.py exists |
 | 88 | 9.2 Write property test: Agent section header transitions | ✅ Done | no mapping |
 | 89 | 9.3 Write property test: Malformed line resilience | ✅ Done | no mapping |
-| 90 | 10. Final checkpoint — test quality audit | ⏳ Partial | no mapping |
+| 90 | 10. Final checkpoint — test quality audit | ✅ Done | no mapping |
 | 91 | 10.1 Run full test suite and confirm all tests pass | ✅ Done | no mapping |
 | 92 | 10.2 Run test quality audit on all test files | ✅ Done | no mapping |
 | 93 | 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain | ✅ Done | no mapping |
 | 94 | 10.4 Verify runtime files excluded from git | ✅ Done | no mapping |
-| 95 | 10.5 Run generate_spec_compliance.py and commit output | ⏳ Partial | no mapping |
+| 95 | 10.5 Run generate_spec_compliance.py and commit output | ✅ Done | no mapping |
