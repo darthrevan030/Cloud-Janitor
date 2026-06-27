@@ -195,3 +195,90 @@ def test_monthly_savings_computation(scan_id, completed_at, findings, data):
         assert abs(entry["monthly_savings_added"] - expected_savings) < 1e-9, (
             f"Expected {expected_savings}, got {entry['monthly_savings_added']}"
         )
+
+
+# --- Property 3: Recalculate-from-source invariant ---
+# Feature: savings-tracker-localstack, Property 3: Recalculate-from-source invariant
+
+# Strategy for generating a sequence of runs (1-10 runs, each with distinct findings)
+run_sequence_strategy = st.lists(
+    st.fixed_dictionaries({
+        "scan_id": scan_id_strategy,
+        "completed_at": completed_at_strategy,
+        "findings": findings_strategy,
+    }),
+    min_size=1,
+    max_size=10,
+    unique_by=lambda x: x["scan_id"],
+)
+
+
+@settings(max_examples=100, deadline=None)
+@given(
+    run_sequence=run_sequence_strategy,
+    data=st.data(),
+)
+def test_recalculate_from_source_invariant(run_sequence, data):
+    """
+    Property 3: Recalculate-from-source invariant
+
+    For any sequence of K calls to record_run() (each with distinct run_ids),
+    after the K-th write, both total_lifetime_savings and the K-th entry's
+    cumulative_at_time SHALL equal the sum of monthly_savings_added across
+    all K entries in the runs array. Neither value shall be computed by
+    incremental addition from a prior stored total.
+
+    **Validates: Requirements 2.3, 2.4**
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        findings_path = tmp_path / "findings_store.json"
+        ledger_path = tmp_path / "savings_ledger.json"
+
+        for k, run_data in enumerate(run_sequence):
+            findings = run_data["findings"]
+            resource_ids = [f["resource_id"] for f in findings]
+
+            # Draw a non-empty subset of resources for this run
+            subset = data.draw(
+                st.lists(
+                    st.sampled_from(resource_ids),
+                    min_size=1,
+                    max_size=len(resource_ids),
+                    unique=True,
+                )
+            )
+
+            # Write findings_store.json with the current run's data
+            findings_store = {
+                "scan_id": run_data["scan_id"],
+                "completed_at": run_data["completed_at"],
+                "findings": findings,
+            }
+            findings_path.write_text(json.dumps(findings_store), encoding="utf-8")
+
+            # Record this run
+            tracker = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+            result = tracker.record_run(subset)
+            assert result is True
+
+            # Read back the ledger
+            ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+
+            # Verify we have k+1 runs
+            assert len(ledger["runs"]) == k + 1
+
+            # Compute expected total: sum of monthly_savings_added across ALL entries
+            expected_total = sum(r["monthly_savings_added"] for r in ledger["runs"])
+
+            # Verify total_lifetime_savings equals the sum from source
+            assert abs(ledger["total_lifetime_savings"] - expected_total) < 1e-9, (
+                f"After run {k+1}: total_lifetime_savings={ledger['total_lifetime_savings']} "
+                f"but sum of monthly_savings_added={expected_total}"
+            )
+
+            # Verify the K-th entry's cumulative_at_time equals the same sum
+            assert abs(ledger["runs"][k]["cumulative_at_time"] - expected_total) < 1e-9, (
+                f"After run {k+1}: cumulative_at_time={ledger['runs'][k]['cumulative_at_time']} "
+                f"but sum of monthly_savings_added={expected_total}"
+            )
