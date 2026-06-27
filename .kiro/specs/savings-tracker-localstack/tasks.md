@@ -58,7 +58,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Add `emit("secops_guard", "handoff", ...)` at scan complete
     - _Requirements: 9.2_
 
-  - [ ] 2.4 Integrate ReasoningLogger into Remediation Architect
+  - [x] 2.4 Integrate ReasoningLogger into Remediation Architect
     - Add `emit("remediation_architect", "check", ...)` at start and per-dependency check
     - Add `emit("remediation_architect", "decision", ...)` per result and per HCL generated
     - Add `emit("remediation_architect", "handoff", ...)` at planning complete
