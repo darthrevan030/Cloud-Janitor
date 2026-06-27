@@ -288,7 +288,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
       (default: "tflocal" for demo mode, override to "terraform" for real AWS)
     - Verify TF_CMD is documented in mcp_server/README.md and Makefile comments
 
-  - [-] 10.4 Verify runtime files excluded from git
+  - [x] 10.4 Verify runtime files excluded from git
     - Run: `git check-ignore -v savings_ledger.json agent_reasoning.log`
     - Both files must be ignored
 
