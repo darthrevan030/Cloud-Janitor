@@ -207,7 +207,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Run `pytest` from project root
     - All tests must pass before proceeding to 10.2
 
-  - [ ] 10.2 Run test quality audit on all test files
+  - [x] 10.2 Run test quality audit on all test files
     - Review every test file in `tests/` and `test_fixture.py` with the
       following mandate:
 
@@ -280,9 +280,13 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
       "Found lying test: <name> — it now correctly fails because
       <reason>".
 
-  - [ ] 10.3 Verify no bare `terraform` calls remain in codebase
-    - Run: `grep -rn "\"terraform\"" mcp_server/ .kiro/hooks/`
-    - Result must be zero matches — all calls must use `tflocal`
+  - [ ] 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain
+    - Run: `grep -rn '"terraform"' mcp_server/ .kiro/hooks/ orchestrator.py`
+    - Run: `grep -rn '"tflocal"' mcp_server/ .kiro/hooks/ orchestrator.py`
+    - Both must return zero matches
+    - All Terraform invocations must use the TF_CMD environment variable
+      (default: "tflocal" for demo mode, override to "terraform" for real AWS)
+    - Verify TF_CMD is documented in mcp_server/README.md and Makefile comments
 
   - [ ] 10.4 Verify runtime files excluded from git
     - Run: `git check-ignore -v savings_ledger.json agent_reasoning.log`

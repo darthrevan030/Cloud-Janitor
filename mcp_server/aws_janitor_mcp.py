@@ -8,9 +8,9 @@ Usage:
 """
 
 import json
+import os
 import subprocess
 import tempfile
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +18,8 @@ from mcp.server.fastmcp import FastMCP
 
 # Fixtures live at project root / fixtures/
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
+
+TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 # Create the MCP server instance
 mcp = FastMCP("aws-janitor")
@@ -93,19 +95,19 @@ def validate_hcl(hcl_content: str) -> dict:
         with open(hcl_path, "w") as f:
             f.write(hcl_content)
 
-        # tflocal init is required before validate in most cases
+        # terraform init is required before validate in most cases
         init_result = subprocess.run(
-            ["tflocal", "init", "-backend=false"],
+            [TF_CMD, "init", "-backend=false"],
             cwd=tmpdir,
             capture_output=True,
             text=True,
         )
 
         if init_result.returncode != 0:
-            return {"valid": False, "error": f"tflocal init failed: {init_result.stderr.strip()}"}
+            return {"valid": False, "error": f"{TF_CMD} init failed: {init_result.stderr.strip()}"}
 
         result = subprocess.run(
-            ["tflocal", "validate"],
+            [TF_CMD, "validate"],
             cwd=tmpdir,
             capture_output=True,
             text=True,

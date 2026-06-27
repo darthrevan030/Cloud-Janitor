@@ -5,6 +5,8 @@
 
 set -e
 
+TF_CMD="${TF_CMD:-tflocal}"
+
 REMEDIATION_FILE="${1:-/tmp/remediation.tf}"
 ROLLBACK_FILE="${2:-/tmp/rollback.tf}"
 
@@ -26,14 +28,14 @@ validate_hcl() {
 
     cp "$hcl_file" "$tmp_dir/main.tf"
 
-    echo "[pre-remediation] Initializing tflocal for $label..."
-    if ! tflocal -chdir="$tmp_dir" init -backend=false -input=false >/dev/null 2>&1; then
-        echo "[pre-remediation] BLOCKED: tflocal init failed for $label"
+    echo "[pre-remediation] Initializing $TF_CMD for $label..."
+    if ! $TF_CMD -chdir="$tmp_dir" init -backend=false -input=false >/dev/null 2>&1; then
+        echo "[pre-remediation] BLOCKED: $TF_CMD init failed for $label"
         return 1
     fi
 
     echo "[pre-remediation] Validating $label..."
-    if ! tflocal -chdir="$tmp_dir" validate; then
+    if ! $TF_CMD -chdir="$tmp_dir" validate; then
         echo "[pre-remediation] BLOCKED: $label failed validation"
         return 1
     fi

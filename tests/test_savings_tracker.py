@@ -29,10 +29,19 @@ def tracker_env(tmp_path):
 
 
 def test_record_run_new(tracker_env):
+    """First record_run creates ledger with correct structure and content."""
     tracker, ledger_path, _ = tracker_env
     result = tracker.record_run(["res-1", "res-2"])
     assert result is True
     assert ledger_path.exists()
+
+    # Verify ledger has correct top-level schema
+    ledger = json.loads(ledger_path.read_text())
+    assert "total_lifetime_savings" in ledger
+    assert "runs" in ledger
+    assert isinstance(ledger["runs"], list)
+    assert len(ledger["runs"]) == 1
+    assert ledger["total_lifetime_savings"] == 30.0  # res-1=10 + res-2=20
 
 
 def test_record_run_duplicate(tracker_env):
@@ -43,14 +52,36 @@ def test_record_run_duplicate(tracker_env):
 
 
 def test_duplicate_does_not_modify_file(tracker_env):
+    """SavingsTracker must NOT update total_lifetime_savings when duplicate run_id is detected.
+
+    Verifies both that the file mtime is unchanged AND that total_lifetime_savings
+    remains the same value — not incremented by re-processing the same run.
+    """
     tracker, ledger_path, _ = tracker_env
     tracker.record_run(["res-1"])
+
+    # Read total after first write
+    ledger_before = json.loads(ledger_path.read_text())
+    total_before = ledger_before["total_lifetime_savings"]
+    assert total_before == 10.0  # res-1 costs 10.0/mo
+
     mtime_before = ledger_path.stat().st_mtime
-    # Small sleep not needed — same-tick duplicate detection is by content
+
+    # Attempt duplicate
     result = tracker.record_run(["res-1"])
     assert result is False
+
     mtime_after = ledger_path.stat().st_mtime
-    assert mtime_before == mtime_after
+    assert mtime_before == mtime_after, (
+        "File mtime changed on duplicate run — ledger was improperly rewritten"
+    )
+
+    # Verify total_lifetime_savings was NOT inflated
+    ledger_after = json.loads(ledger_path.read_text())
+    assert ledger_after["total_lifetime_savings"] == total_before, (
+        f"total_lifetime_savings changed from {total_before} to "
+        f"{ledger_after['total_lifetime_savings']} on duplicate run"
+    )
 
 
 def test_savings_summary_after_run(tracker_env):

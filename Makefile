@@ -1,5 +1,7 @@
 .PHONY: demo
 
+# TF_CMD defaults to tflocal for LocalStack demo
+# For real AWS: TF_CMD=terraform streamlit run app.py
 demo:
 	docker-compose up -d
 	@echo "Waiting for LocalStack..."

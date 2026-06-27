@@ -282,6 +282,38 @@ class TestPlanGeneratesBoth:
             assert plan.rollback_hcl is not None
             assert not plan.blocked
 
+    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
+    def test_rollback_hcl_not_identical_to_remediation_hcl(self, mock_deps):
+        """Rollback HCL must NOT be identical to remediation HCL.
+
+        If they were identical, applying the rollback would re-apply the
+        remediation instead of reverting it — defeating its purpose.
+        """
+        for finding_fn in (_ebs_finding, _sg_finding, _elasticache_finding):
+            plans = self.architect.plan([finding_fn()])
+            plan = plans[0]
+            assert plan.remediation_hcl != plan.rollback_hcl, (
+                f"Rollback HCL is identical to remediation HCL for "
+                f"{finding_fn.__name__} — they must differ"
+            )
+
+    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_has_dependencies)
+    def test_plan_does_not_generate_hcl_before_dependency_check(self, mock_deps):
+        """Remediation Architect must NOT generate HCL before dependency check completes.
+
+        When dependencies are found, no HCL should be generated at all.
+        """
+        plans = self.architect.plan([_ebs_finding()])
+        assert len(plans) == 1
+        plan = plans[0]
+        assert plan.blocked is True
+        assert plan.remediation_hcl is None, (
+            "Remediation HCL was generated despite dependencies being found"
+        )
+        assert plan.rollback_hcl is None, (
+            "Rollback HCL was generated despite dependencies being found"
+        )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Tests: _sanitize_id helper

@@ -1,11 +1,19 @@
-"""Quick validation of reasoning panel logic."""
+"""Quick validation of reasoning panel logic.
+
+Tests the parse_reasoning_events function and section header detection.
+Rewritten from script-style to proper pytest tests with concrete assertions.
+"""
 
 import json
 import tempfile
 from pathlib import Path
 
-# Core parsing function (mirrored from app.py)
-def parse_reasoning_events(log_path):
+import pytest
+
+
+# Core parsing function (replicated from app.py to avoid Streamlit import side effects)
+def parse_reasoning_events(log_path: Path) -> list[dict]:
+    """Parse reasoning events from a JSONL log file."""
     if not log_path.exists():
         return []
     try:
@@ -25,40 +33,12 @@ def parse_reasoning_events(log_path):
     return events
 
 
-# Test 1: Parse actual log file
-log_path = Path("agent_reasoning.log")
-events = parse_reasoning_events(log_path)
-print(f"[OK] Parsed {len(events)} events from agent_reasoning.log")
+def build_section_headers(events: list[dict]) -> list[bool]:
+    """Determine which events should show a section header.
 
-# Test 2: Malformed lines are skipped
-with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as f:
-    f.write('{"agent":"a","event_type":"check","resource_id":"r1","message":"ok","timestamp":"2026-01-01T00:00:00Z"}\n')
-    f.write("this is not json\n")
-    f.write('{"agent":"b","event_type":"finding","resource_id":"r2","message":"found","timestamp":"2026-01-01T00:01:00Z"}\n')
-    tmp_path = Path(f.name)
-
-events = parse_reasoning_events(tmp_path)
-assert len(events) == 2, f"Expected 2 events, got {len(events)}"
-assert events[0]["agent"] == "a"
-assert events[1]["agent"] == "b"
-print("[OK] Malformed lines skipped silently")
-
-# Test 3: Empty file
-with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as f:
-    f.write("")
-    tmp_path = Path(f.name)
-
-events = parse_reasoning_events(tmp_path)
-assert len(events) == 0
-print("[OK] Empty file returns empty list")
-
-# Test 4: Non-existent file
-events = parse_reasoning_events(Path("nonexistent_file.log"))
-assert len(events) == 0
-print("[OK] Non-existent file returns empty list")
-
-# Test 5: Section header detection
-def build_reasoning_html(events):
+    Returns a list of booleans: True if the event should show a header
+    (agent changed from previous), False otherwise.
+    """
     prev_agent = None
     headers = []
     for event in events:
@@ -68,14 +48,101 @@ def build_reasoning_html(events):
         prev_agent = agent
     return headers
 
-test_events = [
-    {"agent": "finops", "event_type": "check", "resource_id": "r1", "message": "m1", "timestamp": "t1"},
-    {"agent": "finops", "event_type": "finding", "resource_id": "r2", "message": "m2", "timestamp": "t2"},
-    {"agent": "secops", "event_type": "check", "resource_id": "r3", "message": "m3", "timestamp": "t3"},
-]
 
-headers = build_reasoning_html(test_events)
-assert headers == [True, False, True], f"Expected [True, False, True], got {headers}"
-print("[OK] Section headers inserted on agent change")
+class TestParseReasoningEvents:
+    """Tests for parsing JSONL reasoning log files."""
 
-print("\nAll reasoning panel logic tests passed!")
+    def test_malformed_lines_skipped_silently(self, tmp_path: Path):
+        """Malformed lines are skipped, valid lines are preserved."""
+        log_file = tmp_path / "reasoning.log"
+        log_file.write_text(
+            '{"agent":"a","event_type":"check","resource_id":"r1","message":"ok","timestamp":"2026-01-01T00:00:00Z"}\n'
+            "this is not json\n"
+            '{"agent":"b","event_type":"finding","resource_id":"r2","message":"found","timestamp":"2026-01-01T00:01:00Z"}\n'
+        )
+        events = parse_reasoning_events(log_file)
+        assert len(events) == 2
+        assert events[0]["agent"] == "a"
+        assert events[0]["event_type"] == "check"
+        assert events[1]["agent"] == "b"
+        assert events[1]["event_type"] == "finding"
+
+    def test_empty_file_returns_empty_list(self, tmp_path: Path):
+        """An empty log file returns an empty list."""
+        log_file = tmp_path / "reasoning.log"
+        log_file.write_text("")
+        events = parse_reasoning_events(log_file)
+        assert events == []
+
+    def test_nonexistent_file_returns_empty_list(self, tmp_path: Path):
+        """A non-existent file returns an empty list (no exception)."""
+        events = parse_reasoning_events(tmp_path / "nonexistent_file.log")
+        assert events == []
+
+    def test_all_valid_lines_returned(self, tmp_path: Path):
+        """When all lines are valid JSON, all are returned."""
+        log_file = tmp_path / "reasoning.log"
+        log_file.write_text(
+            '{"agent":"x","event_type":"check","resource_id":"","message":"m1","timestamp":"t1"}\n'
+            '{"agent":"y","event_type":"finding","resource_id":"r1","message":"m2","timestamp":"t2"}\n'
+        )
+        events = parse_reasoning_events(log_file)
+        assert len(events) == 2
+        assert events[0]["message"] == "m1"
+        assert events[1]["message"] == "m2"
+
+    def test_required_keys_present_in_valid_events(self, tmp_path: Path):
+        """Valid events must contain all required keys."""
+        log_file = tmp_path / "reasoning.log"
+        log_file.write_text(
+            '{"agent":"finops","event_type":"check","resource_id":"r1","message":"ok","timestamp":"2026-01-01T00:00:00Z"}\n'
+        )
+        events = parse_reasoning_events(log_file)
+        assert len(events) == 1
+        required_keys = {"agent", "event_type", "resource_id", "message", "timestamp"}
+        assert required_keys.issubset(events[0].keys())
+
+
+class TestSectionHeaders:
+    """Tests for section header detection on agent transitions."""
+
+    def test_headers_inserted_on_agent_change(self):
+        """Section header is True when agent changes from previous."""
+        events = [
+            {"agent": "finops", "event_type": "check", "resource_id": "r1", "message": "m1", "timestamp": "t1"},
+            {"agent": "finops", "event_type": "finding", "resource_id": "r2", "message": "m2", "timestamp": "t2"},
+            {"agent": "secops", "event_type": "check", "resource_id": "r3", "message": "m3", "timestamp": "t3"},
+        ]
+        headers = build_section_headers(events)
+        assert headers == [True, False, True]
+
+    def test_all_same_agent_one_header(self):
+        """When all events have the same agent, only the first gets a header."""
+        events = [
+            {"agent": "finops", "event_type": "check"},
+            {"agent": "finops", "event_type": "finding"},
+            {"agent": "finops", "event_type": "handoff"},
+        ]
+        headers = build_section_headers(events)
+        assert headers == [True, False, False]
+
+    def test_alternating_agents_all_headers(self):
+        """Alternating agents produce a header on every event."""
+        events = [
+            {"agent": "a", "event_type": "check"},
+            {"agent": "b", "event_type": "check"},
+            {"agent": "a", "event_type": "finding"},
+        ]
+        headers = build_section_headers(events)
+        assert headers == [True, True, True]
+
+    def test_empty_events_list(self):
+        """Empty event list returns empty header list."""
+        headers = build_section_headers([])
+        assert headers == []
+
+    def test_single_event_gets_header(self):
+        """A single event always gets a header (first event)."""
+        events = [{"agent": "finops", "event_type": "check"}]
+        headers = build_section_headers(events)
+        assert headers == [True]

@@ -18,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -38,6 +39,8 @@ from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
 from savings import SavingsTracker
 
+
+TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 PROJECT_ROOT = Path(__file__).parent
 FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
@@ -304,9 +307,9 @@ class Orchestrator:
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
 
-        # Execute tflocal apply against LocalStack
+        # Execute terraform apply against LocalStack
         apply_result = subprocess.run(
-            ["tflocal", "apply", "-auto-approve"],
+            [TF_CMD, "apply", "-auto-approve"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -314,10 +317,10 @@ class Orchestrator:
         )
         if apply_result.returncode != 0:
             error = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action("execution", resource_id, "failure", f"tflocal apply failed: {error}")
+            self._log_action("execution", resource_id, "failure", f"{TF_CMD} apply failed: {error}")
             return ApprovalResult(
                 success=False,
-                error=f"tflocal apply failed: {error}",
+                error=f"{TF_CMD} apply failed: {error}",
                 resource_id=resource_id,
             )
 

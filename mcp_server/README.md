@@ -8,6 +8,12 @@ Exposes AWS infrastructure data and Terraform validation via the [Model Context 
 - `mcp >= 1.28.1` (FastMCP)
 - `terraform` CLI on PATH (for HCL validation)
 
+## Environment Variables
+
+| Variable | Valid values | Default | Description |
+|----------|-------------|---------|-------------|
+| `TF_CMD` | `tflocal`, `terraform` | `tflocal` | Terraform binary |
+
 ## Running the Server
 
 ```bash
