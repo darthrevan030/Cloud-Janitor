@@ -63,7 +63,7 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 
 ### Phase 6: UI
 
-- [ ] 1. Streamlit layout — 4 panels (agent feed, findings, diff, audit log)
+- [x] 1. Streamlit layout — 4 panels (agent feed, findings, diff, audit log)
 - [ ] 2. Agent activity feed with live status dots
 - [ ] 3. Side-by-side diff view (remediation HCL vs rollback HCL)
 - [ ] 4. Approval input field + confirmation display
