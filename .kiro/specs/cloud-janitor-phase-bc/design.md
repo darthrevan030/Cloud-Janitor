@@ -901,17 +901,18 @@ BEGIN
         previous = history[-2]
         current = history[-1]
 
-        # Match by (resource_id, check_type) pair
-        prev_keys = {(f["resource_id"], f.get("category", "")) for f in previous["findings"]}
-        curr_keys = {(f["resource_id"], f.get("category", "")) for f in current["findings"]}
+        # Match by (resource_id, check_type) pair — use check_type when present, fall back to category
+        def match_key(f):
+            return (f["resource_id"], f.get("check_type", f.get("category", "")))
+
+        prev_keys = {match_key(f) for f in previous["findings"]}
+        curr_keys = {match_key(f) for f in current["findings"]}
 
         new_keys = curr_keys - prev_keys
         resolved_keys = prev_keys - curr_keys
 
-        new_findings = [f for f in current["findings"]
-                        if (f["resource_id"], f.get("category", "")) in new_keys]
-        resolved_findings = [f for f in previous["findings"]
-                            if (f["resource_id"], f.get("category", "")) in resolved_keys]
+        new_findings = [f for f in current["findings"] if match_key(f) in new_keys]
+        resolved_findings = [f for f in previous["findings"] if match_key(f) in resolved_keys]
 
         waste_delta = current["total_waste"] - previous["total_waste"]
         critical_delta = (
