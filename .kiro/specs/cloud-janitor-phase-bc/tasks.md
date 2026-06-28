@@ -7,7 +7,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
 ## Tasks
 
 - [ ] 1. Set up shared LLM infrastructure and project dependencies
-  - [ ] 1.1 Create `llm_client.py` at project root
+  - [x] 1.1 Create `llm_client.py` at project root
     - Implement `get_client() -> openai.OpenAI` configured with `base_url="https://openrouter.ai/api/v1"` and `api_key` from `OPENROUTER_API_KEY` env var
     - Implement `DEFAULT_MODEL: str` reading from `JANITOR_LLM_MODEL` env var, defaulting to `"anthropic/claude-haiku-4-5"`
     - Raise `EnvironmentError("OPENROUTER_API_KEY is not set")` if env var missing
