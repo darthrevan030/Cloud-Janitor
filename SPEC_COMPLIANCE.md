@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T06:01:10Z
+Generated: 2026-06-28T06:07:33Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -38,7 +38,7 @@ Generated: 2026-06-28T06:01:10Z
 | 32 | 5. Record demo video for Devpost submission | ❌ Pending | — |
 | 33 | 6. Write Devpost submission copy | ❌ Pending | — |
 | 34 | 1. Set up shared LLM infrastructure and project dependencies | ❌ Pending | — |
-| 35 | 1.1 Create `llm_client.py` at project root | ❌ Pending | — |
+| 35 | 1.1 Create `llm_client.py` at project root | ✅ Done | no mapping |
 | 36 | 1.2 Update `requirements.txt` with new dependencies | ❌ Pending | — |
 | 37 | 1.3 Update `.gitignore` with sensitive data files | ❌ Pending | — |
 | 38 | 1.4 Write unit tests for `llm_client.py` | ❌ Pending | — |

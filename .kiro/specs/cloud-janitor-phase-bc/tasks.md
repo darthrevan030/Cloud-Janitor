@@ -13,8 +13,8 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Raise `EnvironmentError("OPENROUTER_API_KEY is not set")` if env var missing
     - _Requirements: 13.1, 13.2, 13.3, 13.4_
 
-  - [ ] 1.2 Update `requirements.txt` with new dependencies
-    - Add `openai>=1.0.0` (OpenAI-compatible SDK for OpenRouter)
+  - [x] 1.2 Update `requirements.txt` with new dependencies
+    - Add `openai>=2.44.0` (OpenAI-compatible SDK for OpenRouter)
     - Add `filelock>=3.13.0` (file locking for DriftDetector)
     - Add `APScheduler>=3.10.0` (cron scheduling)
     - Ensure `anthropic` package is NOT present
