@@ -44,7 +44,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 6. IF the OpenRouter API is unavailable or returns an error, THEN THE IncidentPolicyGenerator SHALL return an empty list without writing any files
 7. IF the OpenRouter API is unavailable or returns an error, THEN THE DriftDetector SHALL return a report with drift=None and reason="error"
 8. THE system SHALL ensure that no AI agent raises an unhandled exception to callers regardless of input content or external service state; each agent SHALL catch all exceptions and return its defined safe default within 30 seconds of invocation
-9. IF any AI agent returns a safe default due to an error, THEN THE system SHALL log the failure event including the agent name and error type to stderr so that operators can detect degraded operation
+9. IF any AI agent returns a safe default due to an error (including transient errors), THEN THE system SHALL always log the failure event including the agent name and error type to stderr so that operators can detect degraded operation; logging SHALL NOT be skipped regardless of error duration or type
 10. IF an AI agent returns a safe default due to an error, THEN THE Orchestrator SHALL continue executing subsequent pipeline steps using the safe default values without halting or requiring manual intervention
 11. THE system SHALL route all LLM calls through `llm_client.py` at project root; no AI agent SHALL import `openai` or any LLM SDK directly
 
@@ -60,7 +60,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 4. WHEN a natural language query is submitted, THE QueryInterpreter SHALL return a min_idle_days value that is a non-negative integer not exceeding 3650
 5. IF an empty or whitespace-only query is submitted, THEN THE QueryInterpreter SHALL return safe defaults: resource_types=[], check_types=[], min_idle_days=7, confidence=0.0, intent_summary="Could not interpret query." without calling the LLM
 6. IF the LLM returns invalid JSON, THEN THE QueryInterpreter SHALL return safe defaults: resource_types=[], check_types=[], min_idle_days=7, confidence=0.0, intent_summary="Could not interpret query."
-7. WHEN a valid query is submitted, THE QueryInterpreter SHALL return an intent_summary as a non-empty string of at most 200 characters describing the parsed intent
+7. WHEN a valid query is submitted, THE QueryInterpreter SHALL return an intent_summary as a string of at least 10 characters and at most 200 characters describing the parsed intent
 8. WHEN a natural language query is submitted, THE QueryInterpreter SHALL return a dict containing exactly five keys: resource_types, check_types, min_idle_days, intent_summary, and confidence
 
 ### Requirement 3: Remediation Explanation
@@ -74,7 +74,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 3. WHEN a remediation plan is generated, THE RemediationExplainer SHALL produce a what_rollback_restores description in 1-2 sentences with a minimum length of 20 characters
 4. THE RemediationExplainer SHALL return a dict containing exactly three keys: risk_explanation, what_terraform_does, what_rollback_restores, where each value is a non-empty string
 5. THE RemediationExplainer SHALL limit LLM output to 400 max_tokens to keep explanations concise for the UI panel
-6. IF the remediation_hcl or rollback_hcl input is empty or whitespace-only, THEN THE RemediationExplainer SHALL return all three keys populated with "Explanation unavailable." without calling the LLM
+6. IF the remediation_hcl or rollback_hcl input is empty or whitespace-only, THEN THE RemediationExplainer SHALL return all three keys populated with "Explanation unavailable." without calling the LLM, regardless of which specific input is missing
 
 ### Requirement 4: Policy Suggestion
 
@@ -83,7 +83,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 #### Acceptance Criteria
 
 1. WHEN scan findings are provided, THE PolicySuggester SHALL return between 0 and 5 suggestion dicts
-2. THE PolicySuggester SHALL not return any suggestion whose implied check_type matches an entry in the already_checked list
+2. THE PolicySuggester SHALL not return any suggestion whose implied check_type matches an entry in the already_checked list; this SHALL be enforced by post-processing filtering of LLM output in addition to any prompt-level instruction
 3. WHEN suggestions are returned, THE PolicySuggester SHALL include for each: suggestion_id (non-empty slug string), title (non-empty string, maximum 80 characters), rationale (non-empty string, maximum 200 characters), query (non-empty string), and priority
 4. WHEN suggestions are returned, THE PolicySuggester SHALL set priority to one of: "high", "medium", or "low"
 5. WHEN findings is an empty list, THE PolicySuggester SHALL return between 1 and 5 general-purpose suggestions covering common security and cost checks
@@ -98,8 +98,8 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 1. WHEN a resource is analyzed, THE ResourceTagger SHALL return a dict containing exactly five keys: env, team, owner, risk_level, and confidence
 2. WHEN a resource is analyzed, THE ResourceTagger SHALL return an env value from the set: "production", "staging", "development", "unknown"
 3. WHEN a resource is analyzed, THE ResourceTagger SHALL return a confidence score between 0.0 and 1.0 inclusive
-4. IF confidence is below the confidence_threshold (default 0.7), THEN THE ResourceTagger SHALL set team and owner to None
-5. IF existing_tags already contains env, team, or owner values, THEN THE ResourceTagger SHALL skip inference for those fields and use the existing values unchanged
+4. IF confidence is strictly below the confidence_threshold (default 0.7), THEN THE ResourceTagger SHALL set team and owner to None; when confidence equals the threshold exactly, inferred values SHALL be preserved
+5. IF existing_tags already contains env, team, or owner fields with non-empty, non-null values, THEN THE ResourceTagger SHALL skip inference for those fields and use the existing values unchanged; empty or null values SHALL be treated as absent and inference SHALL proceed normally
 6. WHEN batch inference is requested with more than 10 resources, THE ResourceTagger SHALL split the input into chunks of at most 10 and issue one LLM call per chunk, returning results in the same order as the input list
 7. WHEN a resource is analyzed, THE ResourceTagger SHALL return a risk_level from the set: "high", "medium", "low"
 
@@ -113,7 +113,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 2. WHEN anomalies are detected, THE AnomalyDetector SHALL return a flat list of at most 20 anomaly dicts each containing: anomaly_id (string slug), resource_id (string), anomaly_type (string), description (string of 1-2 sentences), severity (string), and evidence (string describing the specific detail that triggered the anomaly)
 3. WHEN anomalies are detected, THE AnomalyDetector SHALL set severity to one of: "high", "medium", "low"
 4. WHEN the orchestrator completes FinOps and SecOps scanning, THE AnomalyDetector SHALL be invoked with the combined resource list and findings list before drift detection runs
-5. IF the resources input list is empty, THEN THE AnomalyDetector SHALL return an empty list without calling the LLM
+5. IF the resources input list is empty, THEN THE AnomalyDetector SHALL return an empty list without calling the LLM; IF the list is non-empty but no anomalies are found by the LLM, THEN THE AnomalyDetector SHALL return an empty list
 6. IF the LLM returns invalid JSON or an unexpected structure, THEN THE AnomalyDetector SHALL return an empty list without raising an exception
 
 ### Requirement 7: Incident-Based Policy Generation
@@ -125,7 +125,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 1. WHEN a non-empty, non-whitespace incident description of at most 2000 characters is provided, THE IncidentPolicyGenerator SHALL generate between 3 and 5 policy dicts inclusive, discarding any excess policies beyond 5 and re-invoking the LLM if fewer than 3 are returned (up to 1 retry, returning whatever policies were generated if the retry also produces fewer than 3)
 2. WHEN a policy is generated, THE IncidentPolicyGenerator SHALL write a JSON file to policies/{policy_id}.json, creating the policies/ directory if it does not exist
 3. WHEN a policy is generated, THE IncidentPolicyGenerator SHALL set check_type to one of: "security_group", "encryption", "public_access", "idle_resource"
-4. WHEN an empty or whitespace-only incident description is provided, THE IncidentPolicyGenerator SHALL return an empty list without writing any files
+4. WHEN an empty, whitespace-only, or missing incident description is provided, THE IncidentPolicyGenerator SHALL return an empty list without writing any files
 5. WHEN an incident description exceeds 2000 characters, THE IncidentPolicyGenerator SHALL truncate the input to the first 2000 characters before the LLM call
 6. WHEN a policy with the same incident_hash already exists in the policies/ directory (matched by reading existing policy files and comparing the incident_hash field), THE IncidentPolicyGenerator SHALL return the existing policies without re-generating or writing files
 7. WHEN policies are generated, THE IncidentPolicyGenerator SHALL include in each: policy_id (slug string), policy_name, resource_types (non-empty list), check_type, check_logic_description, rationale, query, generated_at (ISO 8601 timestamp), incident_hash (first 8 hex characters of the SHA-256 hash of the original un-truncated incident description), version (integer value 1)
@@ -142,7 +142,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 2. WHEN a snapshot is saved, THE DriftDetector SHALL write atomically using a temporary file and rename strategy
 3. WHEN a snapshot is saved, THE DriftDetector SHALL maintain at most 30 snapshots by rotating oldest entries when the count exceeds 30
 4. WHEN a snapshot is saved, THE DriftDetector SHALL acquire a file lock with a timeout of 10 seconds and release it after writing completes, even if an error occurs
-5. IF save_snapshot encounters any error, THEN THE DriftDetector SHALL log the error to stderr and return without raising an exception
+5. IF save_snapshot encounters any I/O or other error, THEN THE DriftDetector SHALL log the error to stderr and return without raising an exception, ensuring the caller can continue operating
 6. WHEN detect is called with at least 2 snapshots in history, THE DriftDetector SHALL calculate waste_delta as current snapshot total_waste minus previous snapshot total_waste expressed as a float
 7. WHEN detect is called with at least 2 snapshots in history, THE DriftDetector SHALL match findings across the two most recent snapshots by the (resource_id, check_type) pair to identify new_findings (present in current but not previous) and resolved_findings (present in previous but not current)
 8. WHEN detect is called with at least 2 snapshots in history, THE DriftDetector SHALL calculate critical_delta as the count of findings with severity "CRITICAL" in the current snapshot minus the count in the previous snapshot
@@ -176,7 +176,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 4. WHEN get_status is called, THE JanitorScheduler SHALL return a dict with keys: running (bool), schedule (string cron expression), next_run (ISO timestamp string or None), last_run (ISO timestamp string or None), runs_completed (int)
 5. WHEN start is called multiple times, THE JanitorScheduler SHALL be idempotent by stopping any previous scheduler before starting a new one
 6. WHEN stop is called, THE JanitorScheduler SHALL shut down cleanly within 5 seconds with no background threads remaining active
-7. THE JanitorScheduler SHALL run as a daemon thread that exits with the main process
+7. THE JanitorScheduler SHALL run as a daemon thread that always exits with the main process regardless of its internal state
 8. IF a scheduled scan is still running when the next trigger fires, THEN THE JanitorScheduler SHALL skip the overlapping trigger and log a warning indicating the previous scan is still in progress
 
 ### Requirement 11: MCP Tool Integration
@@ -191,8 +191,8 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 4. THE system SHALL expose infer_resource_context as an MCP tool that accepts resource_id (string, required), resource_name (string, required), existing_tags (dict, optional, defaults to empty dict) and returns an inference dict
 5. THE system SHALL expose detect_anomalies as an MCP tool that accepts resources (list, required) and findings (list, required) and returns a list of anomaly dicts
 6. THE system SHALL expose policy_from_incident as an MCP tool that accepts incident_description (string, required) and returns a list of policy dicts
-7. THE system SHALL use direct import (no network transport) for all MCP tool implementations
-8. IF a required parameter is missing or of incorrect type, THEN THE MCP tool SHALL return an error response indicating the invalid parameter without crashing the server
+7. THE system SHALL use direct import (no network transport) for all MCP tool implementations regardless of error conditions or backend mode
+8. IF a required parameter is missing or of incorrect type, THEN THE MCP tool SHALL catch all parameter validation errors (including those from underlying libraries) and return an error response indicating the invalid parameter without crashing the server
 9. IF any MCP tool invocation triggers an internal agent failure, THEN THE tool SHALL return the agent's safe default response rather than raising an unhandled exception
 10. THE system SHALL provide a `llm_client.py` module at project root exposing `get_client() -> openai.OpenAI` and `DEFAULT_MODEL: str`; all AI agents SHALL use `get_client()` for LLM calls and `DEFAULT_MODEL` as the model string
 
@@ -205,7 +205,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 1. WHEN JANITOR_BACKEND is set to "fixture", THE FixtureProvider SHALL return fixture data containing at least one flaggable resource for each resource_type ("elasticache", "ebs", "ec2") and at least one finding for each check_type ("security_group", "encryption", "public_access") so that all Phase B and C agents can exercise their detection logic
 2. WHEN JANITOR_BACKEND is set to "fixture", THE system SHALL return responses from all MCP tools (interpret_query, explain_remediation, suggest_policies, infer_resource_context, detect_anomalies, policy_from_incident) that conform to the same output schema (required keys and value types) as when running against a live backend
 3. WHEN JANITOR_BACKEND is set to "fixture", THE system SHALL allow end-to-end execution of the full pipeline (NL query interpretation, FinOps scan, SecOps scan, anomaly detection, drift detection, multi-account orchestration) with all operations completing without raising unhandled exceptions and producing non-empty findings
-4. THE system SHALL ensure no Phase B or C feature imports or invokes AWS SDK calls (boto3) at runtime when JANITOR_BACKEND is set to "fixture"; OpenRouter API calls for AI agents SHALL be mockable at the test level via patching `llm_client.get_client`
+4. THE system SHALL ensure no Phase B or C feature imports or invokes AWS SDK calls (boto3) at runtime when JANITOR_BACKEND is set to "fixture"; OpenRouter API calls for AI agents SHALL be mockable at the test level via patching `llm_client.get_client` in all backend modes
 5. IF JANITOR_BACKEND is set to "fixture" and an AI agent's LLM dependency is also mocked, THEN THE system SHALL produce deterministic output for a given fixture input, enabling repeatable automated test assertions
 
 ### Requirement 13: LLM Client Configuration
@@ -227,10 +227,10 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 
 #### Acceptance Criteria
 
-1. THE system SHALL never log, store, or include `OPENROUTER_API_KEY` or `JANITOR_LLM_MODEL` values in any output file, log entry, error message, Streamlit session state, or API response
+1. THE system SHALL never log, store, or include any sensitive data including `OPENROUTER_API_KEY` or `JANITOR_LLM_MODEL` values in any output file, log entry, error message, Streamlit session state, or API response; any partial exposure of sensitive data SHALL be treated as a complete violation
 2. THE IncidentPolicyGenerator SHALL validate that each LLM-returned policy_id matches the pattern `^[a-z0-9\-]+$` before constructing the file path; policies with non-conforming IDs SHALL be skipped and logged to stderr
 3. THE system SHALL ensure that `findings_store.json`, `scan_history.json`, `savings_ledger.json`, `scheduler.log`, and `policies/*.json` are listed in `.gitignore` to prevent accidental credential or infrastructure data commits
-4. THE MultiAccountOrchestrator SHALL validate each role_arn in accounts.json matches `arn:aws:iam::\d{12}:role/.+` before use; entries failing validation SHALL be skipped with an error logged to stderr
+4. THE MultiAccountOrchestrator SHALL validate each role_arn in accounts.json matches `arn:aws:iam::\d{12}:role/.+` before use; entries failing validation SHALL be skipped with an error logged to stderr and the system SHALL continue processing remaining valid entries from the same file
 5. THE JanitorScheduler SHALL rotate `scheduler.log` when it exceeds 10MB using `logging.handlers.RotatingFileHandler` with a maximum of 3 backup files
 6. THE DriftDetector SHALL delete any stale `scan_history.json.tmp` file older than 60 seconds at the start of each `save_snapshot` call, before acquiring the file lock
 7. THE MultiAccountOrchestrator SHALL catch `(Exception, concurrent.futures.TimeoutError, concurrent.futures.CancelledError)` in the futures completion loop to ensure all account failures are handled regardless of exception type
