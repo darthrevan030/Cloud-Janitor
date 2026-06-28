@@ -6,7 +6,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
 
 ## Tasks
 
-- [ ] 1. Create the backends module with CloudProvider ABC
+- [x] 1. Create the backends module with CloudProvider ABC
   - [x] 1.1 Create `mcp_server/backends/__init__.py` with CloudProvider abstract base class
     - Define `CloudProvider(ABC)` with abstract methods: `get_cost_data`, `get_security_data`, `check_dependencies`
     - Include full type hints and docstrings matching design document signatures
@@ -21,7 +21,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - Handle missing fixture files gracefully with error dict
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10_
 
-  - [ ] 1.3 Write property tests for FixtureProvider
+  - [x] 1.3 Write property tests for FixtureProvider
     - **Property 2: Cost data structural invariants** — verify total_monthly_waste == round(sum of costs, 2) and filtering correctness for any resource_type/min_idle_days
     - **Property 3: Security data critical count consistency** — verify critical_count matches CRITICAL findings count and check_type filtering
     - **Property 4: Dependency response boolean consistency** — verify has_dependencies == (len(dependents) > 0)
