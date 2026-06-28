@@ -212,13 +212,13 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Catch parameter validation errors and return error response without crashing server
     - _Requirements: 11.1, 11.7, 11.8, 11.9_
 
-  - [ ] 8.2 Add MCP tool `explain_remediation` to `mcp_server/aws_janitor_mcp.py`
+  - [x] 8.2 Add MCP tool `explain_remediation` to `mcp_server/aws_janitor_mcp.py`
     - Decorator `@mcp.tool()`, accepts `resource_id`, `finding`, `remediation_hcl`, `rollback_hcl`
     - Import via `from agents.explainer import RemediationExplainer`
     - Return safe default on internal failure
     - _Requirements: 11.2, 11.7, 11.8, 11.9_
 
-  - [ ] 8.3 Add MCP tool `suggest_policies` to `mcp_server/aws_janitor_mcp.py`
+  - [x] 8.3 Add MCP tool `suggest_policies` to `mcp_server/aws_janitor_mcp.py`
     - Decorator `@mcp.tool()`, accepts `findings: list`, `already_checked: list`
     - Import via `from agents.policy_suggester import PolicySuggester`
     - Return safe default on internal failure

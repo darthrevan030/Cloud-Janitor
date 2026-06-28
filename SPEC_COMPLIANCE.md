@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T09:49:58Z
+Generated: 2026-06-28T09:51:12Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -69,7 +69,7 @@ Generated: 2026-06-28T09:49:58Z
 | 63 | 8. Wire MCP tools and orchestrator integration | ❌ Pending | — |
 | 64 | 8.1 Add MCP tool `interpret_query` to `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 65 | 8.2 Add MCP tool `explain_remediation` to `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
-| 66 | 8.3 Add MCP tool `suggest_policies` to `mcp_server/aws_janitor_mcp.py` | ❌ Pending | — |
+| 66 | 8.3 Add MCP tool `suggest_policies` to `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 67 | 8.4 Add MCP tool `infer_resource_context` to `mcp_server/aws_janitor_mcp.py` | ❌ Pending | — |
 | 68 | 8.5 Add MCP tool `detect_anomalies` to `mcp_server/aws_janitor_mcp.py` | ❌ Pending | — |
 | 69 | 8.6 Add MCP tool `policy_from_incident` to `mcp_server/aws_janitor_mcp.py` | ❌ Pending | — |
