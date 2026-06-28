@@ -29,16 +29,16 @@ from orchestrator import (
 def tmp_project(tmp_path):
     """Set up a temporary project structure for testing."""
     # Create directories
-    (tmp_path / ".kiro" / "hooks").mkdir(parents=True)
+    (tmp_path / "scripts" / "hooks").mkdir(parents=True)
     (tmp_path / "output").mkdir()
     (tmp_path / "rollbacks").mkdir()
 
     # Create hook scripts (simple pass/fail scripts for testing)
-    pre_hook = tmp_path / ".kiro" / "hooks" / "pre-remediation.sh"
+    pre_hook = tmp_path / "scripts" / "hooks" / "pre-remediation.sh"
     pre_hook.write_text("#!/usr/bin/env bash\nexit 0\n")
     pre_hook.chmod(0o755)
 
-    post_hook = tmp_path / ".kiro" / "hooks" / "post-remediation.sh"
+    post_hook = tmp_path / "scripts" / "hooks" / "post-remediation.sh"
     post_hook.write_text("#!/usr/bin/env bash\nexit 0\n")
     post_hook.chmod(0o755)
 

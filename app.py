@@ -155,7 +155,7 @@ def load_remediation_hcl() -> str:
     """Load the generated remediation HCL."""
     if not REMEDIATION_PATH.exists():
         return "No remediation plan generated yet."
-    return REMEDIATION_PATH.read_text(encoding="utf-8")
+    return REMEDIATION_PATH.read_text(encoding="utf-8", errors="replace")
 
 
 def load_rollback_hcl(resource_id: str) -> str:

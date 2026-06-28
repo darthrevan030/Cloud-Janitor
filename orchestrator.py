@@ -49,7 +49,7 @@ TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 PROJECT_ROOT = Path(__file__).parent
 FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
-HOOKS_DIR = PROJECT_ROOT / ".kiro" / "hooks"
+HOOKS_DIR = PROJECT_ROOT / "scripts" / "hooks"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 ROLLBACKS_DIR = PROJECT_ROOT / "rollbacks"
 AUDIT_LOG_PATH = PROJECT_ROOT / "audit.log"
@@ -134,7 +134,7 @@ class Orchestrator:
     ):
         self.project_root = project_root or PROJECT_ROOT
         self.findings_store_path = self.project_root / "findings_store.json"
-        self.hooks_dir = self.project_root / ".kiro" / "hooks"
+        self.hooks_dir = self.project_root / "scripts" / "hooks"
         self.output_dir = self.project_root / "output"
         self.rollbacks_dir = self.project_root / "rollbacks"
         self.audit_log_path = self.project_root / "audit.log"
@@ -579,11 +579,11 @@ class Orchestrator:
 
         try:
             result = subprocess.run(
-                ["bash", str(hook_path), str(remediation_path), str(rollback_path)],
+                ["bash", hook_path.as_posix(), remediation_path.as_posix(), rollback_path.as_posix()],
                 capture_output=True,
                 text=True,
                 timeout=60,
-                cwd=str(self.project_root),
+                cwd=self.project_root.as_posix(),
             )
 
             if result.returncode != 0:
@@ -618,7 +618,7 @@ class Orchestrator:
             subprocess.run(
                 [
                     "bash",
-                    str(hook_path),
+                    hook_path.as_posix(),
                     resource_id,
                     action,
                     result,
@@ -627,7 +627,7 @@ class Orchestrator:
                 capture_output=True,
                 text=True,
                 timeout=30,
-                cwd=str(self.project_root),
+                cwd=self.project_root.as_posix(),
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             # Post-remediation hook is non-blocking — log but don't fail
