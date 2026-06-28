@@ -44,7 +44,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - _Requirements: 5.4_
 
 - [ ] 3. Wire provider selection into MCP server
-  - [ ] 3.1 Add PROVIDER_REGISTRY and `_load_provider()` to `aws_janitor_mcp.py`
+  - [x] 3.1 Add PROVIDER_REGISTRY and `_load_provider()` to `aws_janitor_mcp.py`
     - Define registry mapping backend names to provider classes
     - Implement `_load_provider()` reading `JANITOR_BACKEND` env var (default: `"fixture"`)
     - Raise `ValueError` for invalid backend names with helpful message listing valid options

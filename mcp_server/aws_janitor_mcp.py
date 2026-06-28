@@ -16,6 +16,8 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
+from mcp_server.backends import CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
+
 # Fixtures live at project root / fixtures/
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
@@ -23,6 +25,28 @@ TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 # Create the MCP server instance
 mcp = FastMCP("aws-janitor")
+
+# Provider registry mapping backend names to provider classes
+PROVIDER_REGISTRY: dict[str, type[CloudProvider]] = {
+    "fixture": FixtureProvider,
+    "aws": AWSProvider,
+    "gcp": GCPProvider,
+    "azure": AzureProvider,
+}
+
+
+def _load_provider() -> CloudProvider:
+    """Instantiate the provider based on JANITOR_BACKEND env var."""
+    backend = os.environ.get("JANITOR_BACKEND", "fixture")
+    if backend not in PROVIDER_REGISTRY:
+        valid = ", ".join(sorted(PROVIDER_REGISTRY.keys()))
+        raise ValueError(
+            f"Invalid JANITOR_BACKEND={backend!r}. Valid options: {valid}"
+        )
+    return PROVIDER_REGISTRY[backend]()
+
+
+_provider: CloudProvider = _load_provider()
 
 
 @mcp.tool()
