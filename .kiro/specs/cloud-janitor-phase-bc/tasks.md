@@ -79,6 +79,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Create `ResourceTagger` class with `infer(resource_id, resource_name, existing_tags) -> dict` and `infer_batch(resources) -> list[dict]`
     - Implement confidence_threshold logic: if confidence < threshold → set team/owner to None; if confidence == threshold → preserve inferred values
     - Implement existing_tags passthrough: skip inference for fields with non-empty, non-null string values
+    - Treat existing_tags fields as present only when value is a non-empty, non-null string; empty strings and None values trigger inference as if the field were absent
     - Implement batch: split into chunks of 10, single LLM call per chunk, preserve input order
     - Return safe defaults on any exception: env="unknown", team=None, owner=None, risk_level="low", confidence=0.0
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 1.4, 1.8, 1.9, 1.11_
@@ -94,6 +95,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Create `AnomalyDetector` class with `detect(resources, findings) -> list[dict]`
     - Filter out resources already in findings by resource_id before LLM call
     - Only call LLM when unflagged resources exist; return [] when resources is empty
+    - Always call LLM when unflagged resources list is non-empty, even when no anomalies are expected; never skip the LLM call based on predicted output
     - Validate each anomaly has: anomaly_id, resource_id, anomaly_type, description, severity ∈ {"high", "medium", "low"}, evidence
     - Post-filter: ensure no anomaly resource_id exists in findings
     - Cap at 20 anomalies max
@@ -320,14 +322,14 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     { "id": 0, "tasks": ["1.1", "1.2", "1.3"] },
     { "id": 1, "tasks": ["1.4", "2.1", "2.3", "2.5"] },
     { "id": 2, "tasks": ["2.2", "2.4", "2.6", "3.1", "3.3"] },
-    { "id": 3, "tasks": ["3.2", "3.4"] },
+    { "id": 3, "tasks": ["3.2", "3.4", "4"] },
     { "id": 4, "tasks": ["5.1", "5.3"] },
     { "id": 5, "tasks": ["5.2", "5.4", "6.1", "6.3"] },
-    { "id": 6, "tasks": ["6.2", "6.4"] },
+    { "id": 6, "tasks": ["6.2", "6.4", "7"] },
     { "id": 7, "tasks": ["8.1", "8.2", "8.3", "8.4", "8.5", "8.6"] },
     { "id": 8, "tasks": ["8.7", "8.8", "9.1", "9.2"] },
     { "id": 9, "tasks": ["9.3", "10.1"] },
-    { "id": 10, "tasks": ["12.1"] }
+    { "id": 10, "tasks": ["11", "12.1"] }
   ]
 }
 ```
