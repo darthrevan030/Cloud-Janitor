@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T02:33:26Z
+Generated: 2026-06-28T02:38:10Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -50,52 +50,57 @@ Generated: 2026-06-28T02:33:26Z
 | 44 | 3.2 Refactor MCP tool functions to delegate to provider instance | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 45 | 3.3 Write property tests for provider selection | ✅ Done | no mapping |
 | 46 | 4. Checkpoint - Verify backward compatibility | ✅ Done | no mapping |
-| 47 | 5. Write backward compatibility property test | ⏳ Partial | no mapping |
+| 47 | 5. Write backward compatibility property test | ✅ Done | no mapping |
 | 48 | 6. Update dependencies and documentation | ❌ Pending | — |
-| 49 | 6.1 Add boto3 to requirements.txt | ❌ Pending | — |
-| 50 | 6.2 Update `mcp_server/README.md` with provider architecture documentation | ❌ Pending | — |
-| 51 | 7. Final checkpoint - Ensure all tests pass | ❌ Pending | — |
-| 52 | 1. Implement Savings Tracker core module | ✅ Done | no mapping |
-| 53 | 1.1 Create `savings.py` with SavingsTracker class | ✅ Done | savings.py exists |
-| 54 | 1.2 Write property test: RunEntry schema and field correctness | ✅ Done | no mapping |
-| 55 | 1.3 Write property test: Monthly savings computation | ✅ Done | savings.py exists |
-| 56 | 1.4 Write property test: Recalculate-from-source invariant | ✅ Done | no mapping |
-| 57 | 1.5 Write property test: Duplicate run idempotency | ✅ Done | no mapping |
-| 58 | 1.6 Write property test: Savings summary correctness | ✅ Done | no mapping |
-| 59 | 2. Implement Reasoning Logger and agent integration | ✅ Done | no mapping |
-| 60 | 2.1 Create `agents/reasoning_logger.py` with ReasoningLogger class | ✅ Done | no mapping |
-| 61 | 2.2 Integrate ReasoningLogger into FinOps Auditor | ✅ Done | agents/finops_auditor.py exists |
-| 62 | 2.3 Integrate ReasoningLogger into SecOps Guard | ✅ Done | agents/secops_guard.py exists |
-| 63 | 2.4 Integrate ReasoningLogger into Remediation Architect | ✅ Done | agents/remediation_architect.py exists |
-| 64 | 2.5 Write property test: Reasoning logger emits valid structured JSON | ✅ Done | no mapping |
-| 65 | 2.6 Write property test: Reasoning logger sequential append | ✅ Done | no mapping |
-| 66 | 3. Checkpoint | ✅ Done | no mapping |
-| 67 | 4. LocalStack wiring and demo infrastructure | ✅ Done | no mapping |
-| 68 | 4.1 Replace `terraform` with `tflocal` in `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
-| 69 | 4.2 Replace `terraform` with `tflocal` in `.kiro/hooks/pre-remediation.sh` | ✅ Done | agents/remediation_architect.py exists |
-| 70 | 4.3 Create `docker-compose.yml` at project root | ✅ Done | no mapping |
-| 71 | 4.4 Create `Makefile` at project root with `demo` target | ✅ Done | no mapping |
-| 72 | 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow | ✅ Done | "APPROVE" found in codebase |
-| 73 | 4.6 Update `requirements.txt` to add `terraform-local` | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
-| 74 | 5. Orchestrator integration with SavingsTracker | ✅ Done | no mapping |
-| 75 | 5.1 Wire SavingsTracker into Orchestrator | ✅ Done | no mapping |
-| 76 | 5.2 Add ReasoningLogger truncation at audit start in Orchestrator | ✅ Done | no mapping |
-| 77 | 5.3 Write unit tests for Orchestrator → SavingsTracker wiring | ✅ Done | no mapping |
-| 78 | 6. Update .gitignore and project configuration | ✅ Done | no mapping |
-| 79 | 6.1 Add runtime files to `.gitignore` | ✅ Done | no mapping |
-| 80 | 7. Checkpoint | ✅ Done | no mapping |
-| 81 | 8. Implement SPEC_COMPLIANCE.md generator | ✅ Done | no mapping |
-| 82 | 8.1 Create `generate_spec_compliance.py` at project root | ✅ Done | no mapping |
-| 83 | 8.2 Create Git post-commit hook | ✅ Done | no mapping |
-| 84 | 8.3 Write property test: Compliance generator parsing and mapping | ✅ Done | no mapping |
-| 85 | 8.4 Write property test: Compliance generator output format | ✅ Done | no mapping |
-| 86 | 9. Implement Streamlit Reasoning Panel | ✅ Done | app.py exists |
-| 87 | 9.1 Add reasoning log panel to `app.py` | ✅ Done | app.py exists |
-| 88 | 9.2 Write property test: Agent section header transitions | ✅ Done | no mapping |
-| 89 | 9.3 Write property test: Malformed line resilience | ✅ Done | no mapping |
-| 90 | 10. Final checkpoint — test quality audit | ✅ Done | no mapping |
-| 91 | 10.1 Run full test suite and confirm all tests pass | ✅ Done | no mapping |
-| 92 | 10.2 Run test quality audit on all test files | ✅ Done | no mapping |
-| 93 | 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain | ✅ Done | no mapping |
-| 94 | 10.4 Verify runtime files excluded from git | ✅ Done | no mapping |
-| 95 | 10.5 Run generate_spec_compliance.py and commit output | ⏳ Partial | no mapping |
+| 49 | 6.1 Add new dependencies to `requirements.txt` | ❌ Pending | — |
+| 50 | 6.2 Rewrite `README.md` at project root as a product README | ❌ Pending | — |
+| 51 | 6.3 Update `mcp_server/README.md` with provider architecture documentation | ❌ Pending | — |
+| 52 | 6.4 Create `agents/README.md` | ❌ Pending | — |
+| 53 | 6.5 Create `fixtures/README.md` | ❌ Pending | — |
+| 54 | 6.6 Create `tests/README.md` | ❌ Pending | — |
+| 55 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ❌ Pending | — |
+| 56 | 7. Final checkpoint - Ensure all tests pass | ❌ Pending | — |
+| 57 | 1. Implement Savings Tracker core module | ✅ Done | no mapping |
+| 58 | 1.1 Create `savings.py` with SavingsTracker class | ✅ Done | savings.py exists |
+| 59 | 1.2 Write property test: RunEntry schema and field correctness | ✅ Done | no mapping |
+| 60 | 1.3 Write property test: Monthly savings computation | ✅ Done | savings.py exists |
+| 61 | 1.4 Write property test: Recalculate-from-source invariant | ✅ Done | no mapping |
+| 62 | 1.5 Write property test: Duplicate run idempotency | ✅ Done | no mapping |
+| 63 | 1.6 Write property test: Savings summary correctness | ✅ Done | no mapping |
+| 64 | 2. Implement Reasoning Logger and agent integration | ✅ Done | no mapping |
+| 65 | 2.1 Create `agents/reasoning_logger.py` with ReasoningLogger class | ✅ Done | no mapping |
+| 66 | 2.2 Integrate ReasoningLogger into FinOps Auditor | ✅ Done | agents/finops_auditor.py exists |
+| 67 | 2.3 Integrate ReasoningLogger into SecOps Guard | ✅ Done | agents/secops_guard.py exists |
+| 68 | 2.4 Integrate ReasoningLogger into Remediation Architect | ✅ Done | agents/remediation_architect.py exists |
+| 69 | 2.5 Write property test: Reasoning logger emits valid structured JSON | ✅ Done | no mapping |
+| 70 | 2.6 Write property test: Reasoning logger sequential append | ✅ Done | no mapping |
+| 71 | 3. Checkpoint | ✅ Done | no mapping |
+| 72 | 4. LocalStack wiring and demo infrastructure | ✅ Done | no mapping |
+| 73 | 4.1 Replace `terraform` with `tflocal` in `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
+| 74 | 4.2 Replace `terraform` with `tflocal` in `.kiro/hooks/pre-remediation.sh` | ✅ Done | agents/remediation_architect.py exists |
+| 75 | 4.3 Create `docker-compose.yml` at project root | ✅ Done | no mapping |
+| 76 | 4.4 Create `Makefile` at project root with `demo` target | ✅ Done | no mapping |
+| 77 | 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow | ✅ Done | "APPROVE" found in codebase |
+| 78 | 4.6 Update `requirements.txt` to add `terraform-local` | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
+| 79 | 5. Orchestrator integration with SavingsTracker | ✅ Done | no mapping |
+| 80 | 5.1 Wire SavingsTracker into Orchestrator | ✅ Done | no mapping |
+| 81 | 5.2 Add ReasoningLogger truncation at audit start in Orchestrator | ✅ Done | no mapping |
+| 82 | 5.3 Write unit tests for Orchestrator → SavingsTracker wiring | ✅ Done | no mapping |
+| 83 | 6. Update .gitignore and project configuration | ✅ Done | no mapping |
+| 84 | 6.1 Add runtime files to `.gitignore` | ✅ Done | no mapping |
+| 85 | 7. Checkpoint | ✅ Done | no mapping |
+| 86 | 8. Implement SPEC_COMPLIANCE.md generator | ✅ Done | no mapping |
+| 87 | 8.1 Create `generate_spec_compliance.py` at project root | ✅ Done | no mapping |
+| 88 | 8.2 Create Git post-commit hook | ✅ Done | no mapping |
+| 89 | 8.3 Write property test: Compliance generator parsing and mapping | ✅ Done | no mapping |
+| 90 | 8.4 Write property test: Compliance generator output format | ✅ Done | no mapping |
+| 91 | 9. Implement Streamlit Reasoning Panel | ✅ Done | app.py exists |
+| 92 | 9.1 Add reasoning log panel to `app.py` | ✅ Done | app.py exists |
+| 93 | 9.2 Write property test: Agent section header transitions | ✅ Done | no mapping |
+| 94 | 9.3 Write property test: Malformed line resilience | ✅ Done | no mapping |
+| 95 | 10. Final checkpoint — test quality audit | ✅ Done | no mapping |
+| 96 | 10.1 Run full test suite and confirm all tests pass | ✅ Done | no mapping |
+| 97 | 10.2 Run test quality audit on all test files | ✅ Done | no mapping |
+| 98 | 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain | ✅ Done | no mapping |
+| 99 | 10.4 Verify runtime files excluded from git | ✅ Done | no mapping |
+| 100 | 10.5 Run generate_spec_compliance.py and commit output | ⏳ Partial | no mapping |
