@@ -20,7 +20,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Ensure `anthropic` package is NOT present
     - _Requirements: 13.5_
 
-  - [ ] 1.3 Update `.gitignore` with sensitive data files
+  - [x] 1.3 Update `.gitignore` with sensitive data files
     - Add entries for `findings_store.json`, `scan_history.json`, `savings_ledger.json`, `scheduler.log`, `policies/*.json`
     - _Requirements: 14.3_
 

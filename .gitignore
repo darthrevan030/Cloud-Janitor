@@ -20,10 +20,16 @@ venv/
 # Runtime outputs
 audit.log
 findings_store.json
+findings_store_*.json
+scan_history.json
+scan_history.json.tmp
 savings_ledger.json
+scheduler.log
+scheduler.log.*
 agent_reasoning.log
 rollbacks/*
 !rollbacks/.gitkeep
+policies/*.json
 
 # IDE
 .vscode/settings.json
