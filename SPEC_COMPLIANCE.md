@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T07:36:38Z
+Generated: 2026-06-28T07:39:37Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -54,7 +54,7 @@ Generated: 2026-06-28T07:36:38Z
 | 48 | 3.2 Write property tests for ResourceTagger | ✅ Done | no mapping |
 | 49 | 3.3 Implement `agents/anomaly_detector.py` | ✅ Done | no mapping |
 | 50 | 3.4 Write property tests for AnomalyDetector | ✅ Done | no mapping |
-| 51 | 4. Checkpoint - Ensure all Phase B agent tests pass | ⏳ Partial | no mapping |
+| 51 | 4. Checkpoint - Ensure all Phase B agent tests pass | ✅ Done | no mapping |
 | 52 | 5. Implement Phase C platform agents (IncidentPolicyGenerator, DriftDetector) | ❌ Pending | — |
 | 53 | 5.1 Implement `agents/incident_policy_generator.py` | ❌ Pending | — |
 | 54 | 5.2 Write property tests for IncidentPolicyGenerator | ❌ Pending | — |
