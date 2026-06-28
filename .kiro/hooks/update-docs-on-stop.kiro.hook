@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Update Docs on Session End",
+  "description": "After each agent session, checks if any files were moved, renamed, or created and updates the relevant README.md files to reflect the current project structure.",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the git diff (staged and unstaged) for this session. If any files were moved, renamed, deleted, or created in a way that would make existing README.md files inaccurate, update the affected READMEs to reflect the current state. Focus on: directory trees, file path references, import paths mentioned in docs. If no structural changes occurred (only code edits within existing files), do nothing."
+  }
+}
