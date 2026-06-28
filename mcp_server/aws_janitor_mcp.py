@@ -18,6 +18,7 @@ from mcp_server.backends import CloudProvider, FixtureProvider, AWSProvider, GCP
 from agents.query_interpreter import QueryInterpreter
 from agents.explainer import RemediationExplainer
 from agents.policy_suggester import PolicySuggester
+from agents.tagger import ResourceTagger
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
@@ -214,6 +215,41 @@ def suggest_policies(findings: list, already_checked: list) -> list:
         return suggester.suggest(findings, already_checked)
     except Exception:
         return []
+
+
+@mcp.tool()
+def infer_resource_context(
+    resource_id: str,
+    resource_name: str,
+    existing_tags: dict | None = None,
+) -> dict:
+    """
+    Infers environment, team, and owner context from resource metadata.
+
+    Uses direct import of ResourceTagger agent (no network transport).
+
+    Args:
+        resource_id: The AWS resource ID to analyze.
+        resource_name: Human-readable resource name.
+        existing_tags: Already-known tags (skips inference for present fields).
+            Defaults to empty dict if not provided.
+
+    Returns:
+        Dict with keys: env, team, owner, risk_level, confidence.
+        On error: returns safe defaults with env="unknown", team=None,
+        owner=None, risk_level="low", confidence=0.0.
+    """
+    try:
+        tagger = ResourceTagger()
+        return tagger.infer(resource_id, resource_name, existing_tags or {})
+    except Exception:
+        return {
+            "env": "unknown",
+            "team": None,
+            "owner": None,
+            "risk_level": "low",
+            "confidence": 0.0,
+        }
 
 
 if __name__ == "__main__":
