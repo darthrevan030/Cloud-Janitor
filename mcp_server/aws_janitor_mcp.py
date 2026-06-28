@@ -16,6 +16,7 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_server.backends import CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
 from agents.query_interpreter import QueryInterpreter
+from agents.explainer import RemediationExplainer
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
@@ -155,6 +156,39 @@ def interpret_query(user_query: str) -> dict:
             "min_idle_days": 7,
             "intent_summary": "Could not interpret query.",
             "confidence": 0.0,
+        }
+
+
+@mcp.tool()
+def explain_remediation(
+    resource_id: str,
+    finding: dict,
+    remediation_hcl: str,
+    rollback_hcl: str,
+) -> dict:
+    """
+    Generates plain-English explanations of a remediation plan.
+
+    Uses direct import of RemediationExplainer agent (no network transport).
+
+    Args:
+        resource_id: The AWS resource ID being remediated.
+        finding: The finding dict that triggered remediation.
+        remediation_hcl: The generated Terraform HCL for the fix.
+        rollback_hcl: The generated Terraform HCL for rollback.
+
+    Returns:
+        Dict with keys: risk_explanation, what_terraform_does, what_rollback_restores.
+        On error: returns safe defaults with all values set to "Explanation unavailable."
+    """
+    try:
+        explainer = RemediationExplainer()
+        return explainer.explain(resource_id, finding, remediation_hcl, rollback_hcl)
+    except Exception:
+        return {
+            "risk_explanation": "Explanation unavailable.",
+            "what_terraform_does": "Explanation unavailable.",
+            "what_rollback_restores": "Explanation unavailable.",
         }
 
 
