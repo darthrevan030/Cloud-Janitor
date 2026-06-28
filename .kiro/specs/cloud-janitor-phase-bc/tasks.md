@@ -91,7 +91,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - For any existing_tags with env/team/owner populated, output preserves those values
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.6**
 
-  - [ ] 3.3 Implement `agents/anomaly_detector.py`
+  - [x] 3.3 Implement `agents/anomaly_detector.py`
     - Create `AnomalyDetector` class with `detect(resources, findings) -> list[dict]`
     - Filter out resources already in findings by resource_id before LLM call
     - Only call LLM when unflagged resources exist; return [] when resources is empty
