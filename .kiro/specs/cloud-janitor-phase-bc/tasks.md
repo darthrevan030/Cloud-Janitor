@@ -31,7 +31,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Test that no sensitive values are logged or exposed
     - _Requirements: 13.1, 13.2, 13.3, 13.4_
 
-- [-] 2. Implement Phase B AI agents (QueryInterpreter, RemediationExplainer, PolicySuggester)
+- [x] 2. Implement Phase B AI agents (QueryInterpreter, RemediationExplainer, PolicySuggester)
   - [x] 2.1 Implement `agents/query_interpreter.py`
     - Create `QueryInterpreter` class with `interpret(query: str) -> dict`
     - Implement prompt construction for NL-to-structured-params mapping
@@ -42,7 +42,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Import LLM via `from llm_client import get_client, DEFAULT_MODEL`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 1.1, 1.8, 1.9, 1.11_
 
-  - [-] 2.2 Write property test for QueryInterpreter output validity
+  - [x] 2.2 Write property test for QueryInterpreter output validity
     - **Property 3: QueryInterpreter Output Validity**
     - For any string input, verify: confidence ∈ [0.0, 1.0], resource_types items ∈ valid set, check_types items ∈ valid set, min_idle_days ≥ 0, intent_summary is non-empty string, exactly 5 keys returned
     - **Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.7**
@@ -55,7 +55,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return all keys as "Explanation unavailable." on any exception
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 1.2, 1.8, 1.9, 1.11_
 
-  - [-] 2.4 Write property test for RemediationExplainer schema completeness
+  - [x] 2.4 Write property test for RemediationExplainer schema completeness
     - **Property 4: RemediationExplainer Schema Completeness**
     - For any combination of inputs, verify: dict has exactly 3 keys, each value is a non-empty string
     - **Validates: Requirements 3.4, 1.2**
@@ -69,7 +69,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return [] on any exception
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 1.3, 1.8, 1.9, 1.11_
 
-  - [-] 2.6 Write property test for PolicySuggester output bounds and exclusion
+  - [x] 2.6 Write property test for PolicySuggester output bounds and exclusion
     - **Property 5: PolicySuggester Output Bounds and Exclusion**
     - For any findings list and already_checked list, verify: 0-5 dicts returned, each has required keys, priority valid, no suggestion references check_type in already_checked
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
