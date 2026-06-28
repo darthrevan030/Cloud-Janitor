@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T06:10:46Z
+Generated: 2026-06-28T06:30:41Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -40,7 +40,7 @@ Generated: 2026-06-28T06:10:46Z
 | 34 | 1. Set up shared LLM infrastructure and project dependencies | ❌ Pending | — |
 | 35 | 1.1 Create `llm_client.py` at project root | ✅ Done | no mapping |
 | 36 | 1.2 Update `requirements.txt` with new dependencies | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
-| 37 | 1.3 Update `.gitignore` with sensitive data files | ❌ Pending | — |
+| 37 | 1.3 Update `.gitignore` with sensitive data files | ✅ Done | no mapping |
 | 38 | 1.4 Write unit tests for `llm_client.py` | ❌ Pending | — |
 | 39 | 2. Implement Phase B AI agents (QueryInterpreter, RemediationExplainer, PolicySuggester) | ❌ Pending | — |
 | 40 | 2.1 Implement `agents/query_interpreter.py` | ❌ Pending | — |

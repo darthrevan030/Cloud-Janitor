@@ -24,7 +24,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Add entries for `findings_store.json`, `scan_history.json`, `savings_ledger.json`, `scheduler.log`, `policies/*.json`
     - _Requirements: 14.3_
 
-  - [ ] 1.4 Write unit tests for `llm_client.py`
+  - [x] 1.4 Write unit tests for `llm_client.py`
     - Test `get_client()` returns OpenAI instance with correct base_url
     - Test `DEFAULT_MODEL` reads from env var with correct default
     - Test `EnvironmentError` raised when `OPENROUTER_API_KEY` unset
