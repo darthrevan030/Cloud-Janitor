@@ -50,7 +50,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - Raise `ValueError` for invalid backend names with helpful message listing valid options
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ] 3.2 Refactor MCP tool functions to delegate to provider instance
+  - [x] 3.2 Refactor MCP tool functions to delegate to provider instance
     - Replace inline fixture-reading logic in `get_cost_data`, `get_security_data`, `check_dependencies` with delegation to `_provider`
     - Keep `validate_hcl` unchanged and directly in `aws_janitor_mcp.py`
     - Remove the now-unused `FIXTURES_DIR` constant (FixtureProvider handles its own path)

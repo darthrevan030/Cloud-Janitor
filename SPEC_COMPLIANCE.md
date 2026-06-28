@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T02:14:49Z
+Generated: 2026-06-28T02:18:24Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -46,8 +46,8 @@ Generated: 2026-06-28T02:14:49Z
 | 40 | 2.2 Implement GCPProvider and AzureProvider in `mcp_server/backends/gcp_provider.py` and `mcp_server/backends/azure_provider.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 41 | 2.3 Update `mcp_server/backends/__init__.py` to export all providers | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 42 | 3. Wire provider selection into MCP server | ❌ Pending | — |
-| 43 | 3.1 Add PROVIDER_REGISTRY and `_load_provider()` to `aws_janitor_mcp.py` | ❌ Pending | — |
-| 44 | 3.2 Refactor MCP tool functions to delegate to provider instance | ❌ Pending | — |
+| 43 | 3.1 Add PROVIDER_REGISTRY and `_load_provider()` to `aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
+| 44 | 3.2 Refactor MCP tool functions to delegate to provider instance | ⏳ Partial | mcp_server/aws_janitor_mcp.py exists |
 | 45 | 3.3 Write property tests for provider selection | ❌ Pending | — |
 | 46 | 4. Checkpoint - Verify backward compatibility | ❌ Pending | — |
 | 47 | 5. Write backward compatibility property test | ❌ Pending | — |

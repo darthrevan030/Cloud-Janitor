@@ -7,19 +7,14 @@ Usage:
     python mcp_server/aws_janitor_mcp.py
 """
 
-import json
 import os
 import subprocess
 import tempfile
-from pathlib import Path
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
 from mcp_server.backends import CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
-
-# Fixtures live at project root / fixtures/
-FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
@@ -61,20 +56,7 @@ def get_cost_data(resource_type: Optional[str] = None, min_idle_days: int = 7) -
     Returns:
         {"resources": [...], "total_monthly_waste": float}
     """
-    fixture_path = FIXTURES_DIR / "aws_cost_explorer.json"
-    if not fixture_path.exists():
-        return {"error": f"Fixture not found: {fixture_path}", "resources": [], "total_monthly_waste": 0.0}
-
-    with open(fixture_path) as f:
-        data = json.load(f)
-
-    resources = data["resources"]
-    if resource_type:
-        resources = [r for r in resources if r["type"] == resource_type]
-    resources = [r for r in resources if r["idle_days"] >= min_idle_days]
-
-    total_waste = sum(r["monthly_cost"] for r in resources)
-    return {"resources": resources, "total_monthly_waste": round(total_waste, 2)}
+    return _provider.get_cost_data(resource_type, min_idle_days)
 
 
 @mcp.tool()
@@ -88,19 +70,7 @@ def get_security_data(check_type: Optional[str] = None) -> dict:
     Returns:
         {"findings": [...], "critical_count": int}
     """
-    fixture_path = FIXTURES_DIR / "aws_config_inspector.json"
-    if not fixture_path.exists():
-        return {"error": f"Fixture not found: {fixture_path}", "findings": [], "critical_count": 0}
-
-    with open(fixture_path) as f:
-        data = json.load(f)
-
-    findings = data["findings"]
-    if check_type:
-        findings = [f for f in findings if f["check_type"] == check_type]
-
-    critical = sum(1 for f in findings if f["severity"] == "CRITICAL")
-    return {"findings": findings, "critical_count": critical}
+    return _provider.get_security_data(check_type)
 
 
 @mcp.tool()
@@ -155,15 +125,7 @@ def check_dependencies(resource_id: str) -> dict:
     Returns:
         {"has_dependencies": bool, "dependents": [...]}
     """
-    fixture_path = FIXTURES_DIR / "aws_config_inspector.json"
-    if not fixture_path.exists():
-        return {"error": f"Fixture not found: {fixture_path}", "has_dependencies": False, "dependents": []}
-
-    with open(fixture_path) as f:
-        data = json.load(f)
-
-    deps = data.get("dependencies", {}).get(resource_id, [])
-    return {"has_dependencies": len(deps) > 0, "dependents": deps}
+    return _provider.check_dependencies(resource_id)
 
 
 if __name__ == "__main__":
