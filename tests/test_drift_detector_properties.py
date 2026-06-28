@@ -187,3 +187,151 @@ class TestDriftDetectorMaxSnapshotsInvariant:
             assert data[0]["scan_id"] == expected_first_id, (
                 f"First entry should be {expected_first_id}, got {data[0]['scan_id']}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Property 15: DriftDetector Waste Delta Correctness
+# ---------------------------------------------------------------------------
+
+
+class TestDriftDetectorWasteDeltaCorrectness:
+    """Property 15: DriftDetector Waste Delta Correctness.
+
+    **Validates: Requirements 8.4**
+
+    For two snapshots with total_waste W_prev and W_curr,
+    waste_delta = W_curr - W_prev.
+    """
+
+    @given(
+        w_prev=st.floats(min_value=0.0, max_value=100000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=100000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_waste_delta_equals_current_minus_previous(self, tmp_path, w_prev, w_curr):
+        """waste_delta must equal W_curr - W_prev for any two waste values."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Drift analysis complete."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", [], [], w_prev)
+            detector.save_snapshot("scan-curr", [], [], w_curr)
+            result = detector.detect([])
+
+        expected_delta = w_curr - w_prev
+        assert abs(result["waste_delta"] - expected_delta) < 1e-6, (
+            f"waste_delta should be {expected_delta}, got {result['waste_delta']}"
+        )
+
+    @given(
+        w_prev=st.floats(min_value=0.0, max_value=100000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_zero_delta_when_waste_unchanged(self, tmp_path, w_prev):
+        """When waste is the same in both snapshots, delta is 0."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "No change in waste."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", [], [], w_prev)
+            detector.save_snapshot("scan-curr", [], [], w_prev)
+            result = detector.detect([])
+
+        assert result["waste_delta"] == 0.0, (
+            f"waste_delta should be 0.0 when waste unchanged, got {result['waste_delta']}"
+        )
+
+
+    @given(
+        w_prev=st.floats(min_value=0.01, max_value=100000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=100000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_negative_delta_when_waste_decreases(self, tmp_path, w_prev, w_curr):
+        """When W_curr < W_prev, waste_delta is negative."""
+        assume(w_curr < w_prev)
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Waste decreased."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", [], [], w_prev)
+            detector.save_snapshot("scan-curr", [], [], w_curr)
+            result = detector.detect([])
+
+        assert result["waste_delta"] < 0, (
+            f"waste_delta should be negative when waste decreased, got {result['waste_delta']}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Property 16: DriftDetector Finding Diff Correctness
+# ---------------------------------------------------------------------------
+
+
+class TestDriftDetectorFindingDiffCorrectness:
+    """Property 16: DriftDetector Finding Diff Correctness.
+
+    **Validates: Requirements 8.5**
+
+    new_findings contains exactly findings in current but not previous;
+    resolved_findings contains exactly findings in previous but not current.
+    Matching is by (resource_id, check_type) pair.
+    """
+
+    @given(
+        prev_findings=unique_findings_strategy(min_size=0, max_size=8),
+        curr_findings=unique_findings_strategy(min_size=0, max_size=8),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_new_findings_are_in_current_not_previous(self, tmp_path, prev_findings, curr_findings):
+        """new_findings contains exactly the findings in current but not in previous."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Drift detected."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", prev_findings, [], 10.0)
+            detector.save_snapshot("scan-curr", curr_findings, [], 20.0)
+            result = detector.detect(curr_findings)
+
+        # Compute expected keys
+        prev_keys = {
+            (f["resource_id"], f["check_type"]) for f in prev_findings
+            if f.get("resource_id") and f.get("check_type")
+        }
+        curr_keys = {
+            (f["resource_id"], f["check_type"]) for f in curr_findings
+            if f.get("resource_id") and f.get("check_type")
+        }
+        expected_new_keys = curr_keys - prev_keys
+
+        actual_new_keys = {
+            (f["resource_id"], f["check_type"]) for f in result["new_findings"]
+        }
+        assert actual_new_keys == expected_new_keys, (
+            f"new_findings keys mismatch.\n"
+            f"Expected: {expected_new_keys}\nGot: {actual_new_keys}"
+        )
