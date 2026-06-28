@@ -256,9 +256,9 @@ class TestDetect:
         # Pre-load 2 snapshots so we get past the insufficient history check
         detector.save_snapshot("scan-001", [], [], 0.0)
         detector.save_snapshot("scan-002", [], [], 0.0)
-        # Make LLM call blow up
-        mock_client.side_effect = Exception("Catastrophic failure")
-        result = detector.detect([])
+        # Corrupt the _load_history to cause a real failure in detect logic
+        with patch.object(detector, "_load_history", side_effect=Exception("Catastrophic failure")):
+            result = detector.detect([])
         assert result == {"drift": None, "reason": "error"}
 
 
@@ -295,11 +295,14 @@ class TestFileLocking:
     """Tests for filelock behavior."""
 
     @patch("agents.drift_detector.get_client")
-    def test_lock_file_created(self, mock_client, detector, tmp_history):
-        """save_snapshot creates a .lock file for filelock (Req 8.4)."""
-        detector.save_snapshot("scan-001", [], [], 0.0)
-        lock_file = Path(str(tmp_history) + ".lock")
-        assert lock_file.exists()
+    def test_lock_acquired_and_released(self, mock_client, detector, tmp_history):
+        """save_snapshot acquires and releases filelock (Req 8.4)."""
+        with patch("agents.drift_detector.FileLock") as mock_lock_cls:
+            mock_lock = MagicMock()
+            mock_lock_cls.return_value = mock_lock
+            detector.save_snapshot("scan-001", [], [], 0.0)
+            mock_lock.acquire.assert_called_once()
+            mock_lock.release.assert_called_once()
 
     @patch("agents.drift_detector.get_client")
     def test_lock_released_after_write(self, mock_client, detector, tmp_history):
@@ -309,3 +312,15 @@ class TestFileLocking:
         detector.save_snapshot("scan-002", [], [], 0.0)
         data = json.loads(tmp_history.read_text())
         assert len(data) == 2
+
+    @patch("agents.drift_detector.get_client")
+    def test_lock_released_on_error(self, mock_client, detector, tmp_history):
+        """Lock is released even when an error occurs during write (Req 8.4)."""
+        with patch("agents.drift_detector.FileLock") as mock_lock_cls:
+            mock_lock = MagicMock()
+            mock_lock_cls.return_value = mock_lock
+            # Make _load_history raise inside the lock
+            with patch.object(detector, "_load_history", side_effect=OSError("disk full")):
+                detector.save_snapshot("scan-001", [], [], 0.0)
+            # Lock must still have been released in finally
+            mock_lock.release.assert_called_once()
