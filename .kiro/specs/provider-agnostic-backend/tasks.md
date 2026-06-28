@@ -121,7 +121,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - **Extending fixtures** section: how to add more resources or findings, what fields are required vs optional, how `check_dependencies` uses the `dependencies` map
     - _Requirements: 9.1_
 
-  - [ ] 6.6 Create `tests/README.md`
+  - [x] 6.6 Create `tests/README.md`
     - List every test file with one-line description of what it covers
     - **Running tests** section: `pytest`, `pytest -v`, `pytest tests/test_<file>.py` for single file
     - **Test philosophy** section: note the use of `hypothesis` for property tests and where they are used (savings tracker, reasoning logger, orchestrator)
