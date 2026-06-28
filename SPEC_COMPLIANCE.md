@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T02:53:45Z
+Generated: 2026-06-28T02:54:42Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -51,15 +51,15 @@ Generated: 2026-06-28T02:53:45Z
 | 45 | 3.3 Write property tests for provider selection | ✅ Done | no mapping |
 | 46 | 4. Checkpoint - Verify backward compatibility | ✅ Done | no mapping |
 | 47 | 5. Write backward compatibility property test | ✅ Done | no mapping |
-| 48 | 6. Update dependencies and documentation | ❌ Pending | — |
+| 48 | 6. Update dependencies and documentation | ✅ Done | no mapping |
 | 49 | 6.1 Add new dependencies to `requirements.txt` | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
 | 50 | 6.2 Rewrite `README.md` at project root as a product README | ✅ Done | no mapping |
 | 51 | 6.3 Update `mcp_server/README.md` with provider architecture documentation | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 52 | 6.4 Create `agents/README.md` | ✅ Done | no mapping |
 | 53 | 6.5 Create `fixtures/README.md` | ✅ Done | fixtures/ exists |
 | 54 | 6.6 Create `tests/README.md` | ✅ Done | no mapping |
-| 55 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ⏳ Partial | rollbacks/ exists |
-| 56 | 7. Final checkpoint - Ensure all tests pass | ❌ Pending | — |
+| 55 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ✅ Done | rollbacks/ exists |
+| 56 | 7. Final checkpoint - Ensure all tests pass | ⏳ Partial | no mapping |
 | 57 | 1. Implement Savings Tracker core module | ✅ Done | no mapping |
 | 58 | 1.1 Create `savings.py` with SavingsTracker class | ✅ Done | savings.py exists |
 | 59 | 1.2 Write property test: RunEntry schema and field correctness | ✅ Done | no mapping |

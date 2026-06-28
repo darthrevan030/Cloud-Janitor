@@ -134,7 +134,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - `rollbacks/README.md`: explain that files are named `<resource_id>.tf`, generated alongside remediation HCL, one file per resource, executed on `CONFIRM ROLLBACK <resource_id>` command; note that these files are gitignored in production use (contain infrastructure state)
     - _Requirements: 9.1_
 
-- [ ] 7. Final checkpoint - Ensure all tests pass
+- [x] 7. Final checkpoint - Ensure all tests pass
   - Run full test suite with `pytest`
   - Verify no import errors when boto3 is not installed and backend is fixture
   - Ensure all tests pass, ask the user if questions arise.

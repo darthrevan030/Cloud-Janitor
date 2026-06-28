@@ -197,6 +197,11 @@ def generate_report(tasks: list[dict], project_root: Path) -> str:
 
         # Clean task text for table display (remove trailing requirement refs)
         display_text = task_text.rstrip()
+        # Ensure display_text is never empty/whitespace-only (breaks markdown table)
+        if not display_text.strip():
+            display_text = "(untitled task)"
+        # Escape pipe characters to avoid breaking markdown table structure
+        display_text = display_text.replace("|", "\\|")
 
         lines.append(f"| {i} | {display_text} | {status_display} | {artifact_info} |")
 
