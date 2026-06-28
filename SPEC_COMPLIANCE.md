@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T02:01:52Z
+Generated: 2026-06-28T02:10:15Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -43,7 +43,7 @@ Generated: 2026-06-28T02:01:52Z
 | 37 | 1.3 Write property tests for FixtureProvider | ✅ Done | no mapping |
 | 38 | 2. Implement stub providers | ❌ Pending | — |
 | 39 | 2.1 Implement AWSProvider in `mcp_server/backends/aws_provider.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
-| 40 | 2.2 Implement GCPProvider and AzureProvider in `mcp_server/backends/gcp_provider.py` and `mcp_server/backends/azure_provider.py` | ❌ Pending | — |
+| 40 | 2.2 Implement GCPProvider and AzureProvider in `mcp_server/backends/gcp_provider.py` and `mcp_server/backends/azure_provider.py` | ⏳ Partial | mcp_server/aws_janitor_mcp.py exists |
 | 41 | 2.3 Update `mcp_server/backends/__init__.py` to export all providers | ❌ Pending | — |
 | 42 | 3. Wire provider selection into MCP server | ❌ Pending | — |
 | 43 | 3.1 Add PROVIDER_REGISTRY and `_load_provider()` to `aws_janitor_mcp.py` | ❌ Pending | — |
