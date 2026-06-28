@@ -137,7 +137,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Whitespace-only returns []; strings > 2000 chars are truncated
     - **Validates: Requirements 7.1, 7.2, 7.4, 7.5, 7.6, 7.7**
 
-  - [ ] 5.3 Implement `agents/drift_detector.py`
+  - [-] 5.3 Implement `agents/drift_detector.py`
     - Create `DriftDetector` class with `save_snapshot(scan_id, findings, anomalies, total_waste) -> None` and `detect(findings) -> dict`
     - Implement atomic write: write to `.tmp` file then rename
     - Implement file lock with 10-second timeout using filelock library; always release in finally
