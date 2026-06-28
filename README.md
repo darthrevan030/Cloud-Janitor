@@ -31,8 +31,8 @@ Cloud Custodian shows you what's wrong with a YAML rules engine. Cloud Janitor r
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/darthrevan030/kiro-buildfest-2026.git
-cd kiro-buildfest-2026
+git clone https://github.com/darthrevan030/Cloud-Janitor.git
+cd Cloud-Janitor
 
 # 2. Install dependencies
 pip install -r requirements.txt
