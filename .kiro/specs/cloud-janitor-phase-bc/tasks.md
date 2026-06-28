@@ -74,7 +74,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - For any findings list and already_checked list, verify: 0-5 dicts returned, each has required keys, priority valid, no suggestion references check_type in already_checked
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
 
-- [ ] 3. Implement Phase B AI agents (ResourceTagger, AnomalyDetector)
+- [x] 3. Implement Phase B AI agents (ResourceTagger, AnomalyDetector)
   - [x] 3.1 Implement `agents/tagger.py`
     - Create `ResourceTagger` class with `infer(resource_id, resource_name, existing_tags) -> dict` and `infer_batch(resources) -> list[dict]`
     - Implement confidence_threshold logic: if confidence < threshold → set team/owner to None; if confidence == threshold → preserve inferred values
@@ -102,7 +102,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return [] on any exception
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 1.5, 1.8, 1.9, 1.11_
 
-  - [ ] 3.4 Write property tests for AnomalyDetector
+  - [x] 3.4 Write property tests for AnomalyDetector
     - **Property 8: AnomalyDetector Disjoint Resource IDs**
     - For any resources and findings lists, verify anomaly resource_ids are disjoint from finding resource_ids
     - **Property 9: AnomalyDetector Output Schema**
