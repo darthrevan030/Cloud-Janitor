@@ -20,6 +20,7 @@ from agents.explainer import RemediationExplainer
 from agents.policy_suggester import PolicySuggester
 from agents.tagger import ResourceTagger
 from agents.anomaly_detector import AnomalyDetector
+from agents.incident_policy_generator import IncidentPolicyGenerator
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
@@ -272,6 +273,29 @@ def detect_anomalies(resources: list, findings: list) -> list:
     try:
         detector = AnomalyDetector()
         return detector.detect(resources, findings)
+    except Exception:
+        return []
+
+
+@mcp.tool()
+def policy_from_incident(incident_description: str) -> list:
+    """
+    Generates preventive scan policies from an incident description.
+
+    Uses direct import of IncidentPolicyGenerator agent (no network transport).
+
+    Args:
+        incident_description: Plain text describing a past incident or near-miss.
+
+    Returns:
+        List of policy dicts, each with keys: policy_id, policy_name,
+        resource_types, check_type, check_logic_description, rationale,
+        query, generated_at, incident_hash, version.
+        On error: returns empty list (safe default).
+    """
+    try:
+        generator = IncidentPolicyGenerator()
+        return generator.generate(incident_description)
     except Exception:
         return []
 
