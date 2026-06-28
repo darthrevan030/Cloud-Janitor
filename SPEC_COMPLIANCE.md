@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T02:51:37Z
+Generated: 2026-06-28T02:53:45Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -57,8 +57,8 @@ Generated: 2026-06-28T02:51:37Z
 | 51 | 6.3 Update `mcp_server/README.md` with provider architecture documentation | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 52 | 6.4 Create `agents/README.md` | ✅ Done | no mapping |
 | 53 | 6.5 Create `fixtures/README.md` | ✅ Done | fixtures/ exists |
-| 54 | 6.6 Create `tests/README.md` | ⏳ Partial | no mapping |
-| 55 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ❌ Pending | — |
+| 54 | 6.6 Create `tests/README.md` | ✅ Done | no mapping |
+| 55 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ⏳ Partial | rollbacks/ exists |
 | 56 | 7. Final checkpoint - Ensure all tests pass | ❌ Pending | — |
 | 57 | 1. Implement Savings Tracker core module | ✅ Done | no mapping |
 | 58 | 1.1 Create `savings.py` with SavingsTracker class | ✅ Done | savings.py exists |
