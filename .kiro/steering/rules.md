@@ -6,7 +6,7 @@ Every generated resource block must include:
   ManagedBy    = "Kiro-Janitor"
   Environment  = var.environment
   RemediatedAt = timestamp()
-  RollbackRef  = "rollbacks/<resource_id>.tf"
+  RollbackRef  = "output/rollbacks/<resource_id>.tf"
 
 ## EBS Volume Rules
 
@@ -89,6 +89,7 @@ into the assertion without an independent expected value
 ### Required for every new module
 
 When writing tests for a new module, include:
+
 1. At least one test with a known concrete expected value (not derived
    from the function under test)
 2. At least one negative test — what the function should NOT do
