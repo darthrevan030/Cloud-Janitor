@@ -700,3 +700,59 @@ class TestDriftDetectorNegativeCases:
         assert result == {"drift": None, "reason": "insufficient history"}, (
             f"With 1 snapshot, expected insufficient history, got {result}"
         )
+
+
+    @given(
+        findings=unique_findings_strategy(min_size=0, max_size=5),
+        w_prev=st.floats(min_value=0.0, max_value=1000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=1000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_llm_failure_still_returns_valid_schema(self, tmp_path, findings, w_prev, w_curr):
+        """When LLM raises, detect still returns a valid result with fallback narrative."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.side_effect = RuntimeError("LLM unavailable")
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", findings, [], w_prev)
+            detector.save_snapshot("scan-curr", findings, [], w_curr)
+            result = detector.detect(findings)
+
+        # Should still have valid schema with fallback narrative
+        assert set(result.keys()) == REQUIRED_DRIFT_KEYS, (
+            f"Even with LLM failure, output should have all keys. Got: {set(result.keys())}"
+        )
+        assert isinstance(result["narrative"], str)
+        assert len(result["narrative"]) > 0, "Fallback narrative must be non-empty"
+
+    @given(
+        findings=unique_findings_strategy(min_size=0, max_size=5),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_get_client_failure_still_returns_valid_schema(self, tmp_path, findings):
+        """When get_client() raises, detect still returns valid result."""
+        history_path = tmp_path / "scan_history.json"
+
+        # First patch allows save_snapshot to work, second makes detect's LLM fail
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", findings, [], 5.0)
+            detector.save_snapshot("scan-curr", findings, [], 10.0)
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_get_client.side_effect = EnvironmentError("OPENROUTER_API_KEY not set")
+
+            result = detector.detect(findings)
+
+        assert set(result.keys()) == REQUIRED_DRIFT_KEYS, (
+            f"Even with get_client failure, output should have all keys. Got: {set(result.keys())}"
+        )
+        assert isinstance(result["narrative"], str)
+        assert len(result["narrative"]) > 0
