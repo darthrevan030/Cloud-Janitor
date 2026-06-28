@@ -30,6 +30,7 @@ agent_reasoning.log
 rollbacks/*
 !rollbacks/.gitkeep
 policies/*.json
+remediation.tf
 
 # IDE
 .vscode/settings.json
