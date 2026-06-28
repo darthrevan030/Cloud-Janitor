@@ -6,6 +6,10 @@ Routes all LLM calls through OpenRouter's OpenAI-compatible API.
 
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()  # loads .env from project root if present, no-op otherwise
+
 import openai
 
 
