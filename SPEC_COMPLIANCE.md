@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T06:55:26Z
+Generated: 2026-06-28T07:08:19Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -49,10 +49,10 @@ Generated: 2026-06-28T06:55:26Z
 | 43 | 2.4 Write property test for RemediationExplainer schema completeness | ✅ Done | agents/remediation_architect.py exists |
 | 44 | 2.5 Implement `agents/policy_suggester.py` | ✅ Done | no mapping |
 | 45 | 2.6 Write property test for PolicySuggester output bounds and exclusion | ✅ Done | no mapping |
-| 46 | 3. Implement Phase B AI agents (ResourceTagger, AnomalyDetector) | ⏳ Partial | no mapping |
-| 47 | 3.1 Implement `agents/tagger.py` | ⏳ Partial | no mapping |
+| 46 | 3. Implement Phase B AI agents (ResourceTagger, AnomalyDetector) | ❌ Pending | — |
+| 47 | 3.1 Implement `agents/tagger.py` | ❌ Pending | — |
 | 48 | 3.2 Write property tests for ResourceTagger | ❌ Pending | — |
-| 49 | 3.3 Implement `agents/anomaly_detector.py` | ⏳ Partial | no mapping |
+| 49 | 3.3 Implement `agents/anomaly_detector.py` | ❌ Pending | — |
 | 50 | 3.4 Write property tests for AnomalyDetector | ❌ Pending | — |
 | 51 | 4. Checkpoint - Ensure all Phase B agent tests pass | ❌ Pending | — |
 | 52 | 5. Implement Phase C platform agents (IncidentPolicyGenerator, DriftDetector) | ❌ Pending | — |
