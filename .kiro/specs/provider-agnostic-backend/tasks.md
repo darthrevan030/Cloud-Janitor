@@ -62,7 +62,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - **Property 6: Invalid backend rejection** — for any string not in registry, _load_provider() raises ValueError with the invalid name and valid options
     - **Validates: Requirements 5.3, 5.4, 5.5**
 
-- [ ] 4. Checkpoint - Verify backward compatibility
+- [x] 4. Checkpoint - Verify backward compatibility
   - Ensure all existing tests pass without modification when `JANITOR_BACKEND` is unset
   - Run `pytest` and verify no regressions
   - Ensure all tests pass, ask the user if questions arise.
