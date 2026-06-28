@@ -101,7 +101,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
       - **New Phase B/C tools** subsection listing the tools that will be added in the next spec (`interpret_query`, `explain_remediation`, `suggest_policies`, `infer_resource_context`, `detect_anomalies`, `policy_from_incident`, `aggregate_findings`) — with one-line description each and `[planned]` status badge so the README stays accurate
     - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-  - [-] 6.4 Create `agents/README.md`
+  - [x] 6.4 Create `agents/README.md`
     - Document every agent class in `agents/`:
       - **FinOpsAuditor** — what it scans, severity rules (ElastiCache idle >30d = HIGH, EBS unattached >30d = MEDIUM), output file (`findings_store.json`, writes fresh)
       - **SecOpsGuard** — what it scans, severity rules (port 6379/3306/5432/27017 open to 0.0.0.0/0 = CRITICAL, port 22 open = HIGH, unencrypted cache/EBS = HIGH), output file (appends to `findings_store.json`)
