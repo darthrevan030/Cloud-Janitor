@@ -115,15 +115,51 @@ This document specifies the requirements for refactoring the MCP server backend 
 
 ### Requirement 9: Documentation
 
-**User Story:** As a new contributor, I want README documentation explaining the provider architecture, so that I can understand how to configure and extend the system.
+**User Story:** As a developer, contributor, or judge, I want comprehensive README documentation covering every module, agent, fixture, and configuration option, so that I can understand, run, extend, and evaluate the system without reading source code.
 
 #### Acceptance Criteria
 
-1. THE README SHALL document all available running modes (fixture, aws, gcp, azure)
-2. THE README SHALL document the `JANITOR_BACKEND` environment variable and its default value
-3. THE README SHALL document the implementation status of each provider (implemented vs stub)
-4. THE README SHALL include instructions for adding a new provider
+**Project root `README.md`**
+1. THE README SHALL contain a one-line product description explaining what Cloud Janitor does and how it differs from static tools like Cloud Custodian
+2. THE README SHALL include a Quick Start section with the `make demo` command, prerequisites, and the Streamlit port
+3. THE README SHALL describe the 3-agent pipeline (FinOps → SecOps → Remediation Architect → approval gate → apply/rollback) in prose or diagram form
+4. THE README SHALL include a complete environment variables table covering `JANITOR_BACKEND`, `TF_CMD`, and `JANITOR_SCHEDULE` with valid values, defaults, and descriptions
+5. THE README SHALL include an annotated project structure section covering all top-level files and directories
+6. THE README SHALL describe the Ghost Cluster demo scenario (idle ElastiCache + exposed security group) that ships with the fixture data
+7. THE README SHALL include a Running Tests section with the `pytest` command
 
+**`mcp_server/README.md`**
+8. THE README SHALL document all available provider backends (`fixture`, `aws`, `gcp`, `azure`) in a table with implementation status (complete vs stub) and required env vars per backend
+9. THE README SHALL document the `JANITOR_BACKEND` environment variable, its default value (`fixture`), and the consequence of each valid value
+10. THE README SHALL document the implementation status of each provider: fixture (complete), aws (stub — raises NotImplementedError), gcp and azure (interface only)
+11. THE README SHALL include step-by-step instructions for adding a new provider: create `backends/<name>_provider.py`, inherit `CloudProvider`, implement the 3 abstract methods, add to `PROVIDER_REGISTRY`
+12. THE README SHALL list Phase B/C planned MCP tools (`interpret_query`, `explain_remediation`, `suggest_policies`, `infer_resource_context`, `detect_anomalies`, `policy_from_incident`, `aggregate_findings`) with one-line descriptions and `[planned]` status markers
+
+**`agents/README.md`**
+13. THE README SHALL document every agent class: FinOpsAuditor, SecOpsGuard, RemediationArchitect, ApprovalGate, ReasoningLogger, AuditLogger — including inputs, outputs, and side effects for each
+14. THE README SHALL document FinOpsAuditor severity rules: ElastiCache idle >30d = HIGH, EBS unattached >30d = MEDIUM, all others = LOW
+15. THE README SHALL document SecOpsGuard severity rules: ports 6379/3306/5432/27017 open to 0.0.0.0/0 = CRITICAL, port 22 open = HIGH, unencrypted cache/EBS = HIGH
+16. THE README SHALL document the agent sequencing requirement: FinOps writes `findings_store.json` fresh, SecOps appends, RemediationArchitect reads both — and explain why order is enforced
+17. THE README SHALL document the ApprovalGate command formats (`APPROVE <id>`, `ROLLBACK <id>`, `CONFIRM ROLLBACK <id>`) and the 3-attempt lock behaviour
+18. THE README SHALL include the full annotated `findings_store.json` schema
+
+**`fixtures/README.md`**
+19. THE README SHALL explain that fixture files provide fake AWS data requiring no credentials, and document their role in the demo pipeline
+20. THE README SHALL document the complete `aws_cost_explorer.json` schema with every field, its type, valid values, and which fields are type-specific (elasticache/ebs/ec2)
+21. THE README SHALL document the complete `aws_config_inspector.json` schema: findings array, dependencies map, check_type enum, severity enum, and check-type-specific fields
+22. THE README SHALL describe the specific resources in the current fixture files and why they were chosen for the Ghost Cluster demo scenario
+23. THE README SHALL include instructions for extending fixtures: required vs optional fields, how `check_dependencies` uses the `dependencies` map, and how to add a new resource type
+
+**`tests/README.md`**
+24. THE README SHALL list every test file with a one-line description of what it covers
+25. THE README SHALL document how to run tests: `pytest`, `pytest -v`, and single-file invocation
+26. THE README SHALL document which tests use `hypothesis` for property-based testing and what invariants they verify
+27. THE README SHALL document what is intentionally not tested: `app.py` (requires browser context) and LocalStack-dependent paths
+28. THE README SHALL include a checklist for adding tests when a new agent is introduced
+
+**`output/README.md` and `rollbacks/README.md`**
+29. `output/README.md` SHALL explain that `remediation.tf` is auto-generated by RemediationArchitect, must not be manually edited, is overwritten on each scan, and is the file submitted to `tflocal apply` on approval
+30. `rollbacks/README.md` SHALL explain the `<resource_id>.tf` naming convention, that files are generated alongside remediation HCL, one per resource, and are executed on `CONFIRM ROLLBACK <resource_id>`
 ### Requirement 10: Dependency Management
 
 **User Story:** As a developer, I want boto3 listed as an optional dependency, so that users who only need the fixture backend do not need AWS SDK installed.

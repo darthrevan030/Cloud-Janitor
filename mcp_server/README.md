@@ -6,7 +6,14 @@ Exposes AWS infrastructure data and Terraform validation via the [Model Context 
 
 - Python 3.12+
 - `mcp >= 1.28.1` (FastMCP)
-- `terraform` CLI on PATH (for HCL validation)
+- `tflocal` CLI on PATH (from `terraform-local` package; override via `TF_CMD=terraform` for real AWS)
+
+## Environment Variables
+
+| Variable | Valid values | Default | Description |
+|----------|-------------|---------|-------------|
+| `JANITOR_BACKEND` | `fixture`, `aws`, `gcp`, `azure` | `fixture` | Active cloud data provider |
+| `TF_CMD` | `tflocal`, `terraform` | `tflocal` | Terraform binary for `validate_hcl` |
 
 ## Running the Server
 
@@ -41,7 +48,7 @@ Returns security findings from the Config/Inspector fixture.
 
 ### `validate_hcl(hcl_content)`
 
-Validates Terraform HCL by writing to a temp directory and running `terraform init -backend=false` + `terraform validate`.
+Validates Terraform HCL by writing to a temp directory and running `$TF_CMD init -backend=false` + `$TF_CMD validate` (where `TF_CMD` defaults to `tflocal`).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -122,6 +129,72 @@ Finding-specific fields:
 | `encryption` | `encryption_at_rest` |
 
 The `dependencies` map drives `check_dependencies()` — keys are resource IDs, values are lists of resources that reference them. An empty list means safe to remediate without cascading impact.
+
+## Provider Backends
+
+The MCP server uses a pluggable provider architecture. The active backend is selected via the `JANITOR_BACKEND` environment variable.
+
+| Backend | `JANITOR_BACKEND` value | Status | Required env vars | Description |
+|---------|------------------------|--------|-------------------|-------------|
+| Fixture | `fixture` | **Complete** | None | Reads from local JSON fixture files. Default backend. |
+| AWS | `aws` | Stub | AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`) | Live AWS API calls via boto3. All methods raise `NotImplementedError`. |
+| GCP | `gcp` | Interface only | — | Placeholder for Google Cloud Platform. All methods raise `NotImplementedError`. |
+| Azure | `azure` | Interface only | — | Placeholder for Microsoft Azure. All methods raise `NotImplementedError`. |
+
+When `JANITOR_BACKEND` is unset, it defaults to `"fixture"`. Setting it to an invalid value raises a `ValueError` listing valid options.
+
+### Provider class hierarchy
+
+```text
+CloudProvider (ABC)
+├── FixtureProvider   — reads fixtures/*.json
+├── AWSProvider       — stub, requires boto3
+├── GCPProvider       — stub
+└── AzureProvider     — stub
+```
+
+All providers live in `mcp_server/backends/` and implement three abstract methods:
+
+- `get_cost_data(resource_type, min_idle_days) -> dict`
+- `get_security_data(check_type) -> dict`
+- `check_dependencies(resource_id) -> dict`
+
+## Adding a New Provider
+
+1. Create `mcp_server/backends/<name>_provider.py`
+2. Import and inherit from `CloudProvider`:
+
+   ```python
+   from mcp_server.backends import CloudProvider
+
+   class MyProvider(CloudProvider):
+       ...
+   ```
+
+3. Implement the three abstract methods: `get_cost_data`, `get_security_data`, `check_dependencies`
+4. Register the provider in `mcp_server/aws_janitor_mcp.py`:
+
+   ```python
+   from mcp_server.backends.my_provider import MyProvider
+
+   PROVIDER_REGISTRY["my_backend"] = MyProvider
+   ```
+
+5. Users can now activate it with `JANITOR_BACKEND=my_backend`
+
+## Phase B/C Tools (Planned)
+
+The following tools will be added in future specs to support natural-language querying, AI-driven remediation explanation, and policy inference.
+
+| Tool | Status | Description |
+|------|--------|-------------|
+| `interpret_query` | `[planned]` | Translate natural-language infrastructure questions into structured tool calls |
+| `explain_remediation` | `[planned]` | Generate human-readable explanation of a proposed Terraform remediation |
+| `suggest_policies` | `[planned]` | Recommend IAM/SCP policies based on current findings and remediation history |
+| `infer_resource_context` | `[planned]` | Enrich a resource ID with usage context, ownership, and blast radius |
+| `detect_anomalies` | `[planned]` | Identify unusual cost or security patterns across time-series data |
+| `policy_from_incident` | `[planned]` | Generate a preventive policy from a resolved security incident |
+| `aggregate_findings` | `[planned]` | Roll up findings by severity, service, or account for executive summaries |
 
 ## Architecture Note
 

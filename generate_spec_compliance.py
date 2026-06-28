@@ -230,8 +230,13 @@ def generate_compliance_report(tasks: list[dict]) -> str:
         else:
             artifact_status = "—"
 
-        # Escape pipe characters in task text for Markdown table
-        task_text = task["task"].replace("|", "\\|")
+        # Clean task text for table display (remove trailing requirement refs)
+        display_text = task_text.rstrip()
+        # Ensure display_text is never empty/whitespace-only (breaks markdown table)
+        if not display_text.strip():
+            display_text = "(untitled task)"
+        # Escape pipe characters to avoid breaking markdown table structure
+        display_text = display_text.replace("|", "\\|")
 
         lines.append(
             f"| {task['number']} | {task_text} | {task['status_display']} | {artifact_status} |"

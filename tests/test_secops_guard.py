@@ -203,3 +203,55 @@ class TestSecOpsGuard:
                 assert f["metadata"]["encryption_at_rest"] is False
                 assert "current_state" in f["metadata"]
                 assert "required_state" in f["metadata"]
+
+
+class TestFinOpsNegativeCases:
+    """Negative tests: FinOps Auditor must NOT flag resources idle < 7 days.
+
+    The fixture contains vol-0def456abc789012b (staging-restore-vol) with
+    idle_days=5, which must NOT appear in scan results.
+    """
+
+    def test_finops_does_not_flag_recently_idle_resource(self):
+        """Resources idle < 30 days must NOT be flagged."""
+        from agents.finops_auditor import FinOpsAuditor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store_path = Path(tmpdir) / "findings_store.json"
+            auditor = FinOpsAuditor(findings_store_path=store_path)
+            findings = auditor.scan()
+
+            flagged_ids = [f["resource_id"] for f in findings]
+            # vol-0def456abc789012b has idle_days=5, must NOT be flagged
+            assert "vol-0def456abc789012b" not in flagged_ids, (
+                "Resource with 5 idle days was incorrectly flagged by FinOps Auditor"
+            )
+
+    def test_finops_only_flags_resources_above_threshold(self):
+        """Only resources at or above 30-day threshold should be flagged."""
+        from agents.finops_auditor import FinOpsAuditor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store_path = Path(tmpdir) / "findings_store.json"
+            auditor = FinOpsAuditor(findings_store_path=store_path)
+            findings = auditor.scan()
+
+            for f in findings:
+                assert f["idle_days"] >= 30, (
+                    f"Resource {f['resource_id']} flagged with only {f['idle_days']} idle days "
+                    f"(threshold is 30)"
+                )
+
+    def test_finops_flags_expected_resources(self):
+        """The 2 resources above threshold must be flagged with correct IDs."""
+        from agents.finops_auditor import FinOpsAuditor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store_path = Path(tmpdir) / "findings_store.json"
+            auditor = FinOpsAuditor(findings_store_path=store_path)
+            findings = auditor.scan()
+
+            flagged_ids = {f["resource_id"] for f in findings}
+            assert flagged_ids == {"cache-prod-legacy-01", "vol-0abc123def456789a"}, (
+                f"Expected exactly 2 resources to be flagged, got: {flagged_ids}"
+            )

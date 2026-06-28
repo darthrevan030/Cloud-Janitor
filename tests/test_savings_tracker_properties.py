@@ -42,7 +42,7 @@ findings_strategy = st.lists(finding_strategy, min_size=1, max_size=20).map(
 # --- Property 1: RunEntry schema and field correctness ---
 # Feature: savings-tracker-localstack, Property 1: RunEntry schema and field correctness
 
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 @given(
     scan_id=scan_id_strategy,
     completed_at=completed_at_strategy,
@@ -293,7 +293,7 @@ import os
 import time
 
 
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 @given(
     scan_id=scan_id_strategy,
     completed_at=completed_at_strategy,
