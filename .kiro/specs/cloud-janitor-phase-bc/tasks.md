@@ -205,7 +205,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
 - [x] 7. Checkpoint - Ensure all Phase C agent tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Wire MCP tools and orchestrator integration
+- [x] 8. Wire MCP tools and orchestrator integration
   - [x] 8.1 Add MCP tool `interpret_query` to `mcp_server/aws_janitor_mcp.py`
     - Decorator `@mcp.tool()`, accepts `user_query: str`, returns ScanParameters dict
     - Import via `from agents.query_interpreter import QueryInterpreter` (direct import, no network transport)
@@ -236,13 +236,13 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return safe default on internal failure
     - _Requirements: 11.5, 11.7, 11.8, 11.9_
 
-  - [ ] 8.6 Add MCP tool `policy_from_incident` to `mcp_server/aws_janitor_mcp.py`
+  - [x] 8.6 Add MCP tool `policy_from_incident` to `mcp_server/aws_janitor_mcp.py`
     - Decorator `@mcp.tool()`, accepts `incident_description: str`
     - Import via `from agents.incident_policy_generator import IncidentPolicyGenerator`
     - Return safe default on internal failure
     - _Requirements: 11.6, 11.7, 11.8, 11.9_
 
-  - [ ] 8.7 Integrate AI agents into `orchestrator.py`
+  - [x] 8.7 Integrate AI agents into `orchestrator.py`
     - Add `execute_natural_language_audit(query: str)` method
     - Integrate AnomalyDetector post-scan (after FinOps + SecOps, before drift)
     - Integrate DriftDetector: save_snapshot after each audit, detect drift
@@ -250,7 +250,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Pass safe defaults downstream when any agent fails
     - _Requirements: 1.10, 6.4, 11.10_
 
-  - [ ] 8.8 Write unit tests for MCP tools (Phase B+C)
+  - [x] 8.8 Write unit tests for MCP tools (Phase B+C)
     - Test each new MCP tool is callable and returns valid schema
     - Test parameter validation error handling (missing/wrong type params)
     - Test safe default responses on internal agent failure

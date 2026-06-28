@@ -21,6 +21,7 @@ import json
 import os
 import subprocess
 import sys
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,11 +33,15 @@ from agents.approval_gate import (
     parse_confirm_rollback,
     parse_rollback,
 )
+from agents.anomaly_detector import AnomalyDetector
 from agents.audit_logger import AuditLogger
+from agents.drift_detector import DriftDetector
 from agents.finops_auditor import FinOpsAuditor
+from agents.query_interpreter import QueryInterpreter
 from agents.reasoning_logger import ReasoningLogger
 from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
+from mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
 from savings import SavingsTracker
 
 
@@ -82,6 +87,8 @@ class AuditResult:
     blocked_plans: list[RemediationPlan] = field(default_factory=list)
     hook_error: str | None = None
     error: str | None = None
+    anomalies: list[dict] = field(default_factory=list)
+    drift_report: dict | None = None
 
 
 @dataclass
@@ -156,6 +163,13 @@ class Orchestrator:
 
         # Audit logger (append-only, file-based)
         self._audit_logger = AuditLogger(self.audit_log_path)
+
+        # AI agents
+        self._query_interpreter = QueryInterpreter()
+        self._anomaly_detector = AnomalyDetector()
+        self._drift_detector = DriftDetector(
+            history_path=self.project_root / "scan_history.json"
+        )
 
         # Savings tracker
         self._savings_tracker = SavingsTracker(
@@ -236,11 +250,146 @@ class Orchestrator:
                 )
 
         all_findings = finops_findings + secops_findings
+
+        # Step 6: Anomaly Detection (post-scan, before drift) — Req 6.4
+        resources = self._gather_resources()
+        anomalies = self._run_anomaly_detection(resources, all_findings)
+
+        # Step 7: Drift Detection — save snapshot then detect
+        total_waste = sum(
+            f.get("cost_estimate_monthly", 0.0) for f in all_findings
+        )
+        scan_id = str(uuid.uuid4())
+        self._drift_detector.save_snapshot(scan_id, all_findings, anomalies, total_waste)
+        drift_report = self._drift_detector.detect(all_findings)
+
         return AuditResult(
             success=True,
             findings=all_findings,
             plans=active_plans,
             blocked_plans=blocked_plans,
+            anomalies=anomalies,
+            drift_report=drift_report,
+        )
+
+    def execute_natural_language_audit(self, query: str) -> AuditResult:
+        """
+        Execute an audit filtered by a natural language query.
+
+        Uses QueryInterpreter to parse the query into structured parameters.
+        On interpreter failure (confidence=0.0): falls back to full unfiltered scan.
+
+        Args:
+            query: Free-text query describing what to audit.
+
+        Returns:
+            AuditResult with findings, anomalies, and drift info.
+        """
+        # Step 1: Interpret the query
+        try:
+            params = self._query_interpreter.interpret(query)
+        except Exception as exc:
+            print(
+                f"[Orchestrator] QueryInterpreter error: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            # Req 1.10: fall back to full scan on failure
+            return self.execute_audit()
+
+        # Step 2: Check confidence — fall back to full scan if too low
+        if params.get("confidence", 0.0) == 0.0:
+            self._log_action(
+                "nl_audit", "all", "fallback",
+                "QueryInterpreter returned low confidence, falling back to full scan",
+            )
+            return self.execute_audit()
+
+        # Step 3: Use interpreted parameters to gather filtered data
+        resource_types = params.get("resource_types", [])
+        check_types = params.get("check_types", [])
+        min_idle_days = params.get("min_idle_days", 7)
+
+        self._log_action(
+            "nl_audit", "all", "started",
+            f"NL audit: {params.get('intent_summary', 'Query interpreted')}",
+        )
+
+        # Gather cost data (filtered by resource types)
+        all_resources: list[dict] = []
+        cost_findings: list[dict] = []
+        try:
+            if resource_types:
+                for rt in resource_types:
+                    cost_data = get_cost_data(resource_type=rt, min_idle_days=min_idle_days)
+                    all_resources.extend(cost_data.get("resources", []))
+            else:
+                cost_data = get_cost_data(min_idle_days=min_idle_days)
+                all_resources.extend(cost_data.get("resources", []))
+            cost_findings = list(all_resources)
+        except Exception as exc:
+            print(
+                f"[Orchestrator] get_cost_data error: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            # Req 1.10: safe default — empty list
+
+        # Gather security data (filtered by check types)
+        security_findings: list[dict] = []
+        try:
+            if check_types:
+                for ct in check_types:
+                    sec_data = get_security_data(check_type=ct)
+                    security_findings.extend(sec_data.get("findings", []))
+            else:
+                sec_data = get_security_data()
+                security_findings.extend(sec_data.get("findings", []))
+        except Exception as exc:
+            print(
+                f"[Orchestrator] get_security_data error: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            # Req 1.10: safe default — empty list
+
+        all_findings = cost_findings + security_findings
+
+        # Step 4: Run Remediation Architect on gathered findings
+        plans: list[RemediationPlan] = []
+        blocked_plans: list[RemediationPlan] = []
+        try:
+            if all_findings:
+                plans = self._architect.plan()
+                blocked_plans = [p for p in plans if p.blocked]
+                plans = [p for p in plans if not p.blocked]
+        except Exception as exc:
+            print(
+                f"[Orchestrator] Architect error during NL audit: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            # Req 1.10: safe default — empty plans
+
+        # Step 5: Anomaly Detection (post-scan, before drift) — Req 6.4
+        anomalies = self._run_anomaly_detection(all_resources, all_findings)
+
+        # Step 6: Drift Detection
+        total_waste = sum(
+            f.get("cost_estimate_monthly", 0.0) for f in all_findings
+        )
+        scan_id = str(uuid.uuid4())
+        self._drift_detector.save_snapshot(scan_id, all_findings, anomalies, total_waste)
+        drift_report = self._drift_detector.detect(all_findings)
+
+        self._log_action(
+            "nl_audit", "all", "success",
+            f"NL audit completed: {len(all_findings)} findings, {len(anomalies)} anomalies",
+        )
+
+        return AuditResult(
+            success=True,
+            findings=all_findings,
+            plans=plans,
+            blocked_plans=blocked_plans,
+            anomalies=anomalies,
+            drift_report=drift_report,
         )
 
     def approve(self, command: str, resource_id: str | None = None) -> ApprovalResult:
@@ -483,6 +632,58 @@ class Orchestrator:
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             # Post-remediation hook is non-blocking — log but don't fail
             pass
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Private: AI agent helpers
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _gather_resources(self) -> list[dict]:
+        """Gather resources from MCP tools for anomaly detection.
+
+        Returns combined resource list from cost and security data.
+        Returns [] on any error (Req 1.10).
+        """
+        resources: list[dict] = []
+        try:
+            cost_data = get_cost_data()
+            resources.extend(cost_data.get("resources", []))
+        except Exception as exc:
+            print(
+                f"[Orchestrator] Error gathering cost resources: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+
+        try:
+            sec_data = get_security_data()
+            resources.extend(sec_data.get("findings", []))
+        except Exception as exc:
+            print(
+                f"[Orchestrator] Error gathering security resources: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+
+        return resources
+
+    def _run_anomaly_detection(
+        self, resources: list[dict], findings: list[dict]
+    ) -> list[dict]:
+        """Run AnomalyDetector with safe default on failure (Req 1.10, 6.4).
+
+        Args:
+            resources: Combined resource list.
+            findings: Combined findings from FinOps + SecOps.
+
+        Returns:
+            List of anomaly dicts, [] on failure.
+        """
+        try:
+            return self._anomaly_detector.detect(resources, findings)
+        except Exception as exc:
+            print(
+                f"[Orchestrator] AnomalyDetector error: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            return []
 
     # ──────────────────────────────────────────────────────────────────────
     # Private: Validation and helpers
