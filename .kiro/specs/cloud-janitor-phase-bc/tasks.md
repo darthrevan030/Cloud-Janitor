@@ -113,7 +113,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Implement Phase C platform agents (IncidentPolicyGenerator, DriftDetector)
-  - [ ] 5.1 Implement `agents/incident_policy_generator.py`
+  - [x] 5.1 Implement `agents/incident_policy_generator.py`
     - Create `IncidentPolicyGenerator` class with `generate(incident_description) -> list[dict]` and `list_policies() -> list[dict]`
     - Input validation: empty/whitespace → []; >2000 chars → truncate before LLM call
     - Compute incident_hash as sha256[:8] of original un-truncated description
