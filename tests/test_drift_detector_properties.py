@@ -570,3 +570,61 @@ class TestDriftDetectorOutputSchema:
         assert all(isinstance(s, str) for s in result["compared_scans"]), (
             "compared_scans elements must be str"
         )
+
+
+    @given(
+        prev_findings=unique_findings_strategy(min_size=0, max_size=5),
+        curr_findings=unique_findings_strategy(min_size=0, max_size=5),
+        w_prev=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_narrative_is_non_empty(self, prev_findings, curr_findings, w_prev, w_curr):
+        """narrative is always a non-empty string (LLM or fallback)."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Non-empty narrative."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", prev_findings, [], w_prev)
+            detector.save_snapshot("scan-curr", curr_findings, [], w_curr)
+            result = detector.detect(curr_findings)
+
+        assert len(result["narrative"].strip()) > 0, (
+            "narrative must be non-empty"
+        )
+
+    @given(
+        prev_findings=unique_findings_strategy(min_size=0, max_size=5),
+        curr_findings=unique_findings_strategy(min_size=0, max_size=5),
+        w_prev=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_compared_scans_matches_snapshot_ids(
+        self, prev_findings, curr_findings, w_prev, w_curr
+    ):
+        """compared_scans contains [previous_scan_id, current_scan_id] in order."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Compare check."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("id-prev-fixed", prev_findings, [], w_prev)
+            detector.save_snapshot("id-curr-fixed", curr_findings, [], w_curr)
+            result = detector.detect(curr_findings)
+
+        assert result["compared_scans"] == ["id-prev-fixed", "id-curr-fixed"], (
+            f"compared_scans should be ['id-prev-fixed', 'id-curr-fixed'], "
+            f"got {result['compared_scans']}"
+        )
