@@ -7,7 +7,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
 ## Tasks
 
 - [ ] 1. Create the backends module with CloudProvider ABC
-  - [ ] 1.1 Create `mcp_server/backends/__init__.py` with CloudProvider abstract base class
+  - [x] 1.1 Create `mcp_server/backends/__init__.py` with CloudProvider abstract base class
     - Define `CloudProvider(ABC)` with abstract methods: `get_cost_data`, `get_security_data`, `check_dependencies`
     - Include full type hints and docstrings matching design document signatures
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_

@@ -1,9 +1,9 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T18:23:10Z
+Generated: 2026-06-27T18:31:50Z
 
 | # | Task | Status | Artifact Verified |
-| --- | ------ | -------- | ------------------- |
+|---|------|--------|-------------------|
 | 1 | 1. Create .kiro/ directory structure and commit | ✅ Done | no mapping |
 | 2 | 2. Write requirements.md with all user stories | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
 | 3 | 3. Write design.md with architecture + data flow | ✅ Done | .kiro/specs/cloud-janitor/design.md exists |
@@ -98,4 +98,4 @@ Generated: 2026-06-27T18:23:10Z
 | 92 | 10.2 Run test quality audit on all test files | ✅ Done | no mapping |
 | 93 | 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain | ✅ Done | no mapping |
 | 94 | 10.4 Verify runtime files excluded from git | ✅ Done | no mapping |
-| 95 | 10.5 Run generate_spec_compliance.py and commit output | ✅ Done | no mapping |
+| 95 | 10.5 Run generate_spec_compliance.py and commit output | ⏳ Partial | no mapping |
