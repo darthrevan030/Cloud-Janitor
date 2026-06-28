@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T02:38:10Z
+Generated: 2026-06-28T02:39:06Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -52,7 +52,7 @@ Generated: 2026-06-28T02:38:10Z
 | 46 | 4. Checkpoint - Verify backward compatibility | ✅ Done | no mapping |
 | 47 | 5. Write backward compatibility property test | ✅ Done | no mapping |
 | 48 | 6. Update dependencies and documentation | ❌ Pending | — |
-| 49 | 6.1 Add new dependencies to `requirements.txt` | ❌ Pending | — |
+| 49 | 6.1 Add new dependencies to `requirements.txt` | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
 | 50 | 6.2 Rewrite `README.md` at project root as a product README | ❌ Pending | — |
 | 51 | 6.3 Update `mcp_server/README.md` with provider architecture documentation | ❌ Pending | — |
 | 52 | 6.4 Create `agents/README.md` | ❌ Pending | — |

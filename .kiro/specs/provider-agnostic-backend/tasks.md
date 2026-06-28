@@ -74,7 +74,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
 
 - [ ] 6. Update dependencies and documentation
 
-  - [ ] 6.1 Add new dependencies to `requirements.txt`
+  - [x] 6.1 Add new dependencies to `requirements.txt`
     - Add `boto3>=1.34.0` (optional, for AWS backend)
     - Add `anthropic>=0.25.0` (for Phase B/C LLM calls — add now so it's declared)
     - Add `filelock>=3.13.0` (for drift detector atomic writes)
