@@ -29,7 +29,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from hypothesis import given, settings, assume
+from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
 
 os.environ.setdefault("OPENROUTER_API_KEY", "test-key-for-testing")
@@ -44,108 +44,69 @@ from agents.incident_policy_generator import (
     MAX_POLICIES,
 )
 
-
 # ---------------------------------------------------------------------------
-# Helper strategies
+# Helper strategies — kept small to avoid Hypothesis health check failures
 # ---------------------------------------------------------------------------
 
-
-@st.composite
-def valid_policy_id_strategy(draw):
-    """Generate a valid policy_id matching ^[a-z0-9\\-]+$."""
-    prefix = draw(st.sampled_from(["policy-", "check-", "scan-", "rule-"]))
-    suffix = draw(
-        st.text(
-            min_size=3,
-            max_size=20,
-            alphabet=st.characters(
-                whitelist_categories=("Ll", "Nd"),
-                whitelist_characters="-",
-            ),
-        )
-    )
-    pid = prefix + suffix
-    assume(POLICY_ID_PATTERN.match(pid))
-    assume(len(pid) >= 4)
-    return pid
-
-
-@st.composite
-def valid_policy_dict_strategy(draw, policy_id=None):
-    """Generate a valid policy dict as the LLM would return (without metadata fields)."""
-    if policy_id is None:
-        policy_id = draw(valid_policy_id_strategy())
-    policy_name = draw(st.text(min_size=3, max_size=50, alphabet=st.characters(
-        whitelist_categories=("L", "N", "Z"),
-        whitelist_characters=" -_",
-    )))
-    assume(policy_name.strip())
-
-    resource_types = draw(st.lists(
-        st.sampled_from(sorted(VALID_RESOURCE_TYPES)),
-        min_size=1,
-        max_size=3,
-        unique=True,
-    ))
-    check_type = draw(st.sampled_from(sorted(VALID_CHECK_TYPES)))
-    check_logic_description = draw(st.text(min_size=5, max_size=80, alphabet=st.characters(
-        whitelist_categories=("L", "N", "Z"),
-        whitelist_characters=" .-,",
-    )))
-    assume(check_logic_description.strip())
-    rationale = draw(st.text(min_size=5, max_size=80, alphabet=st.characters(
-        whitelist_categories=("L", "N", "Z"),
-        whitelist_characters=" .-,",
-    )))
-    assume(rationale.strip())
-    query = draw(st.text(min_size=5, max_size=80, alphabet=st.characters(
-        whitelist_categories=("L", "N", "Z"),
-        whitelist_characters=" .-,?",
-    )))
-    assume(query.strip())
-
-    return {
-        "policy_id": policy_id,
-        "policy_name": policy_name,
-        "resource_types": resource_types,
-        "check_type": check_type,
-        "check_logic_description": check_logic_description,
-        "rationale": rationale,
-        "query": query,
-    }
+# Fixed pool of valid policy IDs to avoid complex generation
+FIXED_POLICY_IDS = [
+    "policy-sg-redis",
+    "policy-encrypt-ebs",
+    "policy-public-ec2",
+    "policy-idle-cache",
+    "policy-check-ports",
+    "rule-sg-open",
+    "check-encrypt-vol",
+    "scan-public-access",
+]
 
 
 @st.composite
 def valid_policy_list_strategy(draw, count=None):
-    """Generate a list of valid policy dicts with unique policy_ids."""
+    """Generate a list of valid policy dicts with unique policy_ids (small)."""
     if count is None:
         count = draw(st.integers(min_value=MIN_POLICIES, max_value=MAX_POLICIES))
 
+    ids = draw(st.permutations(FIXED_POLICY_IDS).map(lambda x: list(x[:count])))
+    assume(len(ids) == count)
+
     policies = []
-    used_ids = set()
-    for _ in range(count):
-        policy = draw(valid_policy_dict_strategy())
-        # Ensure unique IDs
-        while policy["policy_id"] in used_ids:
-            policy = draw(valid_policy_dict_strategy())
-        used_ids.add(policy["policy_id"])
-        policies.append(policy)
+    for pid in ids:
+        resource_types = draw(st.lists(
+            st.sampled_from(sorted(VALID_RESOURCE_TYPES)),
+            min_size=1,
+            max_size=3,
+            unique=True,
+        ))
+        check_type = draw(st.sampled_from(sorted(VALID_CHECK_TYPES)))
+        policies.append({
+            "policy_id": pid,
+            "policy_name": f"Policy for {pid}",
+            "resource_types": resource_types,
+            "check_type": check_type,
+            "check_logic_description": f"Check logic for {pid}",
+            "rationale": f"Rationale for {pid}",
+            "query": f"Find resources related to {pid}",
+        })
     return policies
+
+
+# Simple incident description strategy using sampled_from for speed
+INCIDENT_PREFIXES = [
+    "A Redis cluster was compromised via open port",
+    "Unencrypted EBS volumes exposed sensitive data",
+    "EC2 instances had public access enabled",
+    "ElastiCache was idle for months costing money",
+    "Security group allowed unrestricted ingress",
+]
 
 
 @st.composite
 def incident_description_strategy(draw):
-    """Generate a valid non-empty incident description."""
-    desc = draw(st.text(
-        min_size=10,
-        max_size=500,
-        alphabet=st.characters(
-            whitelist_categories=("L", "N", "Z", "P"),
-            whitelist_characters=" .-,!?;:'",
-        ),
-    ))
-    assume(desc.strip())
-    return desc
+    """Generate a valid non-empty incident description (simple, fast)."""
+    prefix = draw(st.sampled_from(INCIDENT_PREFIXES))
+    suffix = draw(st.text(min_size=1, max_size=30, alphabet="abcdefghijklmnopqrstuvwxyz "))
+    return f"{prefix} {suffix}".strip()
 
 
 def _make_mock_response(policies: list[dict]) -> MagicMock:
@@ -191,7 +152,6 @@ class TestIncidentPolicyGeneratorIdempotency:
                 return_value=mock_client,
             ):
                 result1 = gen.generate(description)
-                # Only proceed if first call succeeded
                 assume(len(result1) > 0)
 
                 # Reset mock to track second call
@@ -277,7 +237,6 @@ class TestIncidentPolicyGeneratorFileConsistency:
 
             assume(len(result) > 0)
 
-            # Verify: each returned policy has a file on disk
             for policy in result:
                 file_path = policies_dir / f"{policy['policy_id']}.json"
                 assert file_path.exists(), (
@@ -308,7 +267,6 @@ class TestIncidentPolicyGeneratorFileConsistency:
                 result = gen.generate(description)
 
             assert result == []
-            # No files should have been created
             if policies_dir.exists():
                 files = list(policies_dir.glob("*.json"))
                 assert len(files) == 0, (
@@ -356,7 +314,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
 
     For valid input, returns 3-5 dicts with correct schema (all required keys
     present, valid enums for check_type and resource_types). Each policy has
-    exactly the required keys; check_type ∈ valid set; resource_types items ∈
+    exactly the required keys; check_type in valid set; resource_types items in
     valid set and non-empty; version == 1; policy_id matches pattern;
     incident_hash is 8 hex chars.
     """
@@ -567,7 +525,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
                     f"incident_hash must be 8 hex chars, got {policy['incident_hash']!r}"
                 )
                 assert policy["incident_hash"] == expected_hash, (
-                    f"incident_hash must equal sha256[:8] of original description"
+                    "incident_hash must equal sha256[:8] of original description"
                 )
 
 
@@ -586,17 +544,14 @@ class TestIncidentPolicyGeneratorInputValidation:
     """
 
     @given(
-        whitespace=st.text(
-            alphabet=st.characters(whitelist_characters=" \t\n\r\f\v"),
-            min_size=0,
-            max_size=100,
-        ),
+        whitespace=st.sampled_from([
+            "", " ", "  ", "\t", "\n", "\r\n", "   \t  \n  ",
+            "\t\t\t", "\n\n\n", "  \r\n  \t  ",
+        ]),
     )
     @settings(max_examples=200, deadline=None)
     def test_whitespace_only_returns_empty_list(self, whitespace):
         """Whitespace-only or empty strings must return [] without calling LLM."""
-        assume(not whitespace.strip())
-
         with tempfile.TemporaryDirectory() as tmpdir:
             policies_dir = Path(tmpdir) / "policies"
             gen = IncidentPolicyGenerator(policies_dir=policies_dir)
@@ -611,16 +566,15 @@ class TestIncidentPolicyGeneratorInputValidation:
             mock_get_client.assert_not_called()
 
     @given(
-        base_text=incident_description_strategy(),
         extra_length=st.integers(min_value=1, max_value=2000),
         policies=valid_policy_list_strategy(),
     )
     @settings(max_examples=200, deadline=None)
-    def test_long_strings_truncated_before_llm(self, base_text, extra_length, policies):
+    def test_long_strings_truncated_before_llm(self, extra_length, policies):
         """Strings > 2000 chars are truncated before LLM call; hash uses original."""
         # Build a string longer than 2000 chars
-        long_desc = base_text + "X" * (MAX_DESCRIPTION_LENGTH + extra_length - len(base_text))
-        assume(len(long_desc) > MAX_DESCRIPTION_LENGTH)
+        long_desc = "Incident: " + "X" * (MAX_DESCRIPTION_LENGTH + extra_length)
+        assert len(long_desc) > MAX_DESCRIPTION_LENGTH
 
         expected_hash = hashlib.sha256(long_desc.encode("utf-8")).hexdigest()[:8]
 

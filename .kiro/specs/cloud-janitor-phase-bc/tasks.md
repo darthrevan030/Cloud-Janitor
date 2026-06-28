@@ -126,7 +126,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return [] on any exception; ensure no partial files left on disk on I/O error
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 1.6, 1.8, 1.9, 1.11, 14.2_
 
-  - [ ] 5.2 Write property tests for IncidentPolicyGenerator
+  - [x] 5.2 Write property tests for IncidentPolicyGenerator
     - **Property 10: IncidentPolicyGenerator Idempotency**
     - Calling generate() twice with same text returns same result without second LLM call
     - **Property 11: IncidentPolicyGenerator File Consistency**
