@@ -6,7 +6,7 @@ This design covers 9 features spanning Phase B (Tier 2 AI Features) and Phase C 
 
 All AI agents follow the same architectural pattern: a dedicated class in `agents/`, a corresponding `@mcp.tool()` in `aws_janitor_mcp.py`, direct import (no network transport), safe-default error handling (never raise from AI), and session state caching in `app.py`. The existing pipeline (FinOps → SecOps → Remediation Architect) remains unchanged; new features integrate as pre-scan filters, post-scan enrichments, or independent workflows.
 
-The implementation uses `JANITOR_BACKEND=fixture` compatibility throughout, ensuring all features work without live AWS credentials during development and testing.
+The implementation uses `JANITOR_BACKEND=fixture` compatibility throughout, ensuring all features work without live AWS credentials during development and testing. All user-supplied input that reaches LLM prompts is treated as untrusted; only allowlisted fields from LLM responses are used in application logic.
 
 ## Architecture
 
@@ -860,6 +860,15 @@ INPUT: scan_id: str, findings: list[dict], anomalies: list[dict], total_waste: f
 OUTPUT: None (writes to scan_history.json)
 
 BEGIN
+    # Clean up stale tmp file from a previous crashed write
+    tmp_path = history_path.with_suffix(".json.tmp")
+    TRY:
+        IF tmp_path.exists() AND (now() - tmp_path.stat().st_mtime) > 60:
+            tmp_path.unlink()
+    EXCEPT Exception AS e:
+        sys.stderr.write(f"Failed to clean stale tmp file: {e}\n")
+        RETURN  # Do not proceed if cleanup fails
+
     lock = FileLock(str(history_path) + ".lock", timeout=10)
     TRY:
         WITH lock:
@@ -1119,10 +1128,14 @@ BEGIN
         run_record["completed_at"] = now_iso()
         self._runs_completed += 1
         self._last_run = run_record["completed_at"]
-        # Append to scheduler.log
+        # Use RotatingFileHandler — cap at 10MB, keep 3 backups
+        import logging.handlers
         log_path = self._project_root / "scheduler.log"
-        WITH open(log_path, "a") AS f:
-            f.write(f"{run_record}\n")
+        handler = logging.handlers.RotatingFileHandler(
+            log_path, maxBytes=10 * 1024 * 1024, backupCount=3
+        )
+        handler.emit(logging.makeLogRecord({"msg": str(run_record)}))
+        handler.close()
 END
 ```
 
@@ -1178,8 +1191,14 @@ BEGIN
 
         policies = []
         FOR item IN parsed:
+            # Validate policy_id is a safe slug before constructing file path
+            raw_id = str(item.get("policy_id", ""))
+            IF NOT re.match(r"^[a-z0-9\-]+$", raw_id):
+                sys.stderr.write(f"Skipping policy with unsafe policy_id: {raw_id!r}\n")
+                CONTINUE
+
             policy = {
-                "policy_id": item["policy_id"],
+                "policy_id": raw_id,
                 "policy_name": item["policy_name"],
                 "resource_types": item["resource_types"],
                 "check_type": item["check_type"],
@@ -1716,6 +1735,30 @@ policies = gen.generate(
 **Response**: FixtureProvider returns appropriate mock data for all new tools
 **Recovery**: All features work in fixture mode — no live AWS required for development
 
+### Error Scenario 9: Missing OPENROUTER_API_KEY
+
+**Condition**: `OPENROUTER_API_KEY` environment variable is not set when `get_client()` is called
+**Response**: `llm_client.get_client()` raises `EnvironmentError("OPENROUTER_API_KEY is not set")`. All AI agents catch this in their standard exception handler and return safe defaults.
+**Recovery**: User must set the environment variable. Error message names the missing variable without echoing any credential values.
+
+### Error Scenario 10: Unsafe policy_id from LLM
+
+**Condition**: LLM returns a policy_id containing path traversal characters (e.g. `../../etc/passwd`) or characters outside `[a-z0-9\-]`
+**Response**: `IncidentPolicyGenerator` skips the policy, logs the unsafe ID to stderr, continues processing remaining policies in the response.
+**Recovery**: Remaining valid policies are returned. No file is written for the skipped policy.
+
+### Error Scenario 11: Stale .tmp file on DriftDetector startup
+
+**Condition**: `scan_history.json.tmp` exists from a previous crashed write and is older than 60 seconds
+**Response**: `DriftDetector.save_snapshot()` deletes the stale `.tmp` file before acquiring the file lock.
+**Recovery**: Normal atomic write proceeds. If `.tmp` deletion fails, the error is logged to stderr and `save_snapshot` returns without writing (same as any other write failure).
+
+### Error Scenario 12: ThreadPoolExecutor CancelledError in multi-account scan
+
+**Condition**: A future is cancelled or raises `concurrent.futures.CancelledError` or `concurrent.futures.TimeoutError`
+**Response**: `MultiAccountOrchestrator` catches `(Exception, concurrent.futures.TimeoutError, concurrent.futures.CancelledError)` in the futures completion loop and records the account as `status="failed"` with the exception message.
+**Recovery**: Remaining accounts are unaffected. The failed account appears in `by_account` with `findings=[]` and `error` populated.
+
 ## Testing Strategy
 
 ### Unit Testing Approach
@@ -1797,29 +1840,47 @@ Properties to test:
 
 ### API Key Management
 
-- OpenRouter API key read from `OPENROUTER_API_KEY` environment variable
+- OpenRouter API key read from `OPENROUTER_API_KEY` environment variable; raises `EnvironmentError` if unset — never silently proceeds with a missing key
 - Model selection read from `JANITOR_LLM_MODEL` (default: `"anthropic/claude-haiku-4-5"`)
-- Key is never logged, never included in findings or outputs
-- All AI agents fail gracefully if key missing (safe defaults)
-- Model can be swapped to any OpenRouter-supported model without code changes
+- Key is never logged, never included in findings, outputs, error messages, or `st.session_state`
+- All AI agents catch `EnvironmentError` from `get_client()` and return safe defaults
+- Model can be swapped to any OpenRouter-supported model via env var without code changes
 
-### LLM Output Sanitization
+### LLM Prompt Injection
 
-- All LLM responses parsed as JSON — no code execution
-- Parsed values validated against allowlists (resource types, severities)
-- Free-text fields (narratives, explanations) treated as display-only
+- User-supplied input (NL queries, incident descriptions) is embedded in LLM prompts and treated as untrusted
+- Prompt injection cannot cause code execution — all LLM responses are parsed as JSON only
+- Parsed values are validated against allowlists before use: `resource_types`, `check_types`, `severity`, `env`, `priority`, `check_type` are all checked against closed enum sets
+- Free-text fields (narratives, explanations, rationale, intent_summary) are treated as display-only strings and never evaluated or executed
+- An injected prompt that manipulates scan scope (e.g. forcing `confidence: 1.0`) is bounded by the allowlist validation step — invalid field values are dropped or defaulted
+
+### Policy File Path Traversal
+
+- `policy_id` values from LLM output are validated against `^[a-z0-9\-]+$` before file path construction
+- Policies with non-conforming IDs are skipped and logged to stderr — no file is written
+- The `policies/` directory path is resolved relative to the known project root — never from user input
 
 ### Multi-Account Role Assumption
 
-- Role ARNs validated against `arn:aws:iam::\d{12}:role/.+` pattern
-- No credential storage — uses STS AssumeRole with session tokens
-- Credentials scoped to individual audit execution (not persisted)
+- Role ARNs in `accounts.json` are validated against `arn:aws:iam::\d{12}:role/.+` before passing to boto3
+- Entries failing validation are skipped with an error logged to stderr
+- No credential storage — uses STS AssumeRole with session tokens scoped to individual audit execution
 
-### Policy File Safety
+### Sensitive Data on Disk
 
-- Policies written as JSON only (no executable content)
-- Policy directory path validated (no path traversal)
-- Policies require manual review before enforcement
+- `findings_store.json`, `scan_history.json`, `savings_ledger.json`, `scheduler.log`, and `policies/*.json` contain infrastructure finding data and must be listed in `.gitignore`
+- These files are written with default OS permissions — on shared systems, `chmod 600` is recommended
+- `scheduler.log` is rotated at 10MB with 3 backups via `RotatingFileHandler` to prevent unbounded growth and disk exhaustion
+
+### Atomic Write Safety
+
+- `scan_history.json` is written via tmp-then-rename; stale `.tmp` files older than 60 seconds are cleaned up at the start of each `save_snapshot()` call
+- File lock is always released in a `finally` block — no lock can be held indefinitely by a crashed process (10-second timeout)
+
+### Streamlit UI
+
+- `OPENROUTER_API_KEY` is never stored in `st.session_state` or rendered in any UI element
+- LLM-generated text (narratives, explanations, suggestions) is rendered via `st.write()` or `st.markdown()` — Streamlit escapes HTML by default; `unsafe_allow_html=True` is not used for any LLM-generated content
 
 ## Dependencies
 
