@@ -119,12 +119,14 @@ def scan(finops: bool, secops: bool) -> None:
 
     try:
         if finops:
-            # CLI calls individual agent directly — Orchestrator has no finops-only method
+            # INTENTIONAL private access: Orchestrator exposes no public finops-only
+            # method. We access _finops directly to avoid reimplementing pipeline logic.
+            # Do not remove without adding a public Orchestrator.execute_finops_only().
             findings = orch._finops.scan()
             click.echo(f"Scan complete: {len(findings)} finding(s) produced.")
             return
         elif secops:
-            # CLI calls individual agent directly — Orchestrator has no secops-only method
+            # INTENTIONAL private access: same rationale as --finops above.
             findings = orch._secops.scan()
             click.echo(f"Scan complete: {len(findings)} finding(s) produced.")
             return
@@ -354,6 +356,9 @@ def call_llm(client: openai.OpenAI, **kwargs) -> openai.types.chat.ChatCompletio
         try:
             return client.chat.completions.create(**kwargs)
 
+        # ORDER MATTERS: RateLimitError is a subclass of APIStatusError.
+        # It must be caught first so we can inspect the Retry-After header.
+        # Do not reorder these except clauses.
         except openai.RateLimitError as exc:
             last_error = f"HTTP 429"
             retry_after = _extract_retry_after(exc)
@@ -825,9 +830,55 @@ Run in GitHub Actions workflow:
 - No top-level `import streamlit` in `cli.py`
 - No `import tenacity` in `llm_client.py`
 
+### Test Import Migration (Part of Req 3)
+
+All existing test files in `tests/` import from the flat layout:
+
+```python
+# Current (flat layout)
+from agents.finops_auditor import FinOpsAuditor
+from orchestrator import Orchestrator
+from core.llm_client import get_client
+```
+
+After the src-layout move, these all break. As part of Requirement 3 (Package Structure Configuration), every test file's imports MUST be rewritten to the new package paths:
+
+```python
+# After src-layout (Req 3)
+from cloud_janitor.agents.finops_auditor import FinOpsAuditor
+from cloud_janitor.orchestrator import Orchestrator
+from cloud_janitor.core.llm_client import get_client
+```
+
+This is NOT a separate task — it is included in Req 3's scope. Tests will be broken from the moment files move until the import rewrite is complete. That is expected and acceptable since Req 3 is in Batch 3 (executed atomically).
+
 ### Test Library
 
 - **Property testing**: `hypothesis` (already in project dev dependencies)
 - **Unit testing**: `pytest` (already in project)
 - **CLI testing**: `click.testing.CliRunner` (bundled with Click)
 - **Mocking**: `unittest.mock` (stdlib)
+
+## Batch Execution Constraints
+
+### Batch 1: Flat Layout Preserved
+
+Batch 1 does NOT move any existing files. All new files (cli.py, logging_config.py, updated llm_client.py, updated stub providers, updated pyproject.toml) are created or modified **in the current flat layout**. Specifically:
+
+- `agents/`, `core/`, `mcp_server/`, `orchestrator.py` all stay at project root
+- New CLI module lives at project root: `cli.py` (not `src/cloud_janitor/cli.py`)
+- New logging config lives at project root: `logging_config.py`
+- `core/llm_client.py` is modified in place (retry logic added)
+- `pyproject.toml` is updated in place (build-system, dependencies, scripts)
+- Imports in Batch 1 code use flat paths: `from orchestrator import Orchestrator`, `from agents.finops_auditor import ...`
+- The `[project.scripts]` entry point for Batch 1: `cloud-janitor = "cli:main"` (flat layout path)
+- Do NOT create a `src/` directory in Batch 1
+
+### Batch 3: src-layout Move
+
+The src-layout migration (`src/cloud_janitor/`) happens exclusively in Batch 3 (Req 3). This includes:
+
+- Creating `src/cloud_janitor/` and moving all modules into it
+- Rewriting all imports (source + tests) to `cloud_janitor.*` paths
+- Updating pyproject.toml `[project.scripts]` to `cloud_janitor.cli:main`
+- Adding `[tool.hatch.build.targets.wheel] packages = ["src/cloud_janitor"]`
