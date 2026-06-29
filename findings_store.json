@@ -1,0 +1,143 @@
+{
+  "scan_id": "e526e27e-b509-4147-8d61-1917a18b1063",
+  "started_at": "2026-06-28T04:13:57.054365+00:00",
+  "completed_at": "2026-06-28T04:13:57.097871+00:00",
+  "findings": [
+    {
+      "id": "0e62342c-d8e6-4110-9bc6-9799f9e85ab8",
+      "resource_id": "cache-prod-legacy-01",
+      "resource_type": "elasticache",
+      "agent": "finops",
+      "category": "waste",
+      "severity": "HIGH",
+      "title": "Idle ElastiCache cluster (cache-prod-legacy-01) \u2014 42 days unused",
+      "description": "Legacy session cache \u00e2\u20ac\u201d app migrated to DynamoDB 42 days ago, zero connections since",
+      "cost_estimate_monthly": 45.6,
+      "idle_days": 42,
+      "metadata": {
+        "name": "prod-session-cache",
+        "status": "available",
+        "connections": 0,
+        "instance_type": "cache.t3.medium",
+        "engine": "redis",
+        "engine_version": "7.0.7",
+        "availability_zone": "us-east-1a",
+        "cluster_mode": "disabled",
+        "num_cache_nodes": 1,
+        "created_at": "2024-08-15T09:30:00Z"
+      },
+      "detected_at": "2026-06-28T04:13:57.045581+00:00"
+    },
+    {
+      "id": "75f76229-6047-4614-aa8d-b4a40f4be542",
+      "resource_id": "vol-0abc123def456789a",
+      "resource_type": "ebs",
+      "agent": "finops",
+      "category": "waste",
+      "severity": "MEDIUM",
+      "title": "Unattached EBS volume (vol-0abc123def456789a) \u2014 35 days detached",
+      "description": "Detached from terminated dev instance i-0fed987654321 on 2025-05-10",
+      "cost_estimate_monthly": 12.0,
+      "idle_days": 35,
+      "metadata": {
+        "name": "dev-api-data-vol",
+        "status": "available",
+        "attached": false,
+        "volume_type": "gp3",
+        "size_gb": 100,
+        "availability_zone": "us-east-1b",
+        "encrypted": true,
+        "created_at": "2024-11-02T14:22:00Z"
+      },
+      "detected_at": "2026-06-28T04:13:57.049577+00:00"
+    },
+    {
+      "id": "a97ab616-5fe4-4425-9ea6-8a88f0ff23c4",
+      "resource_id": "sg-prod-redis",
+      "resource_type": "security_group",
+      "agent": "secops",
+      "category": "security",
+      "severity": "CRITICAL",
+      "title": "Redis port open to internet",
+      "description": "Security group sg-prod-redis allows inbound traffic from 0.0.0.0/0 on port 6379 (Redis). Database and cache ports must be restricted to VPC CIDR only.",
+      "cost_estimate_monthly": 0.0,
+      "idle_days": 0,
+      "metadata": {
+        "port": 6379,
+        "cidr": "0.0.0.0/0",
+        "current_state": "open_to_world",
+        "required_state": "vpc_only"
+      },
+      "detected_at": "2026-06-28T04:13:57.067012+00:00"
+    },
+    {
+      "id": "6ca45c9a-ff90-46fc-992d-1b49c2335b41",
+      "resource_id": "sg-web-servers",
+      "resource_type": "security_group",
+      "agent": "secops",
+      "category": "security",
+      "severity": "HIGH",
+      "title": "SSH port open to internet",
+      "description": "Security group sg-web-servers allows inbound traffic from 0.0.0.0/0 on port 22 (SSH). SSH access must be restricted to VPC CIDR only.",
+      "cost_estimate_monthly": 0.0,
+      "idle_days": 0,
+      "metadata": {
+        "port": 22,
+        "cidr": "0.0.0.0/0",
+        "current_state": "open_to_world",
+        "required_state": "vpc_only"
+      },
+      "detected_at": "2026-06-28T04:13:57.068013+00:00"
+    },
+    {
+      "id": "2a6e6958-c83e-4e63-89d8-150c5e19019d",
+      "resource_id": "cache-prod-legacy",
+      "resource_type": "elasticache",
+      "agent": "secops",
+      "category": "security",
+      "severity": "HIGH",
+      "title": "ElastiCache cluster without encryption at rest",
+      "description": "ElastiCache cluster cache-prod-legacy does not have encryption at rest enabled. All cache clusters must be encrypted to protect data at rest.",
+      "cost_estimate_monthly": 0.0,
+      "idle_days": 0,
+      "metadata": {
+        "encryption_at_rest": false,
+        "current_state": "unencrypted",
+        "required_state": "encrypted"
+      },
+      "detected_at": "2026-06-28T04:13:57.072481+00:00"
+    },
+    {
+      "id": "c79e757f-6b05-4535-b983-d0187ea56648",
+      "resource_id": "vol-data-001",
+      "resource_type": "ebs",
+      "agent": "secops",
+      "category": "security",
+      "severity": "HIGH",
+      "title": "EBS volume without encryption at rest",
+      "description": "EBS volume vol-data-001 does not have encryption at rest enabled. All block storage must be encrypted to protect data at rest.",
+      "cost_estimate_monthly": 0.0,
+      "idle_days": 0,
+      "metadata": {
+        "encryption_at_rest": false,
+        "current_state": "unencrypted",
+        "required_state": "encrypted"
+      },
+      "detected_at": "2026-06-28T04:13:57.075801+00:00"
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "by_severity": {
+      "LOW": 0,
+      "MEDIUM": 1,
+      "HIGH": 4,
+      "CRITICAL": 1
+    },
+    "by_agent": {
+      "finops": 2,
+      "secops": 4
+    },
+    "total_monthly_waste": 57.6
+  }
+}

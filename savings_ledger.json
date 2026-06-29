@@ -1,0 +1,14 @@
+{
+  "total_lifetime_savings": 12.5,
+  "runs": [
+    {
+      "run_id": "test-scan-001",
+      "timestamp": "2025-01-15T10:01:00Z",
+      "resources_remediated": [
+        "vol-abc123"
+      ],
+      "monthly_savings_added": 12.5,
+      "cumulative_at_time": 12.5
+    }
+  ]
+}

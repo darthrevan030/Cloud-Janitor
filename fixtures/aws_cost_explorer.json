@@ -46,6 +46,22 @@
       "encrypted": true,
       "created_at": "2025-06-09T11:05:00Z",
       "description": "Snapshot restore 5 days ago — pending re-attach to staging instance"
+    },
+    {
+      "id": "i-0abc123def456ec2a",
+      "type": "ec2",
+      "name": "dev-batch-worker-03",
+      "idle_days": 28,
+      "monthly_cost": 34.5,
+      "status": "running",
+      "instance_type": "t3.medium",
+      "cpu_utilization_avg": 0.3,
+      "network_in_bytes_avg": 120,
+      "availability_zone": "us-east-1a",
+      "platform": "linux",
+      "launch_time": "2025-05-17T08:15:00Z",
+      "created_at": "2025-05-17T08:15:00Z",
+      "description": "Batch worker instance with near-zero CPU and network for 28 days — job queue migrated to Fargate"
     }
   ]
 }
