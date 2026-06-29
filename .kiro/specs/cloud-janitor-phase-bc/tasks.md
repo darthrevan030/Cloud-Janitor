@@ -264,12 +264,12 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Ensure all MCP tools produce conforming output schemas in fixture mode
     - _Requirements: 12.1, 12.2_
 
-  - [ ] 9.2 Create `accounts.json` fixture for multi-account testing
+  - [x] 9.2 Create `accounts.json` fixture for multi-account testing
     - Include 2-3 sample accounts with valid account_id, account_name, role_arn, region, priority fields
     - Used for development/testing when JANITOR_BACKEND=fixture
     - _Requirements: 12.3_
 
-  - [ ] 9.3 Write integration tests for fixture mode
+  - [-] 9.3 Write integration tests for fixture mode
     - Test full pipeline: NL query → scan → anomaly → drift in fixture mode
     - Test all MCP tools return valid schemas in fixture mode
     - Test multi-account orchestration completes without exceptions
