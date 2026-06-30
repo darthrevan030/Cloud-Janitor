@@ -1,4 +1,5 @@
 mcp>=1.28.1
+packaging>=23.0
 python-dotenv>=1.0.0
 streamlit>=1.45.0
 hypothesis>=6.155.7

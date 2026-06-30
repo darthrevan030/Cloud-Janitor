@@ -34,6 +34,14 @@ output/rollbacks/*
 output/policies/*.json
 output/remediation.tf
 
+# Root-level runtime artifacts
+findings_store.json
+savings_ledger.json
+audit.log
+remediation.tf
+/rollbacks/*.tf
+!/rollbacks/.gitkeep
+
 # IDE
 .vscode/settings.json
 *.swp
@@ -45,3 +53,4 @@ Thumbs.db
 
 # kiro steering local
 .kiro/steering/local/
+

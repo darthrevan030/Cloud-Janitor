@@ -12,6 +12,7 @@ dependencies = [
     "hypothesis>=6.155.7",
     "mcp>=1.28.1",
     "openai>=2.44.0",
+    "packaging>=23.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.3",
     "streamlit>=1.45.0",

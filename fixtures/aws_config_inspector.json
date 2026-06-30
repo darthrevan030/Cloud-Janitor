@@ -49,11 +49,25 @@
       "required_state": "encrypted",
       "title": "EBS volume without encryption at rest",
       "description": "EBS volume vol-data-001 does not have encryption at rest enabled. All block storage must be encrypted to protect data at rest."
+    },
+    {
+      "id": "finding-pa-s3-001",
+      "resource_id": "s3-reports-public",
+      "resource_type": "aws_s3_bucket",
+      "check_type": "public_access",
+      "severity": "CRITICAL",
+      "public_acl": true,
+      "block_public_access": false,
+      "current_state": "publicly_accessible",
+      "required_state": "private",
+      "title": "S3 bucket publicly accessible",
+      "description": "S3 bucket s3-reports-public has public ACLs enabled and Block Public Access is disabled. All buckets must restrict public access unless explicitly approved."
     }
   ],
   "dependencies": {
     "cache-prod-legacy": [],
     "vol-data-001": [],
-    "sg-prod-redis": ["cache-prod-legacy"]
+    "sg-prod-redis": ["cache-prod-legacy"],
+    "s3-reports-public": []
   }
 }

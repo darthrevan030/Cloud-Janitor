@@ -16,7 +16,7 @@ class SavingsTracker:
         ledger_path: Path | None = None,
         findings_store_path: Path | None = None,
     ):
-        root = Path(__file__).parent
+        root = Path(__file__).parent.parent
         self._ledger_path = ledger_path or root / "output" / "savings_ledger.json"
         self._ledger_path.parent.mkdir(parents=True, exist_ok=True)
         self._findings_store_path = findings_store_path or root / "output" / "findings_store.json"
@@ -118,11 +118,12 @@ class SavingsTracker:
         findings_data = self._read_findings_store()
         findings = findings_data.get("findings", [])
 
-        total = 0.0
-        for finding in findings:
-            if finding.get("resource_id") in resources_remediated:
-                total += finding.get("cost_estimate_monthly", 0.0)
-        return total
+        remediated_set = set(resources_remediated)
+        return sum(
+            finding.get("cost_estimate_monthly", 0.0)
+            for finding in findings
+            if finding.get("resource_id") in remediated_set
+        )
 
     def _recalculate_total(self, runs: list[dict]) -> float:
         """Sum monthly_savings_added across all runs."""
@@ -132,3 +133,4 @@ class SavingsTracker:
         """Read and parse findings_store.json."""
         content = self._findings_store_path.read_text(encoding="utf-8")
         return json.loads(content)
+

@@ -257,19 +257,19 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Mock `llm_client.get_client` for all tests
     - _Requirements: 11.1-11.9, 12.2_
 
-- [ ] 9. Implement fixture mode compatibility
-  - [ ] 9.1 Update fixture provider for Phase B+C features
+- [x] 9. Implement fixture mode compatibility
+  - [x] 9.1 Update fixture provider for Phase B+C features
     - Ensure fixture data contains at least one flaggable resource per resource_type ("elasticache", "ebs", "ec2")
     - Ensure fixture data contains at least one finding per check_type ("security_group", "encryption", "public_access")
     - Ensure all MCP tools produce conforming output schemas in fixture mode
     - _Requirements: 12.1, 12.2_
 
-  - [ ] 9.2 Create `accounts.json` fixture for multi-account testing
+  - [x] 9.2 Create `accounts.json` fixture for multi-account testing
     - Include 2-3 sample accounts with valid account_id, account_name, role_arn, region, priority fields
     - Used for development/testing when JANITOR_BACKEND=fixture
     - _Requirements: 12.3_
 
-  - [ ] 9.3 Write integration tests for fixture mode
+  - [x] 9.3 Write integration tests for fixture mode
     - Test full pipeline: NL query → scan → anomaly → drift in fixture mode
     - Test all MCP tools return valid schemas in fixture mode
     - Test multi-account orchestration completes without exceptions
@@ -277,8 +277,8 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Verify deterministic output when LLM is also mocked
     - _Requirements: 12.3, 12.4, 12.5_
 
-- [ ] 10. Implement Streamlit UI integration
-  - [ ] 10.1 Add NL query input and AI panels to `app.py`
+- [x] 10. Implement Streamlit UI integration
+  - [x] 10.1 Add NL query input and AI panels to `app.py`
     - Add natural language query text input with QueryInterpreter integration
     - Add remediation explanation panel (rendered alongside approval gate)
     - Add policy suggestions panel (shown post-scan)
@@ -291,11 +291,11 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Ensure LLM-generated text rendered without `unsafe_allow_html=True`
     - _Requirements: 14.1, 14.8_
 
-- [ ] 11. Final checkpoint - Ensure all tests pass
+- [x] 11. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Never-raise guarantee validation
-  - [ ] 12.1 Write property test for never-raise guarantee across all agents
+- [x] 12. Never-raise guarantee validation
+  - [x] 12.1 Write property test for never-raise guarantee across all agents
     - **Property 1: Never-Raise Guarantee**
     - For any input (empty, malformed, None-like, adversarial), calling each agent's primary method does not raise
     - **Property 2: Safe Defaults on LLM Failure**

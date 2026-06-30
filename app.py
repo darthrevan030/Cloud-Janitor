@@ -22,6 +22,25 @@ import streamlit as st
 
 from orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
 
+# Phase B+C agent imports — optional modules that may not be installed yet.
+# Each tuple is (module_path, attribute_name). On ImportError the global is set to None,
+# preserving the same fallback behavior the rest of the UI relies on.
+_PHASE_BC_AGENTS = [
+    ("agents.query_interpreter", "QueryInterpreter"),
+    ("agents.explainer", "RemediationExplainer"),
+    ("agents.policy_suggester", "PolicySuggester"),
+    ("agents.anomaly_detector", "AnomalyDetector"),
+    ("agents.drift_detector", "DriftDetector"),
+    ("agents.multi_account_orchestrator", "MultiAccountOrchestrator"),
+    ("scheduler", "JanitorScheduler"),
+]
+for _mod_name, _attr_name in _PHASE_BC_AGENTS:
+    try:
+        _mod = __import__(_mod_name, fromlist=[_attr_name])
+        globals()[_attr_name] = getattr(_mod, _attr_name)
+    except (ImportError, AttributeError):
+        globals()[_attr_name] = None
+
 # ──────────────────────────────────────────────────────────────────────
 # Page config
 # ──────────────────────────────────────────────────────────────────────
@@ -445,6 +464,24 @@ if "last_saving_delta" not in st.session_state:
 if "reasoning_log_last_count" not in st.session_state:
     st.session_state.reasoning_log_last_count = 0
 
+# Phase B+C session state keys
+if "nl_query_result" not in st.session_state:
+    st.session_state.nl_query_result = None
+if "explanation_cache" not in st.session_state:
+    st.session_state.explanation_cache = {}
+if "policy_suggestions" not in st.session_state:
+    st.session_state.policy_suggestions = None
+if "resource_tags_cache" not in st.session_state:
+    st.session_state.resource_tags_cache = {}
+if "anomaly_results" not in st.session_state:
+    st.session_state.anomaly_results = None
+if "drift_report" not in st.session_state:
+    st.session_state.drift_report = None
+if "scheduler_instance" not in st.session_state:
+    st.session_state.scheduler_instance = None
+if "multi_account_results" not in st.session_state:
+    st.session_state.multi_account_results = None
+
 # ──────────────────────────────────────────────────────────────────────
 # Helper functions
 # ──────────────────────────────────────────────────────────────────────
@@ -715,6 +752,52 @@ def _render_live_feed(statuses: dict[str, str]) -> None:
 
 
 _render_live_feed(st.session_state.agent_status)
+
+# ──────────────────────────────────────────────────────────────────────
+# Natural Language Query Input
+# ──────────────────────────────────────────────────────────────────────
+
+nl_query = st.text_input(
+    "Ask in plain English",
+    key="nl_query_input",
+    placeholder="e.g. Find idle EC2 instances older than 30 days",
+    help="Describe what you want to audit — the system will interpret your query.",
+)
+
+nl_col1, nl_col2 = st.columns([1, 4])
+with nl_col1:
+    nl_submitted = st.button("🔍  NL Audit", use_container_width=True)
+
+if nl_submitted and nl_query and nl_query.strip():
+    orch = st.session_state.orchestrator
+    with st.spinner("Interpreting query and running audit..."):
+        try:
+            result = orch.execute_natural_language_audit(nl_query.strip())
+            st.session_state.nl_query_result = result
+            st.session_state.audit_result = result
+            # Cache anomalies and drift from NL audit result
+            if hasattr(result, "anomalies") and result.anomalies:
+                st.session_state.anomaly_results = result.anomalies
+            if hasattr(result, "drift_report") and result.drift_report:
+                st.session_state.drift_report = result.drift_report
+            st.success(f"NL Audit complete — {len(result.findings)} finding(s).")
+            st.rerun()
+        except Exception as e:
+            st.error(f"NL Audit failed: {e}")
+
+# Show NL query result summary if available
+if st.session_state.nl_query_result is not None:
+    nl_res = st.session_state.nl_query_result
+    if hasattr(nl_res, "findings") and nl_res.findings:
+        st.markdown(
+            f'<div class="cj-panel">'
+            f'<div class="cj-panel-title">NL Query Result ({len(nl_res.findings)} findings)</div>'
+            f'{render_findings_html(nl_res.findings)}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 if st.button("▶  Run Audit", type="primary", use_container_width=False):
     orch = st.session_state.orchestrator
@@ -993,3 +1076,300 @@ else:
         '</div>',
         unsafe_allow_html=True,
     )
+
+# ──────────────────────────────────────────────────────────────────────
+# Remediation Explanation Panel (alongside Approval Gate)
+# ──────────────────────────────────────────────────────────────────────
+
+if audit_result is not None and audit_result.plans and RemediationExplainer is not None:
+    with st.expander("💡 Remediation Explanations", expanded=False):
+        for plan in audit_result.plans:
+            rid = plan.resource_id
+            cache_key = rid
+
+            if cache_key not in st.session_state.explanation_cache:
+                # Find the finding for this resource
+                finding = {}
+                if audit_result.findings:
+                    for f in audit_result.findings:
+                        if isinstance(f, dict) and f.get("resource_id") == rid:
+                            finding = f
+                            break
+
+                remediation_hcl = load_remediation_hcl()
+                rollback_hcl = load_rollback_hcl(rid)
+
+                if remediation_hcl.strip() and rollback_hcl.strip():
+                    try:
+                        explainer = RemediationExplainer()
+                        explanation = explainer.explain(rid, finding, remediation_hcl, rollback_hcl)
+                        st.session_state.explanation_cache[cache_key] = explanation
+                    except Exception:
+                        st.session_state.explanation_cache[cache_key] = {
+                            "risk_explanation": "Explanation unavailable.",
+                            "what_terraform_does": "Explanation unavailable.",
+                            "what_rollback_restores": "Explanation unavailable.",
+                        }
+                else:
+                    st.session_state.explanation_cache[cache_key] = {
+                        "risk_explanation": "Explanation unavailable.",
+                        "what_terraform_does": "Explanation unavailable.",
+                        "what_rollback_restores": "Explanation unavailable.",
+                    }
+
+            explanation = st.session_state.explanation_cache[cache_key]
+            st.markdown(f"**{_esc(rid)}**")
+            # Render LLM text safely — no unsafe_allow_html
+            st.markdown(f"**Risk:** {_esc(explanation.get('risk_explanation', 'N/A'))}")
+            st.markdown(f"**Terraform Fix:** {_esc(explanation.get('what_terraform_does', 'N/A'))}")
+            st.markdown(f"**Rollback Restores:** {_esc(explanation.get('what_rollback_restores', 'N/A'))}")
+            st.markdown("---")
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────
+# Policy Suggestions Panel (shown post-scan)
+# ──────────────────────────────────────────────────────────────────────
+
+if audit_result is not None and PolicySuggester is not None:
+    with st.expander("📋 Policy Suggestions", expanded=False):
+        if st.session_state.policy_suggestions is None:
+            try:
+                suggester = PolicySuggester()
+                current_findings = load_findings()
+                already_checked = list({
+                    f.get("check_type", "") for f in current_findings if f.get("check_type")
+                })
+                suggestions = suggester.suggest(current_findings, already_checked)
+                st.session_state.policy_suggestions = suggestions
+            except Exception:
+                st.session_state.policy_suggestions = []
+
+        suggestions = st.session_state.policy_suggestions or []
+        if suggestions:
+            for s in suggestions:
+                priority = s.get("priority", "low").upper()
+                title = _esc(s.get("title", "Untitled"))
+                rationale = _esc(s.get("rationale", ""))
+                query = _esc(s.get("query", ""))
+
+                # Use badge styling for priority
+                badge_class = {"HIGH": "HIGH", "MEDIUM": "MEDIUM", "LOW": "LOW"}.get(priority, "LOW")
+                st.markdown(
+                    f'<div class="cj-finding">'
+                    f'<div><span class="cj-badge {badge_class}">{priority}</span></div>'
+                    f'<div class="cj-finding-body">'
+                    f'<div class="cj-finding-title">{title}</div>'
+                    f'<div class="cj-finding-meta">{rationale}</div>'
+                    f'<div class="cj-finding-cost">{query}</div>'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown("No policy suggestions available.")
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────
+# Anomaly Detection Results Panel
+# ──────────────────────────────────────────────────────────────────────
+
+if st.session_state.anomaly_results is not None:
+    with st.expander("🔎 Anomaly Detection Results", expanded=False):
+        anomalies = st.session_state.anomaly_results
+        if anomalies:
+            for anomaly in anomalies:
+                severity = anomaly.get("severity", "low").upper()
+                anomaly_type = _esc(anomaly.get("anomaly_type", "unknown"))
+                description = _esc(anomaly.get("description", ""))
+                resource_id = _esc(anomaly.get("resource_id", "unknown"))
+                evidence = _esc(anomaly.get("evidence", ""))
+
+                badge_class = {"HIGH": "HIGH", "MEDIUM": "MEDIUM", "LOW": "LOW"}.get(severity, "LOW")
+                st.markdown(
+                    f'<div class="cj-finding">'
+                    f'<div><span class="cj-badge {badge_class}">{severity}</span></div>'
+                    f'<div class="cj-finding-body">'
+                    f'<div class="cj-finding-title">{anomaly_type}: {description}</div>'
+                    f'<div class="cj-finding-meta">{resource_id} · Evidence: {evidence}</div>'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown("No anomalies detected.")
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────
+# Drift Report Panel
+# ──────────────────────────────────────────────────────────────────────
+
+if st.session_state.drift_report is not None:
+    with st.expander("📊 Drift Report", expanded=False):
+        drift = st.session_state.drift_report
+
+        if drift.get("drift") is None and "reason" in drift:
+            st.markdown(f"*No drift data available:* {_esc(drift.get('reason', 'unknown'))}")
+        else:
+            # Narrative — render LLM text safely (no unsafe_allow_html)
+            narrative = drift.get("narrative", "")
+            if narrative:
+                st.markdown(f"**Narrative:** {_esc(narrative)}")
+
+            # Delta summary
+            waste_delta = drift.get("waste_delta", 0.0)
+            critical_delta = drift.get("critical_delta", 0)
+            compared = drift.get("compared_scans", [])
+
+            delta_color = "red" if waste_delta > 0 else "green"
+            delta_sign = "+" if waste_delta > 0 else ""
+            st.markdown(
+                f'<div class="cj-metric-row">'
+                f'<div class="cj-metric"><div class="cj-metric-label">Waste Delta</div>'
+                f'<div class="cj-metric-value {delta_color}">{delta_sign}${waste_delta:.2f}/mo</div></div>'
+                f'<div class="cj-metric"><div class="cj-metric-label">Critical Delta</div>'
+                f'<div class="cj-metric-value">{"+" if critical_delta > 0 else ""}{critical_delta}</div></div>'
+                f'<div class="cj-metric"><div class="cj-metric-label">Scans Compared</div>'
+                f'<div class="cj-metric-value">{len(compared)}</div></div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # New and resolved findings
+            new_findings = drift.get("new_findings", [])
+            resolved_findings = drift.get("resolved_findings", [])
+
+            if new_findings:
+                st.markdown(f"**New Findings ({len(new_findings)}):**")
+                for nf in new_findings[:5]:
+                    st.markdown(f"- {_esc(nf.get('resource_id', 'unknown'))} ({_esc(nf.get('check_type', 'unknown'))})")
+
+            if resolved_findings:
+                st.markdown(f"**Resolved Findings ({len(resolved_findings)}):**")
+                for rf in resolved_findings[:5]:
+                    st.markdown(f"- ~~{_esc(rf.get('resource_id', 'unknown'))}~~ ({_esc(rf.get('check_type', 'unknown'))})")
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────
+# Scheduler Controls
+# ──────────────────────────────────────────────────────────────────────
+
+if JanitorScheduler is not None:
+    with st.expander("⏰ Scheduler Controls", expanded=False):
+        sched_col1, sched_col2, sched_col3 = st.columns(3)
+
+        with sched_col1:
+            if st.button("▶ Start Scheduler", key="btn_sched_start", use_container_width=True):
+                if st.session_state.scheduler_instance is None:
+                    st.session_state.scheduler_instance = JanitorScheduler()
+                st.session_state.scheduler_instance.start()
+                st.success("Scheduler started.")
+                st.rerun()
+
+        with sched_col2:
+            if st.button("⏹ Stop Scheduler", key="btn_sched_stop", use_container_width=True):
+                if st.session_state.scheduler_instance is not None:
+                    st.session_state.scheduler_instance.stop()
+                    st.info("Scheduler stopped.")
+                    st.rerun()
+
+        with sched_col3:
+            if st.button("🔄 Refresh Status", key="btn_sched_status", use_container_width=True):
+                st.rerun()
+
+        # Show status
+        if st.session_state.scheduler_instance is not None:
+            status = st.session_state.scheduler_instance.get_status()
+            running_indicator = "🟢 Running" if status.get("running") else "🔴 Stopped"
+            st.markdown(f"**Status:** {running_indicator}")
+            st.markdown(f"**Schedule:** `{_esc(status.get('schedule', 'N/A'))}`")
+            st.markdown(f"**Next Run:** {_esc(str(status.get('next_run', 'N/A')))}")
+            st.markdown(f"**Last Run:** {_esc(str(status.get('last_run', 'N/A')))}")
+            st.markdown(f"**Runs Completed:** {status.get('runs_completed', 0)}")
+        else:
+            st.markdown("Scheduler not initialized. Click **Start Scheduler** to begin.")
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────
+# Multi-Account View
+# ──────────────────────────────────────────────────────────────────────
+
+if MultiAccountOrchestrator is not None:
+    with st.expander("🌐 Multi-Account View", expanded=False):
+        if st.button("Run Multi-Account Audit", key="btn_multi_account", use_container_width=True):
+            _accounts_file = PROJECT_ROOT / "accounts.json"
+            if not _accounts_file.exists():
+                _example_file = PROJECT_ROOT / "accounts.json.example"
+                if _example_file.exists():
+                    st.error(
+                        "**accounts.json not found.** "
+                        "Copy `accounts.json.example` to `accounts.json` and fill in your account details."
+                    )
+                else:
+                    st.error(
+                        "**accounts.json not found.** "
+                        "Create an `accounts.json` file in the project root with your AWS account configurations. "
+                        "See the README for the expected format."
+                    )
+            else:
+                with st.spinner("Running audits across accounts..."):
+                    try:
+                        multi_orch = MultiAccountOrchestrator()
+                        results = multi_orch.run_all()
+                        st.session_state.multi_account_results = results
+                        st.success(f"Multi-account audit complete — {results.get('accounts_scanned', 0)} account(s) scanned.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Multi-account audit failed: {e}")
+
+        if st.session_state.multi_account_results is not None:
+            ma = st.session_state.multi_account_results
+
+            # Summary metrics
+            st.markdown(
+                f'<div class="cj-metric-row">'
+                f'<div class="cj-metric"><div class="cj-metric-label">Accounts Scanned</div>'
+                f'<div class="cj-metric-value">{ma.get("accounts_scanned", 0)}</div></div>'
+                f'<div class="cj-metric"><div class="cj-metric-label">Total Findings</div>'
+                f'<div class="cj-metric-value">{ma.get("total_findings", 0)}</div></div>'
+                f'<div class="cj-metric"><div class="cj-metric-label">Total Waste</div>'
+                f'<div class="cj-metric-value yellow">${ma.get("total_waste", 0.0):.2f}/mo</div></div>'
+                f'<div class="cj-metric"><div class="cj-metric-label">Cross-Account Duplicates</div>'
+                f'<div class="cj-metric-value">{ma.get("cross_account_duplicates", 0)}</div></div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Per-account breakdown
+            by_account = ma.get("by_account", [])
+            if by_account:
+                st.markdown("**Per-Account Breakdown:**")
+                for acct in by_account:
+                    acct_name = _esc(acct.get("account_name", "unknown"))
+                    acct_id = _esc(acct.get("account_id", ""))
+                    priority = acct.get("priority", "low").upper()
+                    status = acct.get("status", "unknown")
+                    findings_count = len(acct.get("findings", []))
+                    waste = acct.get("waste", 0.0)
+                    error = acct.get("error")
+
+                    status_icon = "✓" if status == "success" else "✗"
+                    status_color = "green" if status == "success" else "red"
+
+                    badge_class = {"HIGH": "HIGH", "MEDIUM": "MEDIUM", "LOW": "LOW"}.get(priority, "LOW")
+
+                    entry_html = (
+                        f'<div class="cj-finding">'
+                        f'<div><span class="cj-badge {badge_class}">{priority}</span></div>'
+                        f'<div class="cj-finding-body">'
+                        f'<div class="cj-finding-title">{status_icon} {acct_name} ({acct_id})</div>'
+                        f'<div class="cj-finding-meta">{findings_count} findings · ${waste:.2f}/mo waste · {_esc(status)}</div>'
+                    )
+                    if error:
+                        entry_html += f'<div class="cj-finding-meta" style="color:#f85149;">Error: {_esc(error)}</div>'
+                    entry_html += f'</div></div>'
+                    st.markdown(entry_html, unsafe_allow_html=True)

@@ -188,3 +188,37 @@ def test_recalculate_from_source(tmp_path):
     ledger = json.loads(ledger_path.read_text())
     assert ledger["total_lifetime_savings"] == 35.0
     assert ledger["runs"][-1]["cumulative_at_time"] == 35.0
+
+
+def test_default_paths_resolve_under_repo_root():
+    """SavingsTracker() with no explicit paths must resolve under <repo_root>/output/, not agents/output/.
+
+    The bug was: Path(__file__).parent resolved to agents/ (since __file__ is
+    agents/savings_tracker.py), so default output ended up at agents/output/.
+    After the fix, Path(__file__).parent.parent resolves to the repo root.
+    """
+    tracker = SavingsTracker()
+
+    repo_root = Path(__file__).resolve().parent.parent  # tests/ -> repo root
+    expected_output_dir = repo_root / "output"
+
+    # ledger_path should be <repo_root>/output/savings_ledger.json
+    assert tracker._ledger_path == expected_output_dir / "savings_ledger.json", (
+        f"ledger_path resolved to {tracker._ledger_path}, "
+        f"expected {expected_output_dir / 'savings_ledger.json'}"
+    )
+
+    # findings_store_path should be <repo_root>/output/findings_store.json
+    assert tracker._findings_store_path == expected_output_dir / "findings_store.json", (
+        f"findings_store_path resolved to {tracker._findings_store_path}, "
+        f"expected {expected_output_dir / 'findings_store.json'}"
+    )
+
+    # Crucially, neither path should live under agents/
+    agents_dir = repo_root / "agents"
+    assert not str(tracker._ledger_path).startswith(str(agents_dir)), (
+        "ledger_path incorrectly under agents/ directory"
+    )
+    assert not str(tracker._findings_store_path).startswith(str(agents_dir)), (
+        "findings_store_path incorrectly under agents/ directory"
+    )
