@@ -2,7 +2,7 @@
 
 Ensures the fixtures contain the expected data for downstream tests:
 - Correct number of resources
-- At least one flaggable resource (idle >= 30 days)
+- At least one flaggable resource (idle >= 30 days, matching FinOps agent threshold)
 - At least one resource below threshold (idle < 7 days) for negative testing
 - All resources have required schema fields with correct types
 - All required resource_types are present (Req 12.1)
@@ -81,13 +81,17 @@ class TestFixtureSchema:
 
 
 class TestFixtureFlaggableResources:
-    """Verify the fixture has the right mix of flaggable/non-flaggable resources."""
+    """Verify the fixture has the right mix of flaggable/non-flaggable resources.
+
+    'Flaggable' here means eligible for FinOps agent remediation, which uses
+    a 30-day idle threshold (FinOpsAuditor.MIN_IDLE_DAYS = 30).
+    """
 
     def test_has_flaggable_resources(self, resources):
-        """At least one resource must be idle >= 7 days (flaggable by default threshold)."""
-        flaggable = [r for r in resources if r["idle_days"] >= 7]
-        assert len(flaggable) == 3, (
-            f"Expected 3 flaggable resources (idle >= 7d), got {len(flaggable)}"
+        """At least one resource must be idle >= 30 days (flaggable by FinOps)."""
+        flaggable = [r for r in resources if r["idle_days"] >= 30]
+        assert len(flaggable) == 2, (
+            f"Expected 2 flaggable resources (idle >= 30d), got {len(flaggable)}"
         )
 
     def test_has_non_flaggable_resource(self, resources):
@@ -105,20 +109,30 @@ class TestFixtureFlaggableResources:
         assert below_threshold[0]["idle_days"] == 5
 
     def test_flaggable_resource_ids(self, resources):
-        """Verify the exact IDs of flaggable resources (idle >= 7d)."""
-        flaggable_ids = {r["id"] for r in resources if r["idle_days"] >= 7}
-        assert flaggable_ids == {
-            "cache-prod-legacy-01",
-            "vol-0abc123def456789a",
-            "i-0abc123def456ec2a",
-        }
+        """Verify the exact IDs of flaggable resources (idle >= 30d)."""
+        flaggable_ids = {r["id"] for r in resources if r["idle_days"] >= 30}
+        assert flaggable_ids == {"cache-prod-legacy-01", "vol-0abc123def456789a"}
+
+    def test_below_remediation_threshold_not_flaggable(self, resources):
+        """Resources idle < 30 days must NOT be counted as flaggable.
+
+        The EC2 instance i-0abc123def456ec2a has idle_days=28, which is
+        below the FinOps agent's 30-day remediation threshold.
+        """
+        below_remediation = [r for r in resources if 7 <= r["idle_days"] < 30]
+        assert len(below_remediation) == 1
+        assert below_remediation[0]["id"] == "i-0abc123def456ec2a"
+        assert below_remediation[0]["idle_days"] == 28
 
     def test_non_flaggable_resource_is_below_threshold(self, resources):
-        """The non-flaggable resource must be clearly below the 7-day threshold."""
-        non_flaggable = [r for r in resources if r["idle_days"] < 7]
-        assert len(non_flaggable) == 1
-        # It should be well below threshold (5 days)
-        assert non_flaggable[0]["idle_days"] < 7
+        """The non-flaggable resource must be clearly below the 30-day threshold."""
+        non_flaggable = [r for r in resources if r["idle_days"] < 30]
+        # 2 resources below 30d: the 5-day EBS and the 28-day EC2
+        assert len(non_flaggable) == 2
+        # At least one should be well below threshold (< 7 days)
+        very_recent = [r for r in non_flaggable if r["idle_days"] < 7]
+        assert len(very_recent) == 1
+        assert very_recent[0]["idle_days"] < 7
 
 
 class TestFixtureResourceTypeCoverage:
@@ -138,10 +152,12 @@ class TestFixtureResourceTypeCoverage:
         )
 
     def test_each_resource_type_has_flaggable_resource(self, resources):
-        """Each resource_type must have at least one flaggable resource (idle >= 7 days).
+        """Each resource_type must have at least one resource idle >= 7 days.
 
-        This ensures all Phase B+C agents can exercise their detection logic
-        against every resource type.
+        This uses the MCP server's default min_idle_days=7 threshold (not the
+        FinOps agent's 30-day remediation threshold). The purpose is to ensure
+        every resource type has at least one non-trivial entry for agents to
+        exercise their detection logic against.
         """
         for rtype in self.REQUIRED_RESOURCE_TYPES:
             flaggable = [
@@ -149,7 +165,7 @@ class TestFixtureResourceTypeCoverage:
                 if r["type"] == rtype and r["idle_days"] >= 7
             ]
             assert len(flaggable) >= 1, (
-                f"No flaggable resource (idle >= 7d) for type '{rtype}'"
+                f"No resource with idle >= 7d for type '{rtype}'"
             )
 
 
