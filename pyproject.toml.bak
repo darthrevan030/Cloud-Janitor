@@ -1,0 +1,32 @@
+[project]
+name = "cloud-janitor"
+version = "0.1.0"
+description = "Multi-agent cloud infrastructure auditor and remediation system using MCP protocol"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.25.0",
+    "apscheduler>=3.10.0",
+    "boto3>=1.34.0",
+    "filelock>=3.13.0",
+    "hypothesis>=6.155.7",
+    "mcp>=1.28.1",
+    "moto[cloudwatch,ec2,elasticache]>=5.0.0",
+    "openai>=2.44.0",
+    "packaging>=23.0",
+    "pytest>=8.0.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.3",
+    "streamlit>=1.45.0",
+    "terraform-local>=0.26.0",
+]
+
+[dependency-groups]
+dev = [
+    "moto[ec2,elasticache,cloudwatch]>=5.0.0",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

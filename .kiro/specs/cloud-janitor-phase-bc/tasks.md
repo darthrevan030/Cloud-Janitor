@@ -294,8 +294,8 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
 - [x] 11. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Never-raise guarantee validation
-  - [ ] 12.1 Write property test for never-raise guarantee across all agents
+- [x] 12. Never-raise guarantee validation
+  - [x] 12.1 Write property test for never-raise guarantee across all agents
     - **Property 1: Never-Raise Guarantee**
     - For any input (empty, malformed, None-like, adversarial), calling each agent's primary method does not raise
     - **Property 2: Safe Defaults on LLM Failure**
