@@ -25,7 +25,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Ensure script is executable
     - _Requirements: 2.6_
 
-  - [ ] 1.4 Write smoke tests for `bin/tflocal` wrapper (`tests/test_bin_tflocal.py`)
+  - [x] 1.4 Write smoke tests for `bin/tflocal` wrapper (`tests/test_bin_tflocal.py`)
     - Test that `JANITOR_DRY_RUN=1 bin/tflocal validate` exits 0 and stdout contains `[DRY RUN]`
     - Test that `JANITOR_DRY_RUN=1 bin/tflocal apply -auto-approve` exits 0 and stdout contains the full command string
     - Test that the self-skip logic does not recurse into itself (run with only `bin/` on PATH, verify it does not loop — expect graceful error or fallback to terraform)
