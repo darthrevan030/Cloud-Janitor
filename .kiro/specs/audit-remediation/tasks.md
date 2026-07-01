@@ -7,7 +7,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
 ## Tasks
 
 - [ ] 1. Create foundational modules and path configuration
-  - [ ] 1.1 Create `core/paths.py` centralized path configuration with directory creation helper
+  - [x] 1.1 Create `core/paths.py` centralized path configuration with directory creation helper
     - Create `core/__init__.py` if it does not exist
     - Implement `core/paths.py` with all path constants as specified in the design: `PROJECT_ROOT`, `OUTPUT_DIR`, `ROLLBACKS_DIR`, `LOGS_DIR`, `POLICIES_DIR`, `FINDINGS_STORE_PATH`, `AUDIT_LOG_PATH`, `REASONING_LOG_PATH`, `APPROVAL_GATES_PATH`, `SAVINGS_LEDGER_PATH`, `HOOKS_DIR`, `REQUIRED_DIRS`
     - Implement `ensure_output_dirs()` helper function that creates all directories listed in `REQUIRED_DIRS` (`output/`, `output/rollbacks/`, `output/logs/`, `output/policies/`), raising a descriptive `RuntimeError` on failure that identifies which directory could not be created and the underlying OS error
