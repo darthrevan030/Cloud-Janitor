@@ -13,7 +13,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Implement `ensure_output_dirs()` helper function that creates all directories listed in `REQUIRED_DIRS` (`output/`, `output/rollbacks/`, `output/logs/`, `output/policies/`), raising a descriptive `RuntimeError` on failure that identifies which directory could not be created and the underlying OS error
     - _Requirements: 4.1, 4.3, 4.4, 4.5_
 
-  - [ ] 1.2 Create `core/error_telemetry.py` structured error module
+  - [x] 1.2 Create `core/error_telemetry.py` structured error module
     - Implement `ERROR_CATEGORIES` set, `build_error_record()` function, and `write_error_record()` function
     - `build_error_record` must produce a dict with fields: `error_type`, `message`, `traceback` (max 4096 chars), `timestamp` (ISO 8601 UTC), `agent_name`, `error_category`
     - `write_error_record` must append exactly one JSONL line to the target log path

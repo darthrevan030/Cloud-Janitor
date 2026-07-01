@@ -2,6 +2,53 @@
 
 Shared infrastructure modules used across all agents and the orchestrator.
 
+## `paths.py`
+
+Centralised path configuration — every module that reads or writes runtime artifacts imports paths from here.
+
+### Exports
+
+| Symbol | Type | Description |
+|--------|------|-------------|
+| `PROJECT_ROOT` | `Path` | Resolved project root directory |
+| `OUTPUT_DIR` | `Path` | Base output directory (`output/`) |
+| `ROLLBACKS_DIR` | `Path` | Rollback files (`output/rollbacks/`) |
+| `LOGS_DIR` | `Path` | Log files (`output/logs/`) |
+| `POLICIES_DIR` | `Path` | Policy artifacts (`output/policies/`) |
+| `FINDINGS_STORE_PATH` | `Path` | Findings JSON (`output/findings_store.json`) |
+| `AUDIT_LOG_PATH` | `Path` | Audit log (`output/logs/audit.log`) |
+| `REASONING_LOG_PATH` | `Path` | Reasoning log (`output/logs/agent_reasoning.log`) |
+| `APPROVAL_GATES_PATH` | `Path` | Gate store (`output/approval_gates.json`) |
+| `SAVINGS_LEDGER_PATH` | `Path` | Savings ledger (`output/savings_ledger.json`) |
+| `HOOKS_DIR` | `Path` | Hooks directory (`hooks/`) |
+| `REQUIRED_DIRS` | `list[Path]` | Directories created at startup |
+| `ensure_output_dirs()` | `function` | Creates all `REQUIRED_DIRS`, raises `RuntimeError` on failure |
+
+## `error_telemetry.py`
+
+Structured error telemetry — captures agent exceptions as JSONL records for operational diagnosis.
+
+### Exports
+
+| Symbol | Type | Description |
+|--------|------|-------------|
+| `ERROR_CATEGORIES` | `set[str]` | Valid error categories: `agent_failure`, `terraform_failure`, `validation_failure`, `io_failure` |
+| `build_error_record(exc, agent_name, error_category)` | `function` | Builds a structured error dict from an exception |
+| `write_error_record(record, log_path)` | `function` | Appends one JSONL line to the target log path |
+
+### Usage
+
+```python
+from core.error_telemetry import build_error_record, write_error_record
+from core.paths import AUDIT_LOG_PATH
+
+try:
+    agent.run()
+except Exception as exc:
+    record = build_error_record(exc, "finops_auditor", "agent_failure")
+    write_error_record(record, AUDIT_LOG_PATH)
+```
+
 ## `llm_client.py`
 
 Centralised LLM client — every AI agent imports from here instead of using the OpenAI SDK directly.
