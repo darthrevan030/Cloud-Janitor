@@ -19,7 +19,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - `write_error_record` must append exactly one JSONL line to the target log path
     - _Requirements: 12.1, 12.2, 12.3_
 
-  - [ ] 1.3 Create `bin/tflocal` wrapper script
+  - [x] 1.3 Create `bin/tflocal` wrapper script
     - Write the repo-local bash wrapper script at `bin/tflocal`
     - Script must: print command and exit 0 when `JANITOR_DRY_RUN=1`, otherwise delegate to real tflocal/terraform binary on PATH (skipping itself)
     - Ensure script is executable

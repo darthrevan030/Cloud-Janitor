@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# bin/tflocal — repo-local wrapper for Terraform/tflocal.
+# When JANITOR_DRY_RUN=1, prints the command it would run and exits 0.
+# Otherwise delegates to the real tflocal/terraform binary.
+
+set -euo pipefail
+
+if [ "${JANITOR_DRY_RUN:-0}" = "1" ]; then
+    echo "[DRY RUN] Would execute: tflocal $*"
+    exit 0
+fi
+
+# Portable realpath: use realpath if available, fall back to readlink -f or pwd-based resolution
+_realpath() {
+    if command -v realpath >/dev/null 2>&1; then
+        realpath "$1"
+    elif readlink -f "$1" >/dev/null 2>&1; then
+        readlink -f "$1"
+    else
+        # Last resort: resolve via cd + pwd
+        local dir base
+        dir="$(cd "$(dirname "$1")" && pwd)"
+        base="$(basename "$1")"
+        echo "$dir/$base"
+    fi
+}
+
+# Find the real tflocal/terraform, skipping ourselves
+SELF="$(_realpath "$0")"
+REAL=""
+while IFS= read -r -d '' candidate; do
+    candidate_real="$(_realpath "$candidate")"
+    if [ "$candidate_real" != "$SELF" ]; then
+        REAL="$candidate_real"
+        break
+    fi
+done < <(which -a tflocal 2>/dev/null | tr '\n' '\0')
+
+if [ -z "$REAL" ]; then
+    # Fall back to terraform
+    REAL="$(which terraform 2>/dev/null || true)"
+fi
+
+if [ -z "$REAL" ]; then
+    echo "ERROR: Neither tflocal nor terraform found on PATH" >&2
+    exit 1
+fi
+
+exec "$REAL" "$@"
