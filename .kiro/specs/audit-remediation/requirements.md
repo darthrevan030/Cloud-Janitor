@@ -43,6 +43,7 @@ This specification covers the remediation of 14 confirmed audit findings from th
 3. IF TF_CMD contains path separator characters (/ or \), THEN THE Orchestrator SHALL reject the value with a configuration error indicating that only bare binary names are permitted.
 4. WHEN TF_CMD passes the allowlist check, THE Orchestrator SHALL resolve it to an absolute path via system PATH lookup and verify the target file exists and is executable before accepting it.
 5. IF the resolved TF_CMD path does not exist or is not executable, THEN THE Orchestrator SHALL raise a configuration error indicating the binary name could not be found on PATH, and refuse to start.
+6. THE project SHALL provide a repo-local wrapper script (`bin/tflocal`) that is a valid, executable binary named `tflocal` on PATH. For demo/dry-run use, the wrapper script SHALL accept the same subcommands as the real tflocal/terraform binaries (`validate`, `apply -auto-approve`) and, WHEN `JANITOR_DRY_RUN=1` is set in the environment, SHALL print the command it would have run and exit 0 instead of invoking Terraform. THE Orchestrator's TF_CMD allowlist SHALL NOT be widened to accommodate this — the wrapper satisfies the allowlist by being named `tflocal`, not by adding a new allowlist entry.
 
 ### Requirement 3: Streamlit UI Audit Delegation
 
@@ -169,6 +170,8 @@ This specification covers the remediation of 14 confirmed audit findings from th
 4. IF a new Phase B/C agent is added to the codebase, THEN THE Streamlit_UI SHALL require a corresponding explicit import statement; no registry list or loop-based dynamic import pattern shall be used to auto-discover agents.
 
 ### Requirement 14: Session-Isolated File Paths
+
+**Status: DEFERRED** to post-hackathon prod-readiness milestone. Not part of the July 4 BuildFest submission. Do not implement acceptance criteria 14.1–14.5 in this remediation pass — implementation of Req 14 will be scoped as a separate future spec.
 
 **User Story:** As an operator, I want concurrent Streamlit sessions to use isolated file paths, so that simultaneous users do not overwrite each other's audit artifacts.
 
