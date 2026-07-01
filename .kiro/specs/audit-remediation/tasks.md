@@ -55,7 +55,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - **Property 2: TF_CMD Validation Partition**
     - **Validates: Requirements 2.1, 2.2, 2.3**
 
-  - [ ] 2.3 Write unit tests for TF_CMD PATH resolution (`tests/test_tf_cmd_validation.py`)
+  - [x] 2.3 Write unit tests for TF_CMD PATH resolution (`tests/test_tf_cmd_validation.py`)
     - Test PATH resolution with mocked `shutil.which` returning a valid path
     - Test PATH resolution with mocked `shutil.which` returning `None` (binary not found)
     - Test rejection of values containing `/` or `\` path separators
