@@ -25,19 +25,19 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Ensure script is executable
     - _Requirements: 2.6_
 
-  - [ ] 1.6 Write smoke tests for `bin/tflocal` wrapper (`tests/test_bin_tflocal.py`)
+  - [ ] 1.4 Write smoke tests for `bin/tflocal` wrapper (`tests/test_bin_tflocal.py`)
     - Test that `JANITOR_DRY_RUN=1 bin/tflocal validate` exits 0 and stdout contains `[DRY RUN]`
     - Test that `JANITOR_DRY_RUN=1 bin/tflocal apply -auto-approve` exits 0 and stdout contains the full command string
     - Test that the self-skip logic does not recurse into itself (run with only `bin/` on PATH, verify it does not loop — expect graceful error or fallback to terraform)
     - Use `subprocess.run()` with explicit `env` dict to control `JANITOR_DRY_RUN` and `PATH`
     - _Requirements: 2.6_
 
-  - [ ] 1.4 Write property tests for `core/error_telemetry.py`
+  - [ ] 1.5 Write property tests for `core/error_telemetry.py`
     - **Property 11: Structured Error Record Completeness**
     - **Property 12: JSONL Error Record Format**
     - **Validates: Requirements 12.1, 12.2, 12.3**
 
-  - [ ] 1.5 Write unit tests for path configuration and directory creation (`tests/test_path_config.py`)
+  - [ ] 1.6 Write unit tests for path configuration and directory creation (`tests/test_path_config.py`)
     - Test that `ensure_output_dirs()` creates all `REQUIRED_DIRS` when they do not exist
     - Test that `ensure_output_dirs()` raises descriptive error when directory creation fails (mocked `os.makedirs` raising `OSError`)
     - Test that `REQUIRED_DIRS` contains exactly `[OUTPUT_DIR, ROLLBACKS_DIR, LOGS_DIR, POLICIES_DIR]`
