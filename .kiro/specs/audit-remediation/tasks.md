@@ -32,7 +32,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Use `subprocess.run()` with explicit `env` dict to control `JANITOR_DRY_RUN` and `PATH`
     - _Requirements: 2.6_
 
-  - [ ] 1.5 Write property tests for `core/error_telemetry.py`
+  - [x] 1.5 Write property tests for `core/error_telemetry.py`
     - **Property 11: Structured Error Record Completeness**
     - **Property 12: JSONL Error Record Format**
     - **Validates: Requirements 12.1, 12.2, 12.3**
