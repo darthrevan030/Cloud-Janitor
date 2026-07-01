@@ -48,20 +48,13 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Delegate to existing `Orchestrator` class for all operations
     - Handle errors: print to stderr and `sys.exit(1)`
     - No top-level `import streamlit` anywhere in the module
-    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12, 12.2, 12.4_
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12, 9.1, 9.2, 9.3, 9.4, 12.2, 12.4_
 
   - [ ] 1.5 Update stub providers with warning pattern
     - Modify `mcp_server/backends/gcp_provider.py`: add WARNING log on `__init__`, raise `NotImplementedError` with provider+method name in each stub method
     - Modify `mcp_server/backends/azure_provider.py`: same pattern as GCP
     - Ensure providers remain instantiable after warning (no exception on init)
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
-
-  - [ ] 1.6 Read version inline in `cli.py` via importlib.metadata
-    - In `cli.py`, read `__version__` using `importlib.metadata.version("cloud-janitor")` with `PackageNotFoundError` fallback to `"0.0.0-dev"`
-    - Do NOT create a `cloud_janitor/` package directory at the project root — this would conflict with the Batch 3 src-layout move
-    - The `from cloud_janitor import __version__` import path becomes available only after Batch 3 when `src/cloud_janitor/__init__.py` is created
-    - The `cloud_janitor/__init__.py` with importlib.metadata version logic is created in task 7.1 as part of the src-layout migration
-    - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
 - [ ] 2. Checkpoint — Verify Batch 1
   - Ensure all tests pass, ask the user if questions arise.
@@ -135,7 +128,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
   - [ ]* 3.8 Write property test for retry exhaustion exception content
     - **Property 3: Retry Exhaustion Exception Content**
     - Generator: random retriable error type that persists for all 4 attempts
-    - Assertion: exception has status_or_error string, attempts == 4, elapsed > 0
+    - Assertion: exception has status_or_error string, attempts == 4, mocked sleep calls sum to ~7 seconds (1+2+4) matching the exponential backoff formula
     - **Validates: Requirements 8.4**
 
   - [ ]* 3.9 Write property test for backoff delay calculation
@@ -216,10 +209,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Verify `import cloud_janitor.nonexistent` raises `ModuleNotFoundError`
     - _Requirements: 3.2, 3.3, 3.5, 3.6, 9.1, 9.5, 10.1, 10.3_
 
-- [ ] 8. Session isolation (Deferred — Audit Remediation REQ 14)
-  - [ ] 8.1 Generate UUID subdir per Streamlit session under `output/`, thread session path through all artifact reads/writes in Orchestrator and `app.py`, implement session cleanup daemon with configurable retention (default 24h). See Requirement 14 in `.kiro/specs/audit-remediation/requirements.md`.
-
-- [ ] 9. Final checkpoint — Ensure all tests pass
+- [ ] 8. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
   - Verify full test suite passes on editable install
   - Verify `pip wheel .` + `twine check` passes
@@ -235,13 +225,15 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
 - Batch 1 preserves the flat layout — no `src/` directory until Batch 3
 - All existing tests will break temporarily during Batch 3 migration (expected per design)
 - The implementation language is Python throughout (Click CLI, pytest, hypothesis)
+- Session isolation (Audit Remediation Req 14) is explicitly out of scope for this implementation pass. Tracked for a future post-hackathon spec. Do not implement output/<uuid> session directories, SessionManager, or related tests as part of this task list.
+- Batch 3 (task 7, src-layout migration) should not begin until the Audit Remediation spec's fixes are merged, to avoid import-path conflicts in files touched by both specs (orchestrator.py, core/paths.py, core/error_telemetry.py, agents/approval_gate.py, bin/tflocal).
 
 ## Task Dependency Graph
 
 ```json
 {
   "waves": [
-    { "id": 0, "tasks": ["1.1", "1.2", "1.3", "1.5", "1.6"] },
+    { "id": 0, "tasks": ["1.1", "1.2", "1.3", "1.5"] },
     { "id": 1, "tasks": ["1.4"] },
     { "id": 2, "tasks": ["3.1", "3.2", "3.3", "3.4", "3.5"] },
     { "id": 3, "tasks": ["3.6", "3.7", "3.8", "3.9", "3.10"] },
