@@ -25,6 +25,13 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Ensure script is executable
     - _Requirements: 2.6_
 
+  - [ ] 1.6 Write smoke tests for `bin/tflocal` wrapper (`tests/test_bin_tflocal.py`)
+    - Test that `JANITOR_DRY_RUN=1 bin/tflocal validate` exits 0 and stdout contains `[DRY RUN]`
+    - Test that `JANITOR_DRY_RUN=1 bin/tflocal apply -auto-approve` exits 0 and stdout contains the full command string
+    - Test that the self-skip logic does not recurse into itself (run with only `bin/` on PATH, verify it does not loop — expect graceful error or fallback to terraform)
+    - Use `subprocess.run()` with explicit `env` dict to control `JANITOR_DRY_RUN` and `PATH`
+    - _Requirements: 2.6_
+
   - [ ] 1.4 Write property tests for `core/error_telemetry.py`
     - **Property 11: Structured Error Record Completeness**
     - **Property 12: JSONL Error Record Format**
@@ -278,6 +285,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
 - All tests use pytest + hypothesis; invoke via `.venv/Scripts/python.exe -m pytest`
 - `hooks/pre-remediation.sh` already exists in the repo — no task needed to create it
 - Directory creation (`ensure_output_dirs()`) lives in `core/paths.py` alongside the `REQUIRED_DIRS` constant it operates on; the Orchestrator calls it at `__init__` time (task 10.8)
+- **WARNING**: Do not manually invoke the Orchestrator against real `output/` paths until task 10.8 lands — `ensure_output_dirs()` is implemented in wave 0 (task 1.1) but not wired into `Orchestrator.__init__` until wave 6 (task 10.8). Between waves 4–6, code that writes to `output/` subdirectories exists but the directories are not auto-created at startup. Automated tests use `tmp_path`/mocked filesystems and are unaffected.
 
 ## Task Dependency Graph
 
@@ -285,7 +293,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
 {
   "waves": [
     { "id": 0, "tasks": ["1.1", "1.2", "1.3"] },
-    { "id": 1, "tasks": ["1.4", "1.5", "2.1", "2.4"] },
+    { "id": 1, "tasks": ["1.4", "1.5", "1.6", "2.1", "2.4"] },
     { "id": 2, "tasks": ["2.2", "2.3", "2.5", "3.1"] },
     { "id": 3, "tasks": ["3.2", "3.3", "3.4", "3.5"] },
     { "id": 4, "tasks": ["5.1", "6.1", "7.1", "7.2", "8.1"] },
