@@ -49,6 +49,30 @@ except Exception as exc:
     write_error_record(record, AUDIT_LOG_PATH)
 ```
 
+## `logging_config.py`
+
+Centralized logging configuration — call `configure_logging()` once at application startup to set up structured logging across all modules.
+
+### Exports
+
+| Symbol | Type | Description |
+|--------|------|-------------|
+| `configure_logging(level)` | `function` | Configures the root logger with timestamped format to stderr |
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `JANITOR_LOG_LEVEL` | No | `INFO` | Log level (DEBUG, INFO, WARNING, ERROR) |
+
+### Usage
+
+```python
+from core.logging_config import configure_logging
+
+configure_logging()  # Call once at startup
+```
+
 ## `llm_client.py`
 
 Centralised LLM client — every AI agent imports from here instead of using the OpenAI SDK directly.
