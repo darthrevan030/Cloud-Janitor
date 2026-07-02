@@ -152,8 +152,8 @@ class TestInitFailureReturnsError:
         assert stderr_msg in result.error
         # Error message is formatted as "tflocal init failed: <error>"
         assert "init failed" in result.error
-        # exit_code is NOT populated by current implementation
-        assert result.exit_code is None
+        # exit_code should be populated with the subprocess returncode
+        assert result.exit_code == 1
 
 
 class TestApplyFailurePreservesRollbackFile:

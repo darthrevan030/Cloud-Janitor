@@ -1177,6 +1177,7 @@ class Orchestrator:
                 success=False,
                 resource_id=resource_id,
                 error=f"{self._tf_cmd} init failed: {error}",
+                exit_code=init_result.returncode,
             )
 
         apply_result = subprocess.run(
@@ -1194,6 +1195,7 @@ class Orchestrator:
                 success=False,
                 resource_id=resource_id,
                 error=f"{self._tf_cmd} apply failed: {error}",
+                exit_code=apply_result.returncode,
             )
 
         # Rollback applied successfully

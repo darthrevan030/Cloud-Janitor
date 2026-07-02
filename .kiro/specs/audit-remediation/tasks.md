@@ -191,7 +191,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - **Property 5: Savings Tracker Exception Swallowing**
     - **Validates: Requirements 8.1, 8.2, 8.3**
 
-- [-] 9. Checkpoint - Ensure all tests pass
+- [x] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Implement UI–Orchestrator contract alignment
