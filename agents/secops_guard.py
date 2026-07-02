@@ -315,8 +315,10 @@ class SecOpsGuard:
             "total_monthly_waste": round(total_monthly_waste, 2),
         }
 
-        # Write updated store
-        self.findings_store_path.write_text(json.dumps(store, indent=2))
+        # Write updated store (atomic: tmp + rename)
+        tmp_path = self.findings_store_path.with_suffix(".json.tmp")
+        tmp_path.write_text(json.dumps(store, indent=2))
+        tmp_path.replace(self.findings_store_path)
         return store
 
 

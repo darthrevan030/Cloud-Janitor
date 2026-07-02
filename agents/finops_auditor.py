@@ -216,7 +216,10 @@ class FinOpsAuditor:
         }
 
         self.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
-        self.findings_store_path.write_text(json.dumps(store, indent=2))
+        # Atomic write: write to .tmp then rename to prevent corruption on crash
+        tmp_path = self.findings_store_path.with_suffix(".json.tmp")
+        tmp_path.write_text(json.dumps(store, indent=2))
+        tmp_path.replace(self.findings_store_path)
         return store
 
 
