@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T14:36:10Z
+Generated: 2026-07-02T14:46:23Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -34,7 +34,7 @@ Generated: 2026-07-02T14:36:10Z
 | 28 | 6.3 Write unit tests for hook timeout (`tests/test_pre_hook.py`) | ❌ Pending | — |
 | 29 | 7. Implement data integrity features | ❌ Pending | — |
 | 30 | 7.1 Implement findings store schema versioning | ✅ Done | no mapping |
-| 31 | 7.2 Implement reasoning log append mode with separator | ❌ Pending | — |
+| 31 | 7.2 Implement reasoning log append mode with separator | ✅ Done | no mapping |
 | 32 | 7.3 Write property test for schema version validation | ❌ Pending | — |
 | 33 | 7.4 Write property test for reasoning log append preservation | ❌ Pending | — |
 | 34 | 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`) | ❌ Pending | — |

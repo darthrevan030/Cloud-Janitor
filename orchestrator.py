@@ -571,10 +571,13 @@ class Orchestrator:
         # Record savings (non-blocking — errors are logged but don't fail approval)
         try:
             self._savings_tracker.record_run(resources_remediated=[resource_id])
-        except (FileNotFoundError, OSError) as e:
+        except Exception as e:
+            logging.getLogger(__name__).warning(
+                "Savings tracking failed (%s): %s", type(e).__name__, e
+            )
             self._log_action(
                 "savings", resource_id, "warning",
-                f"Savings tracking failed: {e}",
+                f"Savings tracking failed ({type(e).__name__}): {e}",
             )
 
         return ApprovalResult(success=True, resource_id=resource_id)
