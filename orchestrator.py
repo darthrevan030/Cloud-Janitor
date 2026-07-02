@@ -615,7 +615,7 @@ class Orchestrator:
         # Record savings (non-blocking — errors are logged but don't fail approval)
         try:
             self._savings_tracker.record_run(resources_remediated=[resource_id])
-        except (FileNotFoundError, OSError) as e:
+        except Exception as e:
             self._log_action(
                 "savings", resource_id, "warning",
                 f"Savings tracking failed: {e}",
@@ -732,34 +732,34 @@ class Orchestrator:
         if not remediation_path.exists():
             return "remediation.tf not found in output directory"
 
-        # Find a rollback file for validation (use first active plan's resource)
-        rollback_path = None
+        # Validate each rollback file (not just the first one)
+        rollback_paths = []
         for plan in plans:
             candidate = self.rollbacks_dir / f"{plan.resource_id}.tf"
             if candidate.exists():
-                rollback_path = candidate
-                break
+                rollback_paths.append(candidate)
 
-        if not rollback_path:
+        if not rollback_paths:
             return "No rollback file found for validation"
 
         try:
-            result = subprocess.run(
-                [
-                    BASH_CMD,
-                    _to_bash_path(hook_path),
-                    _to_bash_path(remediation_path),
-                    _to_bash_path(rollback_path),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                cwd=str(self.project_root),
-            )
+            for rollback_path in rollback_paths:
+                result = subprocess.run(
+                    [
+                        BASH_CMD,
+                        _to_bash_path(hook_path),
+                        _to_bash_path(remediation_path),
+                        _to_bash_path(rollback_path),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                    cwd=str(self.project_root),
+                )
 
-            if result.returncode != 0:
-                error_output = result.stderr.strip() or result.stdout.strip()
-                return f"Pre-remediation hook failed: {error_output}"
+                if result.returncode != 0:
+                    error_output = result.stderr.strip() or result.stdout.strip()
+                    return f"Pre-remediation hook failed: {error_output}"
 
         except subprocess.TimeoutExpired:
             return "Pre-remediation hook timed out"
