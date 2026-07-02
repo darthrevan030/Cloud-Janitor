@@ -126,7 +126,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - _Requirements: 1.3, 1.4, 1.6_
 
 - [ ] 6. Implement pre-remediation hook full validation
-  - [ ] 6.1 Implement `_run_pre_remediation_hook_full()` method
+  - [x] 6.1 Implement `_run_pre_remediation_hook_full()` method
     - Iterate all active plans, validate rollback file existence + non-empty + hook script exit 0
     - Enforce 60-second total timeout across all plans
     - Return `(validated_paths, failures)` tuple; block remediation if any failures

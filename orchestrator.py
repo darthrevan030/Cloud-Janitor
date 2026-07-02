@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -756,6 +757,65 @@ class Orchestrator:
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             # Post-remediation hook is non-blocking — log but don't fail
             pass
+
+    def _run_pre_remediation_hook_full(
+        self, plans: list[RemediationPlan]
+    ) -> tuple[list[Path], list[str]]:
+        """Validate rollback files for ALL active plans.
+
+        Returns:
+            (validated_paths, failures) — failures is a list of
+            resource_ids missing rollback coverage.
+
+        Raises:
+            TimeoutError: If total validation exceeds 60 seconds.
+        """
+        start = time.monotonic()
+        timeout = 60.0
+        validated: list[Path] = []
+        failures: list[str] = []
+
+        for plan in plans:
+            if time.monotonic() - start > timeout:
+                raise TimeoutError(
+                    "Pre-remediation hook exceeded 60s timeout"
+                )
+
+            rollback_path = self.rollbacks_dir / f"{plan.resource_id}.tf"
+
+            # Check existence and non-empty
+            if not rollback_path.exists() or rollback_path.stat().st_size == 0:
+                failures.append(plan.resource_id)
+                continue
+
+            # Run hook script validation
+            hook_path = self.hooks_dir / "pre-remediation.sh"
+            if not hook_path.exists():
+                # Missing hook cannot confirm exit 0 — validation failure
+                failures.append(plan.resource_id)
+                continue
+
+            remaining = timeout - (time.monotonic() - start)
+            try:
+                result = subprocess.run(
+                    ["bash", _to_bash_path(hook_path), _to_bash_path(rollback_path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=max(remaining, 1),
+                    cwd=str(self.project_root),
+                )
+            except subprocess.TimeoutExpired:
+                raise TimeoutError(
+                    "Pre-remediation hook exceeded 60s timeout"
+                )
+
+            if result.returncode != 0:
+                failures.append(plan.resource_id)
+                continue
+
+            validated.append(rollback_path)
+
+        return validated, failures
 
     # ──────────────────────────────────────────────────────────────────────
     # Private: AI agent helpers

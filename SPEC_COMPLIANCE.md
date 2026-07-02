@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-01T18:54:11Z
+Generated: 2026-07-02T13:39:33Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -25,11 +25,11 @@ Generated: 2026-07-01T18:54:11Z
 | 19 | 3.5 Write unit tests for atomic write failure (`tests/test_gate_persistence.py`) | ✅ Done | no mapping |
 | 20 | 4. Checkpoint - Ensure all tests pass | ✅ Done | no mapping |
 | 21 | 5. Implement rollback path with Terraform execution | ❌ Pending | — |
-| 22 | 5.1 Implement Terraform validate + apply rollback flow | ❌ Pending | — |
+| 22 | 5.1 Implement Terraform validate + apply rollback flow | ✅ Done | output/rollbacks/ exists |
 | 23 | 5.2 Write property test for rollback failure propagation | ❌ Pending | — |
 | 24 | 5.3 Write unit tests for rollback Terraform sequence (`tests/test_rollback_flow.py`) | ❌ Pending | — |
 | 25 | 6. Implement pre-remediation hook full validation | ❌ Pending | — |
-| 26 | 6.1 Implement `_run_pre_remediation_hook_full()` method | ❌ Pending | — |
+| 26 | 6.1 Implement `_run_pre_remediation_hook_full()` method | ⏳ Partial | agents/remediation_architect.py exists |
 | 27 | 6.2 Write property tests for pre-remediation hook | ❌ Pending | — |
 | 28 | 6.3 Write unit tests for hook timeout (`tests/test_pre_hook.py`) | ❌ Pending | — |
 | 29 | 7. Implement data integrity features | ❌ Pending | — |
