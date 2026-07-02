@@ -11,6 +11,11 @@ import re
 import sys
 from pathlib import Path
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 ROLE_ARN_PATTERN = re.compile(r"^arn:aws:iam::\d{12}:role/.+$")
 REQUIRED_ACCOUNT_FIELDS = {"account_id", "account_name", "role_arn", "region", "priority"}
 VALID_PRIORITIES = {"high", "medium", "low"}

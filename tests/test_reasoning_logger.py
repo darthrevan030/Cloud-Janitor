@@ -119,13 +119,13 @@ class TestReasoningLoggerTruncate:
         assert log_file.exists()
         assert log_file.read_text() == ""
 
-    def test_truncate_on_permission_error_prints_stderr(self, tmp_path: Path, capsys):
+    def test_truncate_on_permission_error_prints_stderr(self, tmp_path: Path, caplog):
         # Use an invalid path to trigger an OSError
         bad_path = tmp_path / "nonexistent_dir" / "sub" / "reasoning.log"
         logger = ReasoningLogger(log_path=bad_path)
-        logger.truncate()
-        captured = capsys.readouterr()
-        assert "ReasoningLogger: failed to truncate" in captured.err
+        with caplog.at_level("ERROR"):
+            logger.truncate()
+        assert "ReasoningLogger: failed to rotate" in caplog.text
 
 
 class TestReasoningLoggerEmit:
@@ -204,12 +204,12 @@ class TestReasoningLoggerEmit:
         assert json.loads(lines[1])["message"] == "second"
         assert json.loads(lines[2])["message"] == "third"
 
-    def test_emit_on_filesystem_error_prints_stderr(self, tmp_path: Path, capsys):
+    def test_emit_on_filesystem_error_prints_stderr(self, tmp_path: Path, caplog):
         bad_path = tmp_path / "no_dir" / "sub" / "reasoning.log"
         logger = ReasoningLogger(log_path=bad_path)
-        logger.emit("agent", "check", "", "msg")
-        captured = capsys.readouterr()
-        assert "ReasoningLogger: failed to write" in captured.err
+        with caplog.at_level("ERROR"):
+            logger.emit("agent", "check", "", "msg")
+        assert "ReasoningLogger: failed to write" in caplog.text
 
     def test_emit_does_not_raise_on_filesystem_error(self, tmp_path: Path):
         bad_path = tmp_path / "no_dir" / "sub" / "reasoning.log"

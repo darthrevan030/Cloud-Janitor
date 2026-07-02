@@ -10,6 +10,11 @@ import sys
 
 from core.llm_client import get_client, DEFAULT_MODEL
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 VALID_RESOURCE_TYPES: set[str] = {"elasticache", "ebs", "ec2"}
 VALID_CHECK_TYPES: set[str] = {"security_group", "encryption", "public_access"}
 

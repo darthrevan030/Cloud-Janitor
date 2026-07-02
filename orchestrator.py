@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import json
 import logging
+
+logger = logging.getLogger(__name__)
 import os
 import platform
 import re
@@ -99,6 +101,10 @@ BASH_CMD = _find_bash()
 SCHEMA_VERSION = "1.0.0"
 
 _RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}$")
+
+# Schema version for findings_store.json — bump when the schema changes.
+# The orchestrator will warn (not fail) if the store has a newer version than expected.
+FINDINGS_STORE_SCHEMA_VERSION = "1.0.0"
 
 
 def _validate_tf_cmd() -> str:
@@ -737,34 +743,34 @@ class Orchestrator:
         if not remediation_path.exists():
             return "remediation.tf not found in output directory"
 
-        # Find a rollback file for validation (use first active plan's resource)
-        rollback_path = None
+        # Validate each rollback file (not just the first one)
+        rollback_paths = []
         for plan in plans:
             candidate = self.rollbacks_dir / f"{plan.resource_id}.tf"
             if candidate.exists():
-                rollback_path = candidate
-                break
+                rollback_paths.append(candidate)
 
-        if not rollback_path:
+        if not rollback_paths:
             return "No rollback file found for validation"
 
         try:
-            result = subprocess.run(
-                [
-                    BASH_CMD,
-                    _to_bash_path(hook_path),
-                    _to_bash_path(remediation_path),
-                    _to_bash_path(rollback_path),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                cwd=str(self.project_root),
-            )
+            for rollback_path in rollback_paths:
+                result = subprocess.run(
+                    [
+                        BASH_CMD,
+                        _to_bash_path(hook_path),
+                        _to_bash_path(remediation_path),
+                        _to_bash_path(rollback_path),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                    cwd=str(self.project_root),
+                )
 
-            if result.returncode != 0:
-                error_output = result.stderr.strip() or result.stdout.strip()
-                return f"Pre-remediation hook failed: {error_output}"
+                if result.returncode != 0:
+                    error_output = result.stderr.strip() or result.stdout.strip()
+                    return f"Pre-remediation hook failed: {error_output}"
 
         except subprocess.TimeoutExpired:
             return "Pre-remediation hook timed out"
@@ -981,7 +987,8 @@ class Orchestrator:
 
     def _validate_findings_store(self) -> str | None:
         """
-        Validate findings_store.json has entries from both FinOps and SecOps agents.
+        Validate findings_store.json has entries from both FinOps and SecOps agents
+        and a compatible schema version.
 
         Returns:
             Error string if validation fails, None if valid.

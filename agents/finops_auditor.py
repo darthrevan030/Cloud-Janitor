@@ -24,6 +24,11 @@ from mcp_server.aws_janitor_mcp import get_cost_data
 
 from agents.reasoning_logger import ReasoningLogger
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 # Project root for output files
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -142,7 +147,7 @@ class FinOpsAuditor:
         all_cost_data = get_cost_data(resource_type=None, min_idle_days=0)
 
         if "error" in all_cost_data:
-            print(f"[FinOps Auditor] ERROR: {all_cost_data['error']}", file=sys.stderr)
+            logger.error(f"[FinOps Auditor] ERROR: {all_cost_data['error']}")
             return []
 
         all_resources = all_cost_data.get("resources", [])
@@ -203,6 +208,7 @@ class FinOpsAuditor:
         )
 
         store = {
+            "schema_version": "1.0.0",
             "scan_id": str(uuid.uuid4()),
             "started_at": now,
             "completed_at": now,
@@ -216,7 +222,10 @@ class FinOpsAuditor:
         }
 
         self.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
-        self.findings_store_path.write_text(json.dumps(store, indent=2))
+        # Atomic write: write to .tmp then rename to prevent corruption on crash
+        tmp_path = self.findings_store_path.with_suffix(".json.tmp")
+        tmp_path.write_text(json.dumps(store, indent=2))
+        tmp_path.replace(self.findings_store_path)
         return store
 
 

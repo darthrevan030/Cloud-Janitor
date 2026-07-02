@@ -21,6 +21,9 @@ from packaging.version import Version
 import streamlit as st
 
 from orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
+from core.logging_config import configure_logging
+
+configure_logging()
 
 # Phase B+C agent imports — optional modules that may not be installed yet.
 # Each tuple is (module_path, attribute_name). On ImportError the global is set to None,

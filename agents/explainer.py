@@ -12,6 +12,11 @@ import sys
 
 from core.llm_client import get_client, DEFAULT_MODEL
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 SAFE_DEFAULT: dict = {
     "risk_explanation": "Explanation unavailable.",
     "what_terraform_does": "Explanation unavailable.",

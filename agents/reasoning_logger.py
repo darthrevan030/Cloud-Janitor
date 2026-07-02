@@ -22,6 +22,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 class ReasoningLogger:
     """Structured JSON event logger for agent reasoning traces.
@@ -47,20 +52,48 @@ class ReasoningLogger:
         """The path to the reasoning log file."""
         return self._log_path
 
+    # Maximum number of rotated history files to keep
+    MAX_HISTORY_FILES = 5
+
     def truncate(self) -> None:
-        """Truncate the log file (called at audit start).
+        """Rotate the log file, then start fresh (called at audit start).
 
-        Opens the file in write mode to clear all existing content.
-        On filesystem error: prints to stderr, does NOT raise.
+        Instead of destroying previous reasoning traces, renames the current
+        log to agent_reasoning.<timestamp>.log before creating a new empty file.
+        Keeps at most MAX_HISTORY_FILES rotated files; deletes oldest beyond that.
 
-        Note: Prefer start_run() for new audit runs — it preserves history
-        by appending a separator entry instead of clearing the file.
+        On filesystem error: logs to stderr, does NOT raise.
         """
         try:
+            if self._log_path.exists() and self._log_path.stat().st_size > 0:
+                # Rotate: rename current log with timestamp suffix
+                from datetime import datetime, timezone
+                ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                rotated = self._log_path.with_suffix(f".{ts}.log")
+                try:
+                    self._log_path.rename(rotated)
+                except OSError:
+                    pass  # If rename fails, just truncate below
+
+                # Prune old rotated files beyond MAX_HISTORY_FILES
+                self._prune_rotated_logs()
+
+            # Create/truncate the active log file
             with open(self._log_path, mode="w", encoding="utf-8") as f:
                 f.truncate(0)
         except OSError as exc:
-            print(f"ReasoningLogger: failed to truncate {self._log_path}: {exc}", file=sys.stderr)
+            logger.error(f"ReasoningLogger: failed to rotate {self._log_path}: {exc}")
+
+    def _prune_rotated_logs(self) -> None:
+        """Delete oldest rotated log files beyond MAX_HISTORY_FILES."""
+        try:
+            pattern = self._log_path.stem + ".*.log"
+            rotated = sorted(self._log_path.parent.glob(pattern))
+            while len(rotated) > self.MAX_HISTORY_FILES:
+                oldest = rotated.pop(0)
+                oldest.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def start_run(self) -> None:
         """Write a run separator entry in append mode.
@@ -118,4 +151,4 @@ class ReasoningLogger:
             with open(self._log_path, mode="a", encoding="utf-8") as f:
                 f.write(line)
         except OSError as exc:
-            print(f"ReasoningLogger: failed to write to {self._log_path}: {exc}", file=sys.stderr)
+            logger.error(f"ReasoningLogger: failed to write to {self._log_path}: {exc}")

@@ -26,6 +26,11 @@ from mcp_server.aws_janitor_mcp import check_dependencies, validate_hcl
 
 from agents.reasoning_logger import ReasoningLogger
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 # Project root for output files
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -513,7 +518,7 @@ class RemediationArchitect:
                 data = json.load(f)
             return data.get("findings", [])
         except (json.JSONDecodeError, IOError) as e:
-            print(f"[Remediation Architect] ERROR: Could not read findings_store.json: {e}", file=sys.stderr)
+            logger.error(f"[Remediation Architect] ERROR: Could not read findings_store.json: {e}")
             return []
 
 

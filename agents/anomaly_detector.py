@@ -10,6 +10,11 @@ import sys
 
 from core.llm_client import get_client, DEFAULT_MODEL
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 VALID_SEVERITIES: set[str] = {"high", "medium", "low"}
 
 REQUIRED_ANOMALY_KEYS: set[str] = {
