@@ -195,3 +195,128 @@ def test_reasoning_logger_sequential_append(events):
             assert entry["message"] == expected_message, (
                 f"Line {i}: message mismatch"
             )
+
+
+# --- Property 13: Reasoning log append preservation ---
+# Feature: audit-remediation, Property 13: Reasoning log append preservation
+
+
+# Strategy for existing log content: arbitrary bytes that simulate prior JSONL entries.
+# We include newlines, unicode, and JSON-like content to be realistic.
+existing_log_content_strategy = st.text(
+    alphabet=st.characters(blacklist_categories=("Cs",)),
+    min_size=0,
+    max_size=500,
+)
+
+
+@settings(max_examples=100)
+@given(existing_content=existing_log_content_strategy)
+def test_reasoning_log_append_preservation(existing_content):
+    """
+    Property 13: Reasoning Log Append Preservation
+
+    For any existing reasoning log content, starting a new audit run SHALL
+    preserve all previous content and append a valid JSONL separator entry
+    containing event_type="run_separator", a valid ISO 8601 UTC timestamp,
+    and a non-empty message field.
+
+    **Validates: Requirements 11.1, 11.2**
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        log_file = tmp_path / "reasoning.log"
+
+        # Write arbitrary existing content to simulate prior log entries
+        log_file.write_text(existing_content, encoding="utf-8")
+        original_bytes = log_file.read_bytes()
+
+        # Call start_run — this must append, not overwrite
+        logger = ReasoningLogger(log_path=log_file)
+        logger.start_run()
+
+        # Read back full file content as bytes
+        full_bytes = log_file.read_bytes()
+
+        # --- Assertion 1: All original content is preserved byte-for-byte ---
+        assert full_bytes[: len(original_bytes)] == original_bytes, (
+            "Original content was not preserved byte-for-byte"
+        )
+
+        # --- Assertion 2: Exactly one new line appended after existing content ---
+        appended_bytes = full_bytes[len(original_bytes):]
+        appended_text = appended_bytes.decode("utf-8")
+
+        # The appended portion should be exactly one line terminated by \n
+        assert appended_text.endswith("\n"), "Appended entry must end with newline"
+        # Strip trailing newline and check there are no other newlines
+        # (i.e., exactly one JSONL line was appended)
+        appended_line = appended_text[:-1]
+        assert "\n" not in appended_line, (
+            f"Expected exactly one appended line, but found embedded newlines"
+        )
+
+        # --- Assertion 3: The new line is valid JSON with required fields ---
+        entry = json.loads(appended_line)
+        assert entry["event_type"] == "run_separator", (
+            f"Expected event_type='run_separator', got '{entry.get('event_type')}'"
+        )
+        assert "timestamp" in entry and len(entry["timestamp"]) > 0, (
+            "timestamp must be present and non-empty"
+        )
+        assert "message" in entry and len(entry["message"]) > 0, (
+            "message must be present and non-empty"
+        )
+
+        # --- Assertion 4: Timestamp is valid ISO 8601 UTC ---
+        from datetime import datetime, timezone
+
+        ts = datetime.fromisoformat(entry["timestamp"])
+        assert ts.tzinfo is not None, "Timestamp must include timezone info"
+        assert ts.utcoffset().total_seconds() == 0, (
+            "Timestamp must be UTC (offset 0)"
+        )
+
+
+@settings(max_examples=50)
+@given(data=st.data())
+def test_reasoning_log_start_run_creates_file_when_missing(data):
+    """
+    Property 13 (edge case): start_run creates the file when it doesn't exist.
+
+    When the log file does not exist, start_run() SHALL create it and write
+    exactly one valid JSONL separator entry.
+
+    **Validates: Requirements 11.1, 11.2**
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        log_file = tmp_path / "reasoning.log"
+
+        # Confirm file does not exist
+        assert not log_file.exists()
+
+        logger = ReasoningLogger(log_path=log_file)
+        logger.start_run()
+
+        # File must now exist
+        assert log_file.exists(), "start_run must create the file if missing"
+
+        content = log_file.read_text(encoding="utf-8")
+        lines = content.splitlines()
+
+        # Exactly one line
+        assert len(lines) == 1, f"Expected 1 line, got {len(lines)}"
+
+        # Valid JSON with required fields
+        entry = json.loads(lines[0])
+        assert entry["event_type"] == "run_separator"
+        assert len(entry.get("timestamp", "")) > 0
+        assert len(entry.get("message", "")) > 0
+
+        # Valid ISO 8601 UTC timestamp
+        from datetime import datetime, timezone
+
+        ts = datetime.fromisoformat(entry["timestamp"])
+        assert ts.tzinfo is not None
+        assert ts.utcoffset().total_seconds() == 0
