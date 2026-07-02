@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T16:24:32Z
+Generated: 2026-07-02T16:43:21Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -37,7 +37,7 @@ Generated: 2026-07-02T16:24:32Z
 | 31 | 7.2 Implement reasoning log append mode with separator | ✅ Done | no mapping |
 | 32 | 7.3 Write property test for schema version validation | ❌ Pending | — |
 | 33 | 7.4 Write property test for reasoning log append preservation | ❌ Pending | — |
-| 34 | 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`) | ❌ Pending | — |
+| 34 | 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`) | ✅ Done | no mapping |
 | 35 | 7.6 Write unit tests for reasoning log rotation (`tests/test_reasoning_log.py`) | ❌ Pending | — |
 | 36 | 8. Implement savings tracker broad exception handling | ❌ Pending | — |
 | 37 | 8.1 Wrap `savings_tracker.record_run()` with broad exception handling | ✅ Done | agents/savings_tracker.py exists |
