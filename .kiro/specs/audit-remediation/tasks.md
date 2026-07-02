@@ -106,7 +106,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Implement rollback path with Terraform execution
-  - [ ] 5.1 Implement Terraform validate + apply rollback flow
+  - [x] 5.1 Implement Terraform validate + apply rollback flow
     - When rollback is confirmed and gate check passes: run `subprocess.run([TF_CMD, "validate"], ...)` with 300s timeout
     - On validate success: run `subprocess.run([TF_CMD, "apply", "-auto-approve"], ...)` with 300s timeout
     - On failure: return `RollbackResult(success=False, exit_code=..., error=stderr)`
