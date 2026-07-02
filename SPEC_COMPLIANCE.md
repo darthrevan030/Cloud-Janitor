@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T14:46:23Z
+Generated: 2026-07-02T15:07:22Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -40,7 +40,7 @@ Generated: 2026-07-02T14:46:23Z
 | 34 | 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`) | ❌ Pending | — |
 | 35 | 7.6 Write unit tests for reasoning log rotation (`tests/test_reasoning_log.py`) | ❌ Pending | — |
 | 36 | 8. Implement savings tracker broad exception handling | ❌ Pending | — |
-| 37 | 8.1 Wrap `savings_tracker.record_run()` with broad exception handling | ❌ Pending | — |
+| 37 | 8.1 Wrap `savings_tracker.record_run()` with broad exception handling | ✅ Done | agents/savings_tracker.py exists |
 | 38 | 8.2 Write property test for savings tracker exception swallowing | ❌ Pending | — |
 | 39 | 9. Checkpoint - Ensure all tests pass | ❌ Pending | — |
 | 40 | 10. Implement UI–Orchestrator contract alignment | ❌ Pending | — |

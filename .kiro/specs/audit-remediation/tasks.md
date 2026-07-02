@@ -114,7 +114,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Check rollback file existence at `rollbacks/<resource_id>.tf` before proceeding
     - _Requirements: 1.3, 1.4, 1.6_
 
-  - [ ] 5.2 Write property test for rollback failure propagation
+  - [x] 5.2 Write property test for rollback failure propagation
     - **Property 3: Rollback Failure Error Propagation**
     - **Validates: Requirements 1.4, 1.6**
 
