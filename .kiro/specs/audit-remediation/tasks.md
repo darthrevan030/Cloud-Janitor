@@ -239,7 +239,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Handle missing artifact files gracefully with "no data available" message
     - _Requirements: 4.2, 4.6_
 
-  - [-] 10.8 Update Orchestrator to use `core/paths.py` and call `ensure_output_dirs()`
+  - [x] 10.8 Update Orchestrator to use `core/paths.py` and call `ensure_output_dirs()`
     - Replace hardcoded path strings in `orchestrator.py` with imports from `core/paths.py`
     - Call `ensure_output_dirs()` during Orchestrator `__init__`, halting with descriptive error on failure
     - _Requirements: 4.1, 4.3, 4.4, 4.5_

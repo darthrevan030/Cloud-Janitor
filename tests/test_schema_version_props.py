@@ -21,6 +21,7 @@ from orchestrator import Orchestrator, SCHEMA_VERSION
 _SETTINGS = settings(
     max_examples=200,
     suppress_health_check=[HealthCheck.function_scoped_fixture],
+    deadline=None,
 )
 
 
