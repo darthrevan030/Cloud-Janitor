@@ -50,6 +50,7 @@ def tmp_project(tmp_path):
 def findings_store_both_agents(tmp_project):
     """Create a findings_store.json with entries from both agents."""
     store = {
+        "schema_version": "1.0.0",
         "scan_id": "test-scan-001",
         "started_at": "2025-01-15T10:00:00Z",
         "completed_at": "2025-01-15T10:01:00Z",
@@ -630,6 +631,7 @@ class TestAgentSequencing:
 
         # Write findings_store with only finops entries
         store = {
+            "schema_version": "1.0.0",
             "findings": [
                 {"id": "f1", "resource_id": "vol-1", "agent": "finops"}
             ],

@@ -145,7 +145,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - _Requirements: 5.1, 5.2, 5.3, 5.5_
 
 - [ ] 7. Implement data integrity features
-  - [ ] 7.1 Implement findings store schema versioning
+  - [x] 7.1 Implement findings store schema versioning
     - Add `SCHEMA_VERSION = "1.0.0"` constant
     - Implement `_write_findings_store()`: include `schema_version` field in top-level JSON
     - Implement `_validate_schema_version()`: reject missing field, reject major mismatch, warn on higher minor

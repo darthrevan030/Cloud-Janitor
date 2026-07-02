@@ -69,6 +69,8 @@ TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 TF_CMD_ALLOWLIST = {"terraform", "tflocal"}
 
+SCHEMA_VERSION = "1.0.0"
+
 _RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}$")
 
 
@@ -873,6 +875,61 @@ class Orchestrator:
     # Private: Validation and helpers
     # ──────────────────────────────────────────────────────────────────────
 
+    def _write_findings_store(self, findings: list[dict], metadata: dict) -> None:
+        """Write findings store with schema version.
+
+        Args:
+            findings: List of finding dicts to persist.
+            metadata: Additional top-level metadata fields.
+        """
+        store = {
+            "schema_version": SCHEMA_VERSION,
+            **metadata,
+            "findings": findings,
+        }
+        self.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.findings_store_path, "w") as f:
+            json.dump(store, f, indent=2)
+
+    def _validate_schema_version(self, store: dict) -> str | None:
+        """Validate schema_version field.
+
+        Returns error string or None.
+        """
+        version_str = store.get("schema_version")
+        if version_str is None:
+            return "schema_version field is missing"
+
+        try:
+            parts = version_str.split(".")
+            found_major = int(parts[0])
+        except (ValueError, IndexError, AttributeError):
+            return f"Invalid schema_version format: '{version_str}'"
+
+        expected_major = int(SCHEMA_VERSION.split(".")[0])
+
+        if found_major != expected_major:
+            return (
+                f"Incompatible schema version: found {version_str}, "
+                f"expected major version {expected_major}"
+            )
+
+        # Warn on higher minor version
+        if len(parts) >= 2:
+            try:
+                found_minor = int(parts[1])
+                expected_minor = int(SCHEMA_VERSION.split(".")[1])
+                if found_minor > expected_minor:
+                    logging.getLogger(__name__).warning(
+                        "Findings store minor version %s is higher than expected %s. "
+                        "Proceeding with best-effort parsing.",
+                        version_str, SCHEMA_VERSION,
+                    )
+            except (ValueError, IndexError):
+                return f"Invalid schema_version format: '{version_str}'"
+
+        return None
+
     def _validate_findings_store(self) -> str | None:
         """
         Validate findings_store.json has entries from both FinOps and SecOps agents.
@@ -888,6 +945,11 @@ class Orchestrator:
                 store = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
             return f"Cannot read findings_store.json: {e}"
+
+        # Validate schema version first
+        schema_error = self._validate_schema_version(store)
+        if schema_error:
+            return schema_error
 
         findings = store.get("findings", [])
         agents_present = {f.get("agent") for f in findings}
