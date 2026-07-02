@@ -209,14 +209,18 @@ class TestHappyPath:
             assert approval.success is True
             assert approval.resource_id == "vol-abc123"
 
-            # Pre-remediation (1st call) + tflocal apply (2nd call) + post-remediation (3rd call)
-            assert mock_run.call_count == 3
-            # Verify tflocal apply call (TF_CMD is resolved to absolute path)
-            apply_call_args = mock_run.call_args_list[1][0][0]
+            # Pre-remediation (1st) + tflocal init (2nd) + tflocal apply (3rd) + post-remediation (4th)
+            assert mock_run.call_count == 4
+            # Verify tflocal init call (TF_CMD is resolved to absolute path)
+            init_call_args = mock_run.call_args_list[1][0][0]
+            assert "tflocal" in init_call_args[0].lower()
+            assert init_call_args[1:] == ["init", "-input=false"]
+            # Verify tflocal apply call
+            apply_call_args = mock_run.call_args_list[2][0][0]
             assert "tflocal" in apply_call_args[0].lower()
             assert apply_call_args[1:] == ["apply", "-auto-approve"]
             # Verify post-remediation hook call
-            post_call_args = mock_run.call_args_list[2][0][0]
+            post_call_args = mock_run.call_args_list[3][0][0]
             assert "post-remediation.sh" in post_call_args[1]
             assert "vol-abc123" in post_call_args
             assert "remediate" in post_call_args
@@ -388,8 +392,8 @@ class TestPostRemediationHook:
 
         def side_effect(*args, **kwargs):
             call_count[0] += 1
-            if call_count[0] <= 2:
-                # Pre-remediation hook and tflocal apply pass
+            if call_count[0] <= 3:
+                # Pre-remediation hook, tflocal init, and tflocal apply pass
                 return subprocess.CompletedProcess(
                     args=[], returncode=0, stdout="", stderr=""
                 )
@@ -911,8 +915,8 @@ class TestSavingsTrackerWiring:
 
         def side_effect(*args, **kwargs):
             call_count[0] += 1
-            if call_count[0] == 1:
-                # Pre-remediation hook passes
+            if call_count[0] <= 2:
+                # Pre-remediation hook and tflocal init pass
                 return subprocess.CompletedProcess(
                     args=[], returncode=0, stdout="", stderr=""
                 )
