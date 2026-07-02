@@ -55,28 +55,32 @@ class ReasoningLogger:
     # Maximum number of rotated history files to keep
     MAX_HISTORY_FILES = 5
 
-    def truncate(self) -> None:
-        """Rotate the log file, then start fresh (called at audit start).
+    # Log rotation size threshold in bytes (10 MB)
+    LOG_ROTATION_THRESHOLD = 10_485_760
 
-        Instead of destroying previous reasoning traces, renames the current
-        log to agent_reasoning.<timestamp>.log before creating a new empty file.
-        Keeps at most MAX_HISTORY_FILES rotated files; deletes oldest beyond that.
+    def truncate(self) -> None:
+        """Rotate the log file if it exceeds the size threshold, then start fresh.
+
+        Called at audit start. Rotates (renames with timestamp suffix) only when
+        the current log exceeds LOG_ROTATION_THRESHOLD bytes. Keeps at most
+        MAX_HISTORY_FILES rotated files; deletes oldest beyond that.
 
         On filesystem error: logs to stderr, does NOT raise.
         """
         try:
-            if self._log_path.exists() and self._log_path.stat().st_size > 0:
-                # Rotate: rename current log with timestamp suffix
-                from datetime import datetime, timezone
-                ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-                rotated = self._log_path.with_suffix(f".{ts}.log")
-                try:
-                    self._log_path.rename(rotated)
-                except OSError:
-                    pass  # If rename fails, just truncate below
+            if self._log_path.exists():
+                file_size = self._log_path.stat().st_size
+                if file_size > self.LOG_ROTATION_THRESHOLD:
+                    # Rotate: rename current log with timestamp suffix
+                    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                    rotated = self._log_path.with_suffix(f".{ts}.log")
+                    try:
+                        self._log_path.rename(rotated)
+                    except OSError:
+                        pass  # If rename fails, just truncate below
 
-                # Prune old rotated files beyond MAX_HISTORY_FILES
-                self._prune_rotated_logs()
+                    # Prune old rotated files beyond MAX_HISTORY_FILES
+                    self._prune_rotated_logs()
 
             # Create/truncate the active log file
             with open(self._log_path, mode="w", encoding="utf-8") as f:
