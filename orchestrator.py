@@ -99,6 +99,10 @@ BASH_CMD = _find_bash()
 
 _RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}$")
 
+# Schema version for findings_store.json — bump when the schema changes.
+# The orchestrator will warn (not fail) if the store has a newer version than expected.
+FINDINGS_STORE_SCHEMA_VERSION = "1.0.0"
+
 
 def _validate_tf_cmd() -> str:
     """Validate and resolve TF_CMD from environment.
@@ -862,7 +866,8 @@ class Orchestrator:
 
     def _validate_findings_store(self) -> str | None:
         """
-        Validate findings_store.json has entries from both FinOps and SecOps agents.
+        Validate findings_store.json has entries from both FinOps and SecOps agents
+        and a compatible schema version.
 
         Returns:
             Error string if validation fails, None if valid.
@@ -875,6 +880,22 @@ class Orchestrator:
                 store = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
             return f"Cannot read findings_store.json: {e}"
+
+        # Check schema version compatibility (warn on mismatch, fail on major bump)
+        store_version = store.get("schema_version", "1.0.0")
+        if store_version != FINDINGS_STORE_SCHEMA_VERSION:
+            store_major = store_version.split(".")[0]
+            expected_major = FINDINGS_STORE_SCHEMA_VERSION.split(".")[0]
+            if store_major != expected_major:
+                return (
+                    f"findings_store.json schema version {store_version} is incompatible "
+                    f"with expected {FINDINGS_STORE_SCHEMA_VERSION} (major version mismatch)"
+                )
+            # Minor/patch mismatch: log warning but continue
+            logger.warning(
+                f"findings_store.json schema_version={store_version}, "
+                f"expected={FINDINGS_STORE_SCHEMA_VERSION} (minor mismatch, proceeding)"
+            )
 
         findings = store.get("findings", [])
         agents_present = {f.get("agent") for f in findings}

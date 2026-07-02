@@ -208,6 +208,7 @@ class FinOpsAuditor:
         )
 
         store = {
+            "schema_version": "1.0.0",
             "scan_id": str(uuid.uuid4()),
             "started_at": now,
             "completed_at": now,
