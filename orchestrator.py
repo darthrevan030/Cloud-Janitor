@@ -33,6 +33,31 @@ from pathlib import Path
 from typing import Any
 
 
+def _find_bash() -> str:
+    """Locate a working bash binary.
+
+    Resolution order:
+      1. BASH_PATH environment variable (explicit override)
+      2. Git Bash on Windows (C:/Program Files/Git/bin/bash.exe)
+      3. 'bash' on PATH (works on Linux/macOS; on Windows may hit WSL wrapper)
+
+    Returns the path string to use in subprocess calls.
+    """
+    # Allow explicit override via env var
+    env_bash = os.environ.get("BASH_PATH")
+    if env_bash and shutil.which(env_bash):
+        return env_bash
+
+    # On Windows, prefer Git Bash over WSL wrapper
+    if platform.system() == "Windows":
+        git_bash = r"C:\Program Files\Git\bin\bash.exe"
+        if os.path.isfile(git_bash):
+            return git_bash
+
+    # Fall back to whatever 'bash' resolves to on PATH
+    return "bash"
+
+
 def _to_bash_path(p: Path) -> str:
     """Convert a Path to a bash-compatible string.
 
@@ -68,6 +93,8 @@ from agents.savings_tracker import SavingsTracker
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 TF_CMD_ALLOWLIST = {"terraform", "tflocal"}
+
+BASH_CMD = _find_bash()
 
 SCHEMA_VERSION = "1.0.0"
 
@@ -546,6 +573,25 @@ class Orchestrator:
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
 
+        # Initialize the working directory before apply. Without this, terraform
+        # has no provider plugin selected and no lock file, causing apply to fail
+        # with "inconsistent dependency lock file" or similar init-required errors.
+        init_result = subprocess.run(
+            [self._tf_cmd, "init", "-input=false"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.project_root / "output"),
+        )
+        if init_result.returncode != 0:
+            error = init_result.stderr.strip() or init_result.stdout.strip()
+            self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
+            return ApprovalResult(
+                success=False,
+                error=f"{self._tf_cmd} init failed: {error}",
+                resource_id=resource_id,
+            )
+
         # Execute terraform apply against LocalStack
         apply_result = subprocess.run(
             [self._tf_cmd, "apply", "-auto-approve"],
@@ -705,7 +751,7 @@ class Orchestrator:
         try:
             result = subprocess.run(
                 [
-                    "bash",
+                    BASH_CMD,
                     _to_bash_path(hook_path),
                     _to_bash_path(remediation_path),
                     _to_bash_path(rollback_path),
@@ -747,7 +793,7 @@ class Orchestrator:
         try:
             subprocess.run(
                 [
-                    "bash",
+                    BASH_CMD,
                     _to_bash_path(hook_path),
                     resource_id,
                     action,
