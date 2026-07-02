@@ -22,6 +22,14 @@ import streamlit as st
 
 from orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
 from core.logging_config import configure_logging
+from core.paths import (
+    FINDINGS_STORE_PATH,
+    ROLLBACKS_DIR,
+    AUDIT_LOG_PATH,
+    REASONING_LOG_PATH,
+    OUTPUT_DIR,
+    PROJECT_ROOT,
+)
 
 configure_logging()
 
@@ -449,12 +457,7 @@ div[data-testid="stMetric"] {
 # Constants
 # ──────────────────────────────────────────────────────────────────────
 
-PROJECT_ROOT = Path(__file__).parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
-REMEDIATION_PATH = PROJECT_ROOT / "output" / "remediation.tf"
-ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
-AUDIT_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "audit.log"
-REASONING_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "agent_reasoning.log"
+REMEDIATION_PATH = OUTPUT_DIR / "remediation.tf"
 
 _STREAMLIT_HAS_FRAGMENT = Version(st.__version__) >= Version("1.33.0")
 

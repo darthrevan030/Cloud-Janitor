@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T19:18:57Z
+Generated: 2026-07-02T19:23:32Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -46,11 +46,11 @@ Generated: 2026-07-02T19:18:57Z
 | 40 | 10. Implement UI–Orchestrator contract alignment | ❌ Pending | — |
 | 41 | 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only | ✅ Done | app.py exists |
 | 42 | 10.2 Write unit tests for UI delegation (`tests/test_ui_delegation.py`) | ❌ Pending | — |
-| 43 | 10.3 Implement NL audit delegation with feature detection | ⏳ Partial | no mapping |
+| 43 | 10.3 Implement NL audit delegation with feature detection | ✅ Done | no mapping |
 | 44 | 10.4 Write unit tests for NL audit feature detection (`tests/test_nl_audit.py`) | ❌ Pending | — |
 | 45 | 10.5 Implement explicit Phase B/C agent imports | ✅ Done | no mapping |
 | 46 | 10.6 Write unit tests for agent ImportError handling (`tests/test_agent_imports.py`) | ❌ Pending | — |
-| 47 | 10.7 Update `app.py` to import paths from `core/paths.py` | ❌ Pending | — |
+| 47 | 10.7 Update `app.py` to import paths from `core/paths.py` | ⏳ Partial | app.py exists |
 | 48 | 10.8 Update Orchestrator to use `core/paths.py` and call `ensure_output_dirs()` | ✅ Done | no mapping |
 | 49 | 11. Wire structured error telemetry into Orchestrator | ❌ Pending | — |
 | 50 | 11.1 Integrate `core/error_telemetry.py` into Orchestrator error handling | ❌ Pending | — |

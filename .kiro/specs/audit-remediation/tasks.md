@@ -234,7 +234,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Test that type annotations are `Optional[type]` for fallback values
     - _Requirements: 13.1, 13.2, 13.3_
 
-  - [ ] 10.7 Update `app.py` to import paths from `core/paths.py`
+  - [x] 10.7 Update `app.py` to import paths from `core/paths.py`
     - Replace any hardcoded path strings in `app.py` with imports from `core/paths.py`
     - Handle missing artifact files gracefully with "no data available" message
     - _Requirements: 4.2, 4.6_
