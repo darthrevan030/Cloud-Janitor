@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T17:28:05Z
+Generated: 2026-07-02T17:59:01Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -32,16 +32,16 @@ Generated: 2026-07-02T17:28:05Z
 | 26 | 6.1 Implement `_run_pre_remediation_hook_full()` method | ✅ Done | agents/remediation_architect.py exists |
 | 27 | 6.2 Write property tests for pre-remediation hook | ✅ Done | agents/remediation_architect.py exists |
 | 28 | 6.3 Write unit tests for hook timeout (`tests/test_pre_hook.py`) | ✅ Done | no mapping |
-| 29 | 7. Implement data integrity features | ❌ Pending | — |
+| 29 | 7. Implement data integrity features | ✅ Done | no mapping |
 | 30 | 7.1 Implement findings store schema versioning | ✅ Done | no mapping |
 | 31 | 7.2 Implement reasoning log append mode with separator | ✅ Done | no mapping |
 | 32 | 7.3 Write property test for schema version validation | ✅ Done | no mapping |
 | 33 | 7.4 Write property test for reasoning log append preservation | ✅ Done | no mapping |
-| 34 | 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`) | ⏳ Partial | no mapping |
-| 35 | 7.6 Write unit tests for reasoning log rotation (`tests/test_reasoning_log.py`) | ❌ Pending | — |
-| 36 | 8. Implement savings tracker broad exception handling | ❌ Pending | — |
+| 34 | 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`) | ✅ Done | no mapping |
+| 35 | 7.6 Write unit tests for reasoning log rotation (`tests/test_reasoning_log.py`) | ✅ Done | no mapping |
+| 36 | 8. Implement savings tracker broad exception handling | ✅ Done | agents/savings_tracker.py exists |
 | 37 | 8.1 Wrap `savings_tracker.record_run()` with broad exception handling | ✅ Done | agents/savings_tracker.py exists |
-| 38 | 8.2 Write property test for savings tracker exception swallowing | ❌ Pending | — |
+| 38 | 8.2 Write property test for savings tracker exception swallowing | ✅ Done | agents/savings_tracker.py exists |
 | 39 | 9. Checkpoint - Ensure all tests pass | ❌ Pending | — |
 | 40 | 10. Implement UI–Orchestrator contract alignment | ❌ Pending | — |
 | 41 | 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only | ❌ Pending | — |
