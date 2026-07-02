@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T17:03:55Z
+Generated: 2026-07-02T17:09:48Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -30,8 +30,8 @@ Generated: 2026-07-02T17:03:55Z
 | 24 | 5.3 Write unit tests for rollback Terraform sequence (`tests/test_rollback_flow.py`) | ✅ Done | output/rollbacks/ exists |
 | 25 | 6. Implement pre-remediation hook full validation | ❌ Pending | — |
 | 26 | 6.1 Implement `_run_pre_remediation_hook_full()` method | ✅ Done | agents/remediation_architect.py exists |
-| 27 | 6.2 Write property tests for pre-remediation hook | ❌ Pending | — |
-| 28 | 6.3 Write unit tests for hook timeout (`tests/test_pre_hook.py`) | ❌ Pending | — |
+| 27 | 6.2 Write property tests for pre-remediation hook | ✅ Done | agents/remediation_architect.py exists |
+| 28 | 6.3 Write unit tests for hook timeout (`tests/test_pre_hook.py`) | ⏳ Partial | no mapping |
 | 29 | 7. Implement data integrity features | ❌ Pending | — |
 | 30 | 7.1 Implement findings store schema versioning | ✅ Done | no mapping |
 | 31 | 7.2 Implement reasoning log append mode with separator | ✅ Done | no mapping |
