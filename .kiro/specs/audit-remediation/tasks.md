@@ -105,7 +105,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
 - [x] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Implement rollback path with Terraform execution
+- [x] 5. Implement rollback path with Terraform execution
   - [x] 5.1 Implement Terraform validate + apply rollback flow
     - When rollback is confirmed and gate check passes: run `subprocess.run([TF_CMD, "validate"], ...)` with 300s timeout
     - On validate success: run `subprocess.run([TF_CMD, "apply", "-auto-approve"], ...)` with 300s timeout
@@ -118,33 +118,33 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - **Property 3: Rollback Failure Error Propagation**
     - **Validates: Requirements 1.4, 1.6**
 
-  - [ ] 5.3 Write unit tests for rollback Terraform sequence (`tests/test_rollback_flow.py`)
+  - [x] 5.3 Write unit tests for rollback Terraform sequence (`tests/test_rollback_flow.py`)
     - Test validate → apply sequence with mocked subprocess returning exit 0 for both
     - Test validate failure (mocked subprocess exit 1 with stderr) returns `RollbackResult(success=False)` with exit code and stderr
     - Test apply failure after successful validate preserves Rollback_File unchanged (check mtime)
     - Test missing rollback file returns `RollbackResult(success=False)` identifying missing path
     - _Requirements: 1.3, 1.4, 1.6_
 
-- [ ] 6. Implement pre-remediation hook full validation
+- [x] 6. Implement pre-remediation hook full validation
   - [x] 6.1 Implement `_run_pre_remediation_hook_full()` method
     - Iterate all active plans, validate rollback file existence + non-empty + hook script exit 0
     - Enforce 60-second total timeout across all plans
     - Return `(validated_paths, failures)` tuple; block remediation if any failures
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ] 6.2 Write property tests for pre-remediation hook
+  - [x] 6.2 Write property tests for pre-remediation hook
     - **Property 6: Pre-Remediation Hook Coverage**
     - **Property 7: Pre-Remediation Hook Success**
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4**
 
-  - [ ] 6.3 Write unit tests for hook timeout (`tests/test_pre_hook.py`)
+  - [x] 6.3 Write unit tests for hook timeout (`tests/test_pre_hook.py`)
     - Test that exceeding 60s total execution time raises `TimeoutError` and blocks remediation (use mocked `time.monotonic`)
     - Test that a plan with an empty rollback file is reported in failures
     - Test that a plan with hook script exit code != 0 is reported in failures
     - Test successful validation of all plans returns correct `validated_paths` list
     - _Requirements: 5.1, 5.2, 5.3, 5.5_
 
-- [ ] 7. Implement data integrity features
+- [x] 7. Implement data integrity features
   - [x] 7.1 Implement findings store schema versioning
     - Add `SCHEMA_VERSION = "1.0.0"` constant
     - Implement `_write_findings_store()`: include `schema_version` field in top-level JSON
@@ -157,41 +157,41 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Create file if it does not exist; handle `OSError` gracefully
     - _Requirements: 11.1, 11.2, 11.4_
 
-  - [ ] 7.3 Write property test for schema version validation
+  - [x] 7.3 Write property test for schema version validation
     - **Property 10: Schema Version Validation**
     - **Property 15: Findings Store Schema Version Presence**
     - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5**
 
-  - [ ] 7.4 Write property test for reasoning log append preservation
+  - [x] 7.4 Write property test for reasoning log append preservation
     - **Property 13: Reasoning Log Append Preservation**
     - **Validates: Requirements 11.1, 11.2**
 
-  - [ ] 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`)
+  - [x] 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`)
     - Test that a higher minor version (e.g., `"1.5.0"` when expected is `"1.0.0"`) logs a WARNING and passes validation
     - Test that a major version mismatch (e.g., `"2.0.0"` when expected is `"1.0.0"`) is rejected with descriptive error
     - Test that a missing `schema_version` field is rejected with "schema_version field is missing"
     - Test that an invalid format string (e.g., `"abc"`) is rejected
     - _Requirements: 7.2, 7.3, 7.4, 7.5_
 
-  - [ ] 7.6 Write unit tests for reasoning log rotation (`tests/test_reasoning_log.py`)
+  - [x] 7.6 Write unit tests for reasoning log rotation (`tests/test_reasoning_log.py`)
     - Test log rotation triggers at 10MB threshold (mock file size)
     - Test that rotation renames current file with numeric suffix
     - Test that maximum 5 rotated files are retained (oldest deleted)
     - Test that a new run appends separator without destroying existing content
     - _Requirements: 11.1, 11.2, 11.3_
 
-- [ ] 8. Implement savings tracker broad exception handling
+- [x] 8. Implement savings tracker broad exception handling
   - [x] 8.1 Wrap `savings_tracker.record_run()` with broad exception handling
     - Replace narrow `except (FileNotFoundError, OSError)` with `except Exception`
     - Log WARNING with exception type and message on catch
     - Return `ApprovalResult(success=True)` regardless of exception
     - _Requirements: 8.1, 8.2, 8.3_
 
-  - [ ] 8.2 Write property test for savings tracker exception swallowing
+  - [x] 8.2 Write property test for savings tracker exception swallowing
     - **Property 5: Savings Tracker Exception Swallowing**
     - **Validates: Requirements 8.1, 8.2, 8.3**
 
-- [ ] 9. Checkpoint - Ensure all tests pass
+- [-] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Implement UI–Orchestrator contract alignment

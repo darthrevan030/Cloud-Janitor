@@ -7,7 +7,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
 ## Tasks
 
 - [ ] 1. Batch 1 — Core infrastructure (flat layout)
-  - [ ] 1.1 Create `pyproject.toml` with build system, dependencies, and scripts
+  - [x] 1.1 Create `pyproject.toml` with build system, dependencies, and scripts
     - Declare `[build-system]` with hatchling backend
     - Add `[project]` metadata (name, version 0.1.0, description, requires-python >=3.12)
     - Add `[project.dependencies]` with click, boto3, openai, python-dotenv, pyyaml, apscheduler, filelock, mcp, packaging, terraform-local
@@ -17,7 +17,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Add `[tool.pytest.ini_options]` and `[tool.ruff]` sections
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 4.1, 4.2, 4.3, 4.4, 4.7, 4.8_
 
-  - [ ] 1.2 Create `logging_config.py` at project root
+  - [x] 1.2 Create `logging_config.py` at project root
     - Implement `configure_logging()` function
     - Read `JANITOR_LOG_LEVEL` env var (case-insensitive matching)
     - Valid levels: DEBUG, INFO, WARNING, ERROR; default to INFO if missing or invalid
