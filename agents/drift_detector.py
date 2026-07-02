@@ -15,6 +15,11 @@ from filelock import FileLock, Timeout
 
 from core.llm_client import get_client, DEFAULT_MODEL
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 MAX_SNAPSHOTS: int = 30
 LOCK_TIMEOUT: int = 10
 STALE_TMP_AGE_SECONDS: int = 60

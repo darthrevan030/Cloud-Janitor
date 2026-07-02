@@ -22,6 +22,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 class ReasoningLogger:
     """Structured JSON event logger for agent reasoning traces.
@@ -57,7 +62,7 @@ class ReasoningLogger:
             with open(self._log_path, mode="w", encoding="utf-8") as f:
                 f.truncate(0)
         except OSError as exc:
-            print(f"ReasoningLogger: failed to truncate {self._log_path}: {exc}", file=sys.stderr)
+            logger.error(f"ReasoningLogger: failed to truncate {self._log_path}: {exc}")
 
     def emit(self, agent: str, event_type: str, resource_id: str, message: str) -> None:
         """Append a structured JSON line to the reasoning log.
@@ -92,4 +97,4 @@ class ReasoningLogger:
             with open(self._log_path, mode="a", encoding="utf-8") as f:
                 f.write(line)
         except OSError as exc:
-            print(f"ReasoningLogger: failed to write to {self._log_path}: {exc}", file=sys.stderr)
+            logger.error(f"ReasoningLogger: failed to write to {self._log_path}: {exc}")

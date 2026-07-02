@@ -26,6 +26,11 @@ from mcp_server.aws_janitor_mcp import get_security_data
 
 from agents.reasoning_logger import ReasoningLogger
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 # Sensitive ports that must be VPC-only (never open to 0.0.0.0/0)
 SENSITIVE_PORTS = [22, 3306, 5432, 6379, 27017]
@@ -100,7 +105,7 @@ class SecOpsGuard:
         data = get_security_data(check_type="security_group")
 
         if "error" in data:
-            print(f"[SecOps Guard] ERROR: {data['error']}", file=sys.stderr)
+            logger.error(f"[SecOps Guard] ERROR: {data['error']}")
             return []
 
         raw_findings = data.get("findings", [])
@@ -139,7 +144,7 @@ class SecOpsGuard:
         data = get_security_data(check_type="encryption")
 
         if "error" in data:
-            print(f"[SecOps Guard] ERROR: {data['error']}", file=sys.stderr)
+            logger.error(f"[SecOps Guard] ERROR: {data['error']}")
             return []
 
         raw_findings = data.get("findings", [])
@@ -256,7 +261,7 @@ class SecOpsGuard:
                 with open(self.findings_store_path) as f:
                     return json.load(f)
             except (json.JSONDecodeError, IOError) as e:
-                print(f"[SecOps Guard] WARNING: Could not read existing findings_store.json: {e}", file=sys.stderr)
+                logger.warning(f"[SecOps Guard] WARNING: Could not read existing findings_store.json: {e}")
 
         # Return empty store if file doesn't exist or is unreadable
         return {

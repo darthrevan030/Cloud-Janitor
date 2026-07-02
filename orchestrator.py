@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import json
 import logging
+
+logger = logging.getLogger(__name__)
 import os
 import platform
 import re

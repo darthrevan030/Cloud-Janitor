@@ -24,6 +24,11 @@ from mcp_server.aws_janitor_mcp import get_cost_data
 
 from agents.reasoning_logger import ReasoningLogger
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 # Project root for output files
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -142,7 +147,7 @@ class FinOpsAuditor:
         all_cost_data = get_cost_data(resource_type=None, min_idle_days=0)
 
         if "error" in all_cost_data:
-            print(f"[FinOps Auditor] ERROR: {all_cost_data['error']}", file=sys.stderr)
+            logger.error(f"[FinOps Auditor] ERROR: {all_cost_data['error']}")
             return []
 
         all_resources = all_cost_data.get("resources", [])
