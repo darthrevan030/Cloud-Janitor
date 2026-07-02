@@ -103,6 +103,7 @@ from core.paths import (
     HOOKS_DIR as _CORE_HOOKS_DIR,
     ensure_output_dirs,
 )
+from core.error_telemetry import build_error_record, write_error_record
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
@@ -386,6 +387,7 @@ class Orchestrator:
             finops_findings = self._finops.scan()
         except Exception as e:
             _emit("finops", "failure")
+            self._record_error(e, "FinOpsAuditor", context="")
             return AuditResult(success=False, error=f"FinOps Auditor failed: {e}")
         self._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
         _emit("finops", "success")
@@ -397,6 +399,7 @@ class Orchestrator:
             secops_findings = self._secops.scan()
         except Exception as e:
             _emit("secops", "failure")
+            self._record_error(e, "SecOpsGuard", context="")
             return AuditResult(
                 success=False,
                 findings=finops_findings,
@@ -411,6 +414,8 @@ class Orchestrator:
         if validation_error:
             self._log_action("plan", "all", "failure", validation_error)
             _emit("remediation", "failure")
+            val_exc = RuntimeError(validation_error)
+            self._record_error(val_exc, "Orchestrator", context="schema_check")
             return AuditResult(success=False, error=validation_error)
 
         # Step 4: Remediation Architect plans
@@ -419,6 +424,7 @@ class Orchestrator:
             plans = self._architect.plan()
         except Exception as e:
             _emit("remediation", "failure")
+            self._record_error(e, "RemediationArchitect", context="")
             return AuditResult(
                 success=False,
                 findings=finops_findings + secops_findings,
@@ -444,6 +450,8 @@ class Orchestrator:
             if hook_error:
                 self._log_action("plan", "all", "blocked", f"Pre-remediation hook failed: {hook_error}")
                 _emit("remediation", "failure")
+                hook_exc = RuntimeError(hook_error)
+                self._record_error(hook_exc, "Orchestrator", context="hook_validation")
                 return AuditResult(
                     success=False,
                     findings=finops_findings + secops_findings,
@@ -497,6 +505,7 @@ class Orchestrator:
                 f"[Orchestrator] QueryInterpreter error: {type(exc).__name__}: {exc}",
                 file=sys.stderr,
             )
+            self._record_error(exc, "QueryInterpreter", context="")
             # Req 1.10: fall back to full scan on failure
             return self.execute_audit()
 
@@ -686,6 +695,8 @@ class Orchestrator:
         if init_result.returncode != 0:
             error = init_result.stderr.strip() or init_result.stdout.strip()
             self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
+            tf_exc = RuntimeError(f"{self._tf_cmd} init failed: {error}")
+            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             return ApprovalResult(
                 success=False,
                 error=f"{self._tf_cmd} init failed: {error}",
@@ -703,6 +714,8 @@ class Orchestrator:
         if apply_result.returncode != 0:
             error = apply_result.stderr.strip() or apply_result.stdout.strip()
             self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
+            tf_exc = RuntimeError(f"{self._tf_cmd} apply failed: {error}")
+            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             return ApprovalResult(
                 success=False,
                 error=f"{self._tf_cmd} apply failed: {error}",
@@ -1267,6 +1280,8 @@ class Orchestrator:
         if init_result.returncode != 0:
             error = init_result.stderr.strip() or init_result.stdout.strip()
             self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
+            tf_exc = RuntimeError(f"{self._tf_cmd} init failed: {error}")
+            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
@@ -1284,6 +1299,8 @@ class Orchestrator:
         if apply_result.returncode != 0:
             error = apply_result.stderr.strip() or apply_result.stdout.strip()
             self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
+            tf_exc = RuntimeError(f"{self._tf_cmd} apply failed: {error}")
+            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             # Leave the resource pending so the caller can retry CONFIRM ROLLBACK
             return RollbackResult(
                 success=False,
@@ -1314,3 +1331,45 @@ class Orchestrator:
         self._audit_trail.append(entry)
         # Persist to append-only file log (failures are non-blocking)
         self._audit_logger.append(entry.to_dict())
+
+    def _classify_error(self, exc: Exception, context: str = "") -> str:
+        """Classify an exception into one of the structured error categories.
+
+        Classification logic:
+          - context in {"tf_validate", "tf_apply", "tf_plan"} → "terraform_failure"
+          - isinstance(exc, (OSError, IOError, PermissionError)) → "io_failure"
+          - context in {"schema_check", "gate_check", "hook_validation", "resource_id_check"} → "validation_failure"
+          - default → "agent_failure"
+
+        Args:
+            exc: The caught exception.
+            context: Optional context string indicating where the error occurred.
+
+        Returns:
+            One of: "terraform_failure", "io_failure", "validation_failure", "agent_failure".
+        """
+        if context in ("tf_validate", "tf_apply", "tf_plan"):
+            return "terraform_failure"
+        if isinstance(exc, (OSError, IOError, PermissionError)):
+            return "io_failure"
+        if context in ("schema_check", "gate_check", "hook_validation", "resource_id_check"):
+            return "validation_failure"
+        return "agent_failure"
+
+    def _record_error(self, exc: Exception, agent_name: str, context: str = "") -> None:
+        """Build and write a structured error record to the audit log.
+
+        Args:
+            exc: The caught exception.
+            agent_name: Identifying string for the failing agent/component.
+            context: Optional context string for error classification.
+        """
+        category = self._classify_error(exc, context)
+        record = build_error_record(exc, agent_name, category)
+        try:
+            write_error_record(record, self.audit_log_path)
+        except Exception as write_exc:
+            logger.warning(
+                "Failed to write error record: %s: %s",
+                type(write_exc).__name__, write_exc,
+            )

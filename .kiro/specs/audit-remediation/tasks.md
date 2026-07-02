@@ -245,7 +245,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - _Requirements: 4.1, 4.3, 4.4, 4.5_
 
 - [ ] 11. Wire structured error telemetry into Orchestrator
-  - [ ] 11.1 Integrate `core/error_telemetry.py` into Orchestrator error handling
+  - [x] 11.1 Integrate `core/error_telemetry.py` into Orchestrator error handling
     - Import `build_error_record` and `write_error_record` from `core/error_telemetry`
     - Implement `_classify_error()` method for error categorization: `context="tf_validate"/"tf_apply"/"tf_plan"` → `"terraform_failure"`, `isinstance(exc, (OSError, IOError, PermissionError))` → `"io_failure"`, `context="schema_check"/"gate_check"/"hook_validation"/"resource_id_check"` → `"validation_failure"`, default → `"agent_failure"`
     - Wrap agent execution with try/except that builds and writes structured error records
