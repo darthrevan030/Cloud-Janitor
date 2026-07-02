@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T16:43:21Z
+Generated: 2026-07-02T16:54:11Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -140,8 +140,8 @@ Generated: 2026-07-02T16:43:21Z
 | 134 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 135 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 | 136 | 1. Batch 1 — Core infrastructure (flat layout) | ❌ Pending | — |
-| 137 | 1.1 Create `pyproject.toml` with build system, dependencies, and scripts | ❌ Pending | — |
-| 138 | 1.2 Create `logging_config.py` at project root | ❌ Pending | — |
+| 137 | 1.1 Create `pyproject.toml` with build system, dependencies, and scripts | ✅ Done | no mapping |
+| 138 | 1.2 Create `logging_config.py` at project root | ✅ Done | no mapping |
 | 139 | 1.3 Add retry logic to `core/llm_client.py` | ❌ Pending | — |
 | 140 | 1.4 Create `cli.py` at project root with Click CLI | ❌ Pending | — |
 | 141 | 1.5 Update stub providers with warning pattern | ❌ Pending | — |
