@@ -1,10 +1,10 @@
-version: "3.8"
 services:
   localstack:
     image: localstack/localstack:latest
     ports:
       - "4566:4566"
     environment:
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
       - SERVICES=ec2,elasticache,s3,ebs
       - DEFAULT_REGION=us-east-1
       - DOCKER_HOST=unix:///var/run/docker.sock
