@@ -1138,79 +1138,62 @@ class Orchestrator:
                 error=f"Rollback artifact not found: rollbacks/{resource_id}.tf",
             )
 
-        # Step 1: Terraform validate
+        # Stage the rollback HCL as the active config, then init + apply it
+        # against LocalStack — mirrors the same init/apply pattern approve() uses.
+        # Without this, CONFIRM ROLLBACK only updated bookkeeping and never
+        # touched real infrastructure.
+        remediation_path = self.output_dir / "remediation.tf"
         try:
-            validate_result = subprocess.run(
-                [self._tf_cmd, "validate"],
-                capture_output=True,
-                text=True,
-                timeout=300,
-                cwd=str(rollback_path.parent),
-            )
-        except subprocess.TimeoutExpired:
+            remediation_path.write_text(rollback_path.read_text())
+        except OSError as e:
             self._log_action(
                 "rollback", resource_id, "failure",
-                "Terraform validate timed out (300s)",
+                f"Failed to stage rollback artifact: {e}",
             )
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
-                exit_code=None,
-                error="Terraform validate timed out after 300 seconds",
+                error=f"Failed to stage rollback artifact: {e}",
             )
 
-        if validate_result.returncode != 0:
-            stderr = validate_result.stderr.strip() or validate_result.stdout.strip()
-            self._log_action(
-                "rollback", resource_id, "failure",
-                f"Terraform validate failed: {stderr}",
-            )
+        init_result = subprocess.run(
+            [self._tf_cmd, "init", "-input=false"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.output_dir),
+        )
+        if init_result.returncode != 0:
+            error = init_result.stderr.strip() or init_result.stdout.strip()
+            self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
-                exit_code=validate_result.returncode,
-                error=stderr,
+                error=f"{self._tf_cmd} init failed: {error}",
             )
 
-        # Step 2: Terraform apply (only after validate succeeds)
-        try:
-            apply_result = subprocess.run(
-                [self._tf_cmd, "apply", "-auto-approve"],
-                capture_output=True,
-                text=True,
-                timeout=300,
-                cwd=str(rollback_path.parent),
-            )
-        except subprocess.TimeoutExpired:
-            self._log_action(
-                "rollback", resource_id, "failure",
-                "Terraform apply timed out (300s)",
-            )
-            return RollbackResult(
-                success=False,
-                resource_id=resource_id,
-                exit_code=None,
-                error="Terraform apply timed out after 300 seconds",
-            )
-
+        apply_result = subprocess.run(
+            [self._tf_cmd, "apply", "-auto-approve"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.output_dir),
+        )
         if apply_result.returncode != 0:
-            stderr = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action(
-                "rollback", resource_id, "failure",
-                f"Terraform apply failed: {stderr}",
-            )
+            error = apply_result.stderr.strip() or apply_result.stdout.strip()
+            self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
+            # Leave the resource pending so the caller can retry CONFIRM ROLLBACK
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
-                exit_code=apply_result.returncode,
-                error=stderr,
+                error=f"{self._tf_cmd} apply failed: {error}",
             )
 
-        # Success — rollback applied
+        # Rollback applied successfully
         self._pending_rollbacks.discard(resource_id)
         self._log_action("rollback", resource_id, "success", f"Rollback executed by {self.approver}")
 
-        # Run post-remediation hook for rollback
+        # Run post-remediation hook for rollback (only after apply actually succeeded)
         self._run_post_remediation_hook(resource_id, "rollback", "success")
 
         return RollbackResult(success=True, resource_id=resource_id)
