@@ -25,24 +25,44 @@ from core.logging_config import configure_logging
 
 configure_logging()
 
-# Phase B+C agent imports — optional modules that may not be installed yet.
-# Each tuple is (module_path, attribute_name). On ImportError the global is set to None,
-# preserving the same fallback behavior the rest of the UI relies on.
-_PHASE_BC_AGENTS = [
-    ("agents.query_interpreter", "QueryInterpreter"),
-    ("agents.explainer", "RemediationExplainer"),
-    ("agents.policy_suggester", "PolicySuggester"),
-    ("agents.anomaly_detector", "AnomalyDetector"),
-    ("agents.drift_detector", "DriftDetector"),
-    ("agents.multi_account_orchestrator", "MultiAccountOrchestrator"),
-    ("scheduler", "JanitorScheduler"),
-]
-for _mod_name, _attr_name in _PHASE_BC_AGENTS:
-    try:
-        _mod = __import__(_mod_name, fromlist=[_attr_name])
-        globals()[_attr_name] = getattr(_mod, _attr_name)
-    except (ImportError, AttributeError):
-        globals()[_attr_name] = None
+# Phase B/C agent imports — each agent imported individually with explicit
+# ImportError handling so that type checkers see the fallback as Optional[type].
+from typing import Optional
+
+try:
+    from agents.query_interpreter import QueryInterpreter
+except ImportError:
+    QueryInterpreter: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.explainer import RemediationExplainer
+except ImportError:
+    RemediationExplainer: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.policy_suggester import PolicySuggester
+except ImportError:
+    PolicySuggester: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.anomaly_detector import AnomalyDetector
+except ImportError:
+    AnomalyDetector: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.drift_detector import DriftDetector
+except ImportError:
+    DriftDetector: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.multi_account_orchestrator import MultiAccountOrchestrator
+except ImportError:
+    MultiAccountOrchestrator: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from scheduler import JanitorScheduler
+except ImportError:
+    JanitorScheduler: Optional[type] = None  # type: ignore[assignment]
 
 # ──────────────────────────────────────────────────────────────────────
 # Page config
