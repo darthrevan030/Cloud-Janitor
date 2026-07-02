@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T13:39:33Z
+Generated: 2026-07-02T14:12:22Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -29,11 +29,11 @@ Generated: 2026-07-02T13:39:33Z
 | 23 | 5.2 Write property test for rollback failure propagation | ❌ Pending | — |
 | 24 | 5.3 Write unit tests for rollback Terraform sequence (`tests/test_rollback_flow.py`) | ❌ Pending | — |
 | 25 | 6. Implement pre-remediation hook full validation | ❌ Pending | — |
-| 26 | 6.1 Implement `_run_pre_remediation_hook_full()` method | ⏳ Partial | agents/remediation_architect.py exists |
+| 26 | 6.1 Implement `_run_pre_remediation_hook_full()` method | ✅ Done | agents/remediation_architect.py exists |
 | 27 | 6.2 Write property tests for pre-remediation hook | ❌ Pending | — |
 | 28 | 6.3 Write unit tests for hook timeout (`tests/test_pre_hook.py`) | ❌ Pending | — |
 | 29 | 7. Implement data integrity features | ❌ Pending | — |
-| 30 | 7.1 Implement findings store schema versioning | ❌ Pending | — |
+| 30 | 7.1 Implement findings store schema versioning | ⏳ Partial | no mapping |
 | 31 | 7.2 Implement reasoning log append mode with separator | ❌ Pending | — |
 | 32 | 7.3 Write property test for schema version validation | ❌ Pending | — |
 | 33 | 7.4 Write property test for reasoning log append preservation | ❌ Pending | — |

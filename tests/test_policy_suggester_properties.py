@@ -318,18 +318,29 @@ def test_exclusion_property_with_explicit_check_types(
     # had an explicit check_type from already_checked. The internal filter
     # uses _infer_check_type which checks the explicit field AND content.
     # Since the output only has 5 keys (no check_type), we verify via inference.
+    #
+    # When multiple mock suggestions share the same suggestion_id, a result
+    # item could have come from ANY of them. We only flag if ALL matching
+    # originals would have been filtered (i.e., there's no legitimate source).
     already_set = set(already_checked)
     for item in result:
-        # Build a dict that mimics what _infer_check_type would see
-        # before the output was stripped to 5 keys
-        for original in mock_suggestions:
-            if original["suggestion_id"] == item["suggestion_id"]:
-                # If this suggestion had an explicit check_type in already_checked,
-                # it should NOT be in the result
-                explicit_ct = original.get("check_type", "")
-                if explicit_ct in already_set:
-                    assert False, (
-                        f"Suggestion '{item['suggestion_id']}' with explicit "
-                        f"check_type '{explicit_ct}' should have been filtered "
-                        f"by already_checked={already_checked}"
-                    )
+        matching_originals = [
+            orig for orig in mock_suggestions
+            if orig["suggestion_id"] == item["suggestion_id"]
+        ]
+        if not matching_originals:
+            continue
+        # If at least one matching original has a check_type NOT in already_set,
+        # this result item could legitimately have come from that source.
+        has_legitimate_source = any(
+            orig.get("check_type", "") not in already_set
+            for orig in matching_originals
+        )
+        if not has_legitimate_source:
+            # All originals with this ID should have been filtered
+            offending_types = [orig.get("check_type", "") for orig in matching_originals]
+            assert False, (
+                f"Suggestion '{item['suggestion_id']}' has no legitimate source — "
+                f"all matching originals had check_types {offending_types} which are "
+                f"in already_checked={already_checked}"
+            )
