@@ -195,7 +195,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Implement UI–Orchestrator contract alignment
-  - [ ] 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only
+  - [x] 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only
     - "Run Audit" button must call `Orchestrator.execute_audit(status_callback=...)` exclusively
     - Remove any direct calls to private methods/attributes (prefixed with `_`)
     - Render findings, plans, and blocked plans from `AuditResult` fields only

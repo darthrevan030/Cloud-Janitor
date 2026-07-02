@@ -32,7 +32,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 def _find_bash() -> str:
@@ -357,35 +357,73 @@ class Orchestrator:
     # Public API
     # ──────────────────────────────────────────────────────────────────────
 
-    def execute_audit(self) -> AuditResult:
+    def execute_audit(
+        self,
+        status_callback: Callable[[str, str], None] | None = None,
+    ) -> AuditResult:
         """
         Execute the full audit pipeline: FinOps → SecOps → Remediation Architect.
+
+        Args:
+            status_callback: Optional callable (agent_name, status) invoked at each
+                pipeline stage. Status values: "idle", "running", "success", "failure".
 
         Returns:
             AuditResult with findings, plans, and any errors.
         """
+
+        def _emit(agent: str, status: str) -> None:
+            if status_callback is not None:
+                status_callback(agent, status)
+
         # Truncate reasoning log at the start of each new audit run
         self._reasoning_logger.truncate()
 
         # Step 1: FinOps Auditor scan
+        _emit("finops", "running")
         self._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
-        finops_findings = self._finops.scan()
+        try:
+            finops_findings = self._finops.scan()
+        except Exception as e:
+            _emit("finops", "failure")
+            return AuditResult(success=False, error=f"FinOps Auditor failed: {e}")
         self._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
+        _emit("finops", "success")
 
         # Step 2: SecOps Guard scan
+        _emit("secops", "running")
         self._log_action("scan", "all", "started", "SecOps Guard scan initiated")
-        secops_findings = self._secops.scan()
+        try:
+            secops_findings = self._secops.scan()
+        except Exception as e:
+            _emit("secops", "failure")
+            return AuditResult(
+                success=False,
+                findings=finops_findings,
+                error=f"SecOps Guard failed: {e}",
+            )
         self._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
+        _emit("secops", "success")
 
         # Step 3: Validate findings_store has entries from both agents
+        _emit("remediation", "running")
         validation_error = self._validate_findings_store()
         if validation_error:
             self._log_action("plan", "all", "failure", validation_error)
+            _emit("remediation", "failure")
             return AuditResult(success=False, error=validation_error)
 
         # Step 4: Remediation Architect plans
         self._log_action("plan", "all", "started", "Remediation Architect planning")
-        plans = self._architect.plan()
+        try:
+            plans = self._architect.plan()
+        except Exception as e:
+            _emit("remediation", "failure")
+            return AuditResult(
+                success=False,
+                findings=finops_findings + secops_findings,
+                error=f"Remediation Architect failed: {e}",
+            )
         self._last_plans = plans
 
         blocked_plans = [p for p in plans if p.blocked]
@@ -405,6 +443,7 @@ class Orchestrator:
             hook_error = self._run_pre_remediation_hook(active_plans)
             if hook_error:
                 self._log_action("plan", "all", "blocked", f"Pre-remediation hook failed: {hook_error}")
+                _emit("remediation", "failure")
                 return AuditResult(
                     success=False,
                     findings=finops_findings + secops_findings,
@@ -413,6 +452,7 @@ class Orchestrator:
                     hook_error=hook_error,
                 )
 
+        _emit("remediation", "success")
         all_findings = finops_findings + secops_findings
 
         # Step 6: Anomaly Detection (post-scan, before drift) — Req 6.4

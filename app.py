@@ -824,84 +824,22 @@ st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 if st.button("▶  Run Audit", type="primary", use_container_width=False):
     orch = st.session_state.orchestrator
-    statuses = {"finops": "idle", "secops": "idle", "remediation": "idle"}
-    _render_live_feed(statuses)
 
-    # FinOps
-    statuses["finops"] = "running"
-    _render_live_feed(statuses)
-    try:
-        orch._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
-        finops_findings = orch._finops.scan()
-        orch._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
-        statuses["finops"] = "success"
-    except Exception as e:
-        statuses["finops"] = "failure"
-        _render_live_feed(statuses)
-        st.session_state.agent_status = statuses
-        st.error(f"FinOps Auditor failed: {e}")
-        st.stop()
-    _render_live_feed(statuses)
+    def _on_agent_status(agent_name: str, status: str) -> None:
+        st.session_state.setdefault("agent_status", {})[agent_name] = status
 
-    # SecOps
-    statuses["secops"] = "running"
-    _render_live_feed(statuses)
-    try:
-        orch._log_action("scan", "all", "started", "SecOps Guard scan initiated")
-        secops_findings = orch._secops.scan()
-        orch._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
-        statuses["secops"] = "success"
-    except Exception as e:
-        statuses["secops"] = "failure"
-        _render_live_feed(statuses)
-        st.session_state.agent_status = statuses
-        st.error(f"SecOps Guard failed: {e}")
-        st.stop()
-    _render_live_feed(statuses)
+    with st.spinner("Running audit pipeline..."):
+        result = orch.execute_audit(status_callback=_on_agent_status)
 
-    # Remediation
-    statuses["remediation"] = "running"
-    _render_live_feed(statuses)
-    try:
-        validation_error = orch._validate_findings_store()
-        if validation_error:
-            raise RuntimeError(validation_error)
-        orch._log_action("plan", "all", "started", "Remediation Architect planning")
-        plans = orch._architect.plan()
-        orch._last_plans = plans
-        blocked_plans = [p for p in plans if p.blocked]
-        active_plans = [p for p in plans if not p.blocked]
-        for p in blocked_plans:
-            orch._log_action("plan", p.resource_id, "blocked", p.block_reason)
-        orch._log_action("plan", "all", "success", f"Generated {len(active_plans)} plan(s), {len(blocked_plans)} blocked")
-        hook_error = None
-        if active_plans:
-            hook_error = orch._run_pre_remediation_hook(active_plans)
-        if hook_error:
-            orch._log_action("plan", "all", "blocked", f"Pre-remediation hook failed: {hook_error}")
-            statuses["remediation"] = "failure"
-            _render_live_feed(statuses)
-            st.session_state.agent_status = statuses
-            st.session_state.audit_result = AuditResult(
-                success=False, findings=finops_findings + secops_findings,
-                plans=active_plans, blocked_plans=blocked_plans, hook_error=hook_error,
-            )
-            st.error(f"Pre-remediation hook failed: {hook_error}")
-            st.stop()
-        statuses["remediation"] = "success"
-        st.session_state.audit_result = AuditResult(
-            success=True, findings=finops_findings + secops_findings,
-            plans=active_plans, blocked_plans=blocked_plans,
-        )
-    except Exception as e:
-        statuses["remediation"] = "failure"
-        _render_live_feed(statuses)
-        st.session_state.agent_status = statuses
-        st.error(f"Remediation Architect failed: {e}")
+    # Render final agent statuses
+    _render_live_feed(st.session_state.agent_status)
+
+    if not result.success:
+        st.error(result.error)
+        st.session_state.audit_result = result
         st.stop()
 
-    _render_live_feed(statuses)
-    st.session_state.agent_status = statuses
+    st.session_state.audit_result = result
     st.success("Audit complete.")
     st.rerun()
 
