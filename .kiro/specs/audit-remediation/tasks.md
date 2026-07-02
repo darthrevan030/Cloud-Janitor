@@ -151,7 +151,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Implement `_validate_schema_version()`: reject missing field, reject major mismatch, warn on higher minor
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-  - [ ] 7.2 Implement reasoning log append mode with separator
+  - [x] 7.2 Implement reasoning log append mode with separator
     - Modify reasoning logger to open log in append mode (`mode="a"`)
     - Implement `start_run()`: write JSONL separator entry with `event_type="run_separator"`, ISO 8601 UTC `timestamp`, and `message` field
     - Create file if it does not exist; handle `OSError` gracefully

@@ -25,6 +25,83 @@ class TestReasoningLoggerInit:
         assert logger.log_path == custom
 
 
+class TestReasoningLoggerStartRun:
+    """Tests for start_run() method (Req 11.1, 11.2, 11.4)."""
+
+    def test_start_run_writes_run_separator_entry(self, tmp_path: Path):
+        log_file = tmp_path / "reasoning.log"
+        logger = ReasoningLogger(log_path=log_file)
+        logger.start_run()
+
+        lines = log_file.read_text().strip().splitlines()
+        assert len(lines) == 1
+        entry = json.loads(lines[0])
+        assert entry["event_type"] == "run_separator"
+        assert entry["message"] == "New audit run started"
+        assert "timestamp" in entry
+        assert "+00:00" in entry["timestamp"]
+
+    def test_start_run_creates_file_if_missing(self, tmp_path: Path):
+        """Req 11.4: file is created if it does not exist."""
+        log_file = tmp_path / "new_run.log"
+        assert not log_file.exists()
+        logger = ReasoningLogger(log_path=log_file)
+        logger.start_run()
+        assert log_file.exists()
+        entry = json.loads(log_file.read_text().strip())
+        assert entry["event_type"] == "run_separator"
+
+    def test_start_run_preserves_existing_content(self, tmp_path: Path):
+        """Req 11.1: append mode preserves previously written entries."""
+        log_file = tmp_path / "reasoning.log"
+        log_file.write_text('{"event_type":"check","agent":"x","resource_id":"","message":"old"}\n')
+        logger = ReasoningLogger(log_path=log_file)
+        logger.start_run()
+
+        lines = log_file.read_text().strip().splitlines()
+        assert len(lines) == 2
+        # First line is the original content
+        assert json.loads(lines[0])["event_type"] == "check"
+        # Second line is the separator
+        assert json.loads(lines[1])["event_type"] == "run_separator"
+
+    def test_start_run_entry_has_exactly_three_fields(self, tmp_path: Path):
+        """Req 11.2: separator entry has event_type, timestamp, message."""
+        log_file = tmp_path / "reasoning.log"
+        logger = ReasoningLogger(log_path=log_file)
+        logger.start_run()
+
+        entry = json.loads(log_file.read_text().strip())
+        assert set(entry.keys()) == {"event_type", "timestamp", "message"}
+
+    def test_start_run_on_filesystem_error_prints_stderr(self, tmp_path: Path, capsys):
+        bad_path = tmp_path / "nonexistent_dir" / "sub" / "reasoning.log"
+        logger = ReasoningLogger(log_path=bad_path)
+        logger.start_run()
+        captured = capsys.readouterr()
+        assert "ReasoningLogger: failed to write separator" in captured.err
+
+    def test_start_run_does_not_raise_on_filesystem_error(self, tmp_path: Path):
+        bad_path = tmp_path / "nonexistent_dir" / "sub" / "reasoning.log"
+        logger = ReasoningLogger(log_path=bad_path)
+        # Should not raise
+        logger.start_run()
+
+    def test_start_run_multiple_calls_append_multiple_separators(self, tmp_path: Path):
+        """Multiple start_run() calls produce multiple separator lines."""
+        log_file = tmp_path / "reasoning.log"
+        logger = ReasoningLogger(log_path=log_file)
+        logger.start_run()
+        logger.emit("agent", "check", "res", "doing work")
+        logger.start_run()
+
+        lines = log_file.read_text().strip().splitlines()
+        assert len(lines) == 3
+        assert json.loads(lines[0])["event_type"] == "run_separator"
+        assert json.loads(lines[1])["event_type"] == "check"
+        assert json.loads(lines[2])["event_type"] == "run_separator"
+
+
 class TestReasoningLoggerTruncate:
     """Tests for truncate() method."""
 

@@ -52,12 +52,38 @@ class ReasoningLogger:
 
         Opens the file in write mode to clear all existing content.
         On filesystem error: prints to stderr, does NOT raise.
+
+        Note: Prefer start_run() for new audit runs — it preserves history
+        by appending a separator entry instead of clearing the file.
         """
         try:
             with open(self._log_path, mode="w", encoding="utf-8") as f:
                 f.truncate(0)
         except OSError as exc:
             print(f"ReasoningLogger: failed to truncate {self._log_path}: {exc}", file=sys.stderr)
+
+    def start_run(self) -> None:
+        """Write a run separator entry in append mode.
+
+        Called at the start of each audit run. Creates file if missing.
+        Preserves all previously written entries (Req 11.1).
+
+        On filesystem error: prints to stderr, does NOT raise.
+        """
+        entry = {
+            "event_type": "run_separator",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "message": "New audit run started",
+        }
+        try:
+            line = json.dumps(entry, separators=(",", ":")) + "\n"
+            with open(self._log_path, mode="a", encoding="utf-8") as f:
+                f.write(line)
+        except OSError as exc:
+            print(
+                f"ReasoningLogger: failed to write separator: {exc}",
+                file=sys.stderr,
+            )
 
     def emit(self, agent: str, event_type: str, resource_id: str, message: str) -> None:
         """Append a structured JSON line to the reasoning log.
