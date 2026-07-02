@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-01T18:20:51Z
+Generated: 2026-07-02T15:20:06Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -27,6 +27,8 @@ Generated: 2026-07-01T18:20:51Z
 | 21 | 5. Implement rollback path with Terraform execution | ❌ Pending | — |
 | 22 | 5.1 Implement Terraform validate + apply rollback flow | ❌ Pending | — |
 | 23 | 5.2 Write property test for rollback failure propagation | ❌ Pending | — |
+| 22 | 5.1 Implement Terraform validate + apply rollback flow | ✅ Done | output/rollbacks/ exists |
+| 23 | 5.2 Write property test for rollback failure propagation | ✅ Done | output/rollbacks/ exists |
 | 24 | 5.3 Write unit tests for rollback Terraform sequence (`tests/test_rollback_flow.py`) | ❌ Pending | — |
 | 25 | 6. Implement pre-remediation hook full validation | ❌ Pending | — |
 | 26 | 6.1 Implement `_run_pre_remediation_hook_full()` method | ❌ Pending | — |
