@@ -208,7 +208,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Test that successful result renders findings from `AuditResult` fields only
     - _Requirements: 3.1, 3.3, 3.4_
 
-  - [ ] 10.3 Implement NL audit delegation with feature detection
+  - [x] 10.3 Implement NL audit delegation with feature detection
     - Check `hasattr(orchestrator, 'execute_natural_language_audit')` before rendering NL audit UI
     - Display informational message when feature is unavailable
     - Display error message on exception; preserve existing audit state

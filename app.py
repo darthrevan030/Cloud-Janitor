@@ -780,33 +780,37 @@ _render_live_feed(st.session_state.agent_status)
 # Natural Language Query Input
 # ──────────────────────────────────────────────────────────────────────
 
-nl_query = st.text_input(
-    "Ask in plain English",
-    key="nl_query_input",
-    placeholder="e.g. Find idle EC2 instances older than 30 days",
-    help="Describe what you want to audit — the system will interpret your query.",
-)
+orch = st.session_state.orchestrator
 
-nl_col1, nl_col2 = st.columns([1, 4])
-with nl_col1:
-    nl_submitted = st.button("🔍  NL Audit", use_container_width=True)
+if not hasattr(orch, "execute_natural_language_audit"):
+    st.info("Natural-language audit feature is not yet available.")
+else:
+    nl_query = st.text_input(
+        "Ask in plain English",
+        key="nl_query_input",
+        placeholder="e.g. Find idle EC2 instances older than 30 days",
+        help="Describe what you want to audit — the system will interpret your query.",
+    )
 
-if nl_submitted and nl_query and nl_query.strip():
-    orch = st.session_state.orchestrator
-    with st.spinner("Interpreting query and running audit..."):
-        try:
-            result = orch.execute_natural_language_audit(nl_query.strip())
-            st.session_state.nl_query_result = result
-            st.session_state.audit_result = result
-            # Cache anomalies and drift from NL audit result
-            if hasattr(result, "anomalies") and result.anomalies:
-                st.session_state.anomaly_results = result.anomalies
-            if hasattr(result, "drift_report") and result.drift_report:
-                st.session_state.drift_report = result.drift_report
-            st.success(f"NL Audit complete — {len(result.findings)} finding(s).")
-            st.rerun()
-        except Exception as e:
-            st.error(f"NL Audit failed: {e}")
+    nl_col1, nl_col2 = st.columns([1, 4])
+    with nl_col1:
+        nl_submitted = st.button("🔍  NL Audit", use_container_width=True)
+
+    if nl_submitted and nl_query and nl_query.strip():
+        with st.spinner("Interpreting query and running audit..."):
+            try:
+                result = orch.execute_natural_language_audit(nl_query.strip())
+                st.session_state.nl_query_result = result
+                st.session_state.audit_result = result
+                # Cache anomalies and drift from NL audit result
+                if hasattr(result, "anomalies") and result.anomalies:
+                    st.session_state.anomaly_results = result.anomalies
+                if hasattr(result, "drift_report") and result.drift_report:
+                    st.session_state.drift_report = result.drift_report
+                st.success(f"NL Audit complete — {len(result.findings)} finding(s).")
+                st.rerun()
+            except Exception as e:
+                st.error(f"NL Audit failed: {e}")
 
 # Show NL query result summary if available
 if st.session_state.nl_query_result is not None:

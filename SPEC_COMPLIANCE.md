@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T19:06:52Z
+Generated: 2026-07-02T19:18:57Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -44,9 +44,9 @@ Generated: 2026-07-02T19:06:52Z
 | 38 | 8.2 Write property test for savings tracker exception swallowing | ✅ Done | agents/savings_tracker.py exists |
 | 39 | 9. Checkpoint - Ensure all tests pass | ✅ Done | no mapping |
 | 40 | 10. Implement UI–Orchestrator contract alignment | ❌ Pending | — |
-| 41 | 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only | ❌ Pending | — |
+| 41 | 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only | ✅ Done | app.py exists |
 | 42 | 10.2 Write unit tests for UI delegation (`tests/test_ui_delegation.py`) | ❌ Pending | — |
-| 43 | 10.3 Implement NL audit delegation with feature detection | ❌ Pending | — |
+| 43 | 10.3 Implement NL audit delegation with feature detection | ⏳ Partial | no mapping |
 | 44 | 10.4 Write unit tests for NL audit feature detection (`tests/test_nl_audit.py`) | ❌ Pending | — |
 | 45 | 10.5 Implement explicit Phase B/C agent imports | ✅ Done | no mapping |
 | 46 | 10.6 Write unit tests for agent ImportError handling (`tests/test_agent_imports.py`) | ❌ Pending | — |
