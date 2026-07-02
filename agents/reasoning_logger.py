@@ -52,17 +52,48 @@ class ReasoningLogger:
         """The path to the reasoning log file."""
         return self._log_path
 
-    def truncate(self) -> None:
-        """Truncate the log file (called at audit start).
+    # Maximum number of rotated history files to keep
+    MAX_HISTORY_FILES = 5
 
-        Opens the file in write mode to clear all existing content.
-        On filesystem error: prints to stderr, does NOT raise.
+    def truncate(self) -> None:
+        """Rotate the log file, then start fresh (called at audit start).
+
+        Instead of destroying previous reasoning traces, renames the current
+        log to agent_reasoning.<timestamp>.log before creating a new empty file.
+        Keeps at most MAX_HISTORY_FILES rotated files; deletes oldest beyond that.
+
+        On filesystem error: logs to stderr, does NOT raise.
         """
         try:
+            if self._log_path.exists() and self._log_path.stat().st_size > 0:
+                # Rotate: rename current log with timestamp suffix
+                from datetime import datetime, timezone
+                ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                rotated = self._log_path.with_suffix(f".{ts}.log")
+                try:
+                    self._log_path.rename(rotated)
+                except OSError:
+                    pass  # If rename fails, just truncate below
+
+                # Prune old rotated files beyond MAX_HISTORY_FILES
+                self._prune_rotated_logs()
+
+            # Create/truncate the active log file
             with open(self._log_path, mode="w", encoding="utf-8") as f:
                 f.truncate(0)
         except OSError as exc:
-            logger.error(f"ReasoningLogger: failed to truncate {self._log_path}: {exc}")
+            logger.error(f"ReasoningLogger: failed to rotate {self._log_path}: {exc}")
+
+    def _prune_rotated_logs(self) -> None:
+        """Delete oldest rotated log files beyond MAX_HISTORY_FILES."""
+        try:
+            pattern = self._log_path.stem + ".*.log"
+            rotated = sorted(self._log_path.parent.glob(pattern))
+            while len(rotated) > self.MAX_HISTORY_FILES:
+                oldest = rotated.pop(0)
+                oldest.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def emit(self, agent: str, event_type: str, resource_id: str, message: str) -> None:
         """Append a structured JSON line to the reasoning log.
