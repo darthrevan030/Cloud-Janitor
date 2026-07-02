@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T16:54:11Z
+Generated: 2026-07-02T17:03:55Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -24,10 +24,10 @@ Generated: 2026-07-02T16:54:11Z
 | 18 | 3.4 Write property test for gate lockout invariant | ✅ Done | no mapping |
 | 19 | 3.5 Write unit tests for atomic write failure (`tests/test_gate_persistence.py`) | ✅ Done | no mapping |
 | 20 | 4. Checkpoint - Ensure all tests pass | ✅ Done | no mapping |
-| 21 | 5. Implement rollback path with Terraform execution | ❌ Pending | — |
+| 21 | 5. Implement rollback path with Terraform execution | ✅ Done | output/rollbacks/ exists |
 | 22 | 5.1 Implement Terraform validate + apply rollback flow | ✅ Done | output/rollbacks/ exists |
 | 23 | 5.2 Write property test for rollback failure propagation | ✅ Done | output/rollbacks/ exists |
-| 24 | 5.3 Write unit tests for rollback Terraform sequence (`tests/test_rollback_flow.py`) | ❌ Pending | — |
+| 24 | 5.3 Write unit tests for rollback Terraform sequence (`tests/test_rollback_flow.py`) | ✅ Done | output/rollbacks/ exists |
 | 25 | 6. Implement pre-remediation hook full validation | ❌ Pending | — |
 | 26 | 6.1 Implement `_run_pre_remediation_hook_full()` method | ✅ Done | agents/remediation_architect.py exists |
 | 27 | 6.2 Write property tests for pre-remediation hook | ❌ Pending | — |
@@ -37,7 +37,7 @@ Generated: 2026-07-02T16:54:11Z
 | 31 | 7.2 Implement reasoning log append mode with separator | ✅ Done | no mapping |
 | 32 | 7.3 Write property test for schema version validation | ❌ Pending | — |
 | 33 | 7.4 Write property test for reasoning log append preservation | ❌ Pending | — |
-| 34 | 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`) | ✅ Done | no mapping |
+| 34 | 7.5 Write unit tests for schema version WARNING (`tests/test_schema_version.py`) | ❌ Pending | — |
 | 35 | 7.6 Write unit tests for reasoning log rotation (`tests/test_reasoning_log.py`) | ❌ Pending | — |
 | 36 | 8. Implement savings tracker broad exception handling | ❌ Pending | — |
 | 37 | 8.1 Wrap `savings_tracker.record_run()` with broad exception handling | ✅ Done | agents/savings_tracker.py exists |
