@@ -90,6 +90,19 @@ from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
 from mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
 from agents.savings_tracker import SavingsTracker
+from core.paths import (
+    PROJECT_ROOT as _CORE_PROJECT_ROOT,
+    OUTPUT_DIR as _CORE_OUTPUT_DIR,
+    ROLLBACKS_DIR as _CORE_ROLLBACKS_DIR,
+    LOGS_DIR as _CORE_LOGS_DIR,
+    FINDINGS_STORE_PATH as _CORE_FINDINGS_STORE_PATH,
+    AUDIT_LOG_PATH as _CORE_AUDIT_LOG_PATH,
+    REASONING_LOG_PATH as _CORE_REASONING_LOG_PATH,
+    APPROVAL_GATES_PATH as _CORE_APPROVAL_GATES_PATH,
+    SAVINGS_LEDGER_PATH as _CORE_SAVINGS_LEDGER_PATH,
+    HOOKS_DIR as _CORE_HOOKS_DIR,
+    ensure_output_dirs,
+)
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
@@ -145,12 +158,12 @@ def _validate_tf_cmd() -> str:
     return resolved
 
 
-PROJECT_ROOT = Path(__file__).parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
-HOOKS_DIR = PROJECT_ROOT / "hooks"
-OUTPUT_DIR = PROJECT_ROOT / "output"
-ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
-AUDIT_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "audit.log"
+PROJECT_ROOT = _CORE_PROJECT_ROOT
+FINDINGS_STORE_PATH = _CORE_FINDINGS_STORE_PATH
+HOOKS_DIR = _CORE_HOOKS_DIR
+OUTPUT_DIR = _CORE_OUTPUT_DIR
+ROLLBACKS_DIR = _CORE_ROLLBACKS_DIR
+AUDIT_LOG_PATH = _CORE_AUDIT_LOG_PATH
 
 
 @dataclass
@@ -232,23 +245,54 @@ class Orchestrator:
         approver: str = "system",
     ):
         self.project_root = project_root or PROJECT_ROOT
-        self.findings_store_path = self.project_root / "output" / "findings_store.json"
-        # Ensure output directories exist
-        (self.project_root / "output" / "logs").mkdir(parents=True, exist_ok=True)
-        (self.project_root / "output" / "rollbacks").mkdir(parents=True, exist_ok=True)
-        (self.project_root / "output" / "policies").mkdir(parents=True, exist_ok=True)
-        self.hooks_dir = self.project_root / "hooks"
-        self.output_dir = self.project_root / "output"
-        self.rollbacks_dir = self.project_root / "output" / "rollbacks"
-        self.audit_log_path = self.project_root / "output" / "logs" / "audit.log"
+
+        # Determine whether to use centralized path constants or custom-root paths
+        using_default_root = (project_root is None)
+
+        if using_default_root:
+            # Use centralized path constants from core/paths.py (Req 4.4)
+            # Ensure output directories exist — halt on failure (Req 4.3, 4.5)
+            try:
+                ensure_output_dirs()
+            except RuntimeError as e:
+                raise RuntimeError(
+                    f"Orchestrator initialization failed: {e}"
+                ) from e
+
+            self.findings_store_path = FINDINGS_STORE_PATH
+            self.hooks_dir = HOOKS_DIR
+            self.output_dir = OUTPUT_DIR
+            self.rollbacks_dir = ROLLBACKS_DIR
+            self.audit_log_path = AUDIT_LOG_PATH
+        else:
+            # Custom project root (tests) — construct paths relative to it
+            self.output_dir = self.project_root / "output"
+            self.rollbacks_dir = self.output_dir / "rollbacks"
+            self.findings_store_path = self.output_dir / "findings_store.json"
+            self.hooks_dir = self.project_root / "hooks"
+            self.audit_log_path = self.output_dir / "logs" / "audit.log"
+            # Create required directories for custom root
+            try:
+                for d in [self.output_dir, self.rollbacks_dir,
+                          self.output_dir / "logs", self.output_dir / "policies"]:
+                    os.makedirs(d, exist_ok=True)
+            except OSError as e:
+                raise RuntimeError(
+                    f"Orchestrator initialization failed: could not create directory: {e}"
+                ) from e
+
         self.approver = approver
 
         # Validate and resolve TF_CMD binary
         self._tf_cmd = _validate_tf_cmd()
 
         # Reasoning logger (shared across all agents)
+        reasoning_log_path = (
+            _CORE_REASONING_LOG_PATH if using_default_root
+            else self.output_dir / "logs" / "agent_reasoning.log"
+        )
         self._reasoning_logger = ReasoningLogger(
-            log_path=self.project_root / "output" / "logs" / "agent_reasoning.log"
+            log_path=reasoning_log_path
         )
 
         # Agent instances
@@ -274,17 +318,27 @@ class Orchestrator:
         self._query_interpreter = QueryInterpreter()
         self._anomaly_detector = AnomalyDetector()
         self._drift_detector = DriftDetector(
-            history_path=self.project_root / "output" / "scan_history.json"
+            history_path=(
+                OUTPUT_DIR / "scan_history.json" if using_default_root
+                else self.output_dir / "scan_history.json"
+            )
         )
 
         # Savings tracker
         self._savings_tracker = SavingsTracker(
-            ledger_path=self.project_root / "output" / "savings_ledger.json",
+            ledger_path=(
+                _CORE_SAVINGS_LEDGER_PATH if using_default_root
+                else self.output_dir / "savings_ledger.json"
+            ),
             findings_store_path=self.findings_store_path,
         )
 
         # Persistent approval gate store
-        self._gate_store = ApprovalGateStore(self.output_dir / "approval_gates.json")
+        gate_store_path = (
+            _CORE_APPROVAL_GATES_PATH if using_default_root
+            else self.output_dir / "approval_gates.json"
+        )
+        self._gate_store = ApprovalGateStore(gate_store_path)
         self._gate_store.load()
 
         # Approval gates per resource (keyed by resource_id)
@@ -587,7 +641,7 @@ class Orchestrator:
             capture_output=True,
             text=True,
             timeout=120,
-            cwd=str(self.project_root / "output"),
+            cwd=str(self.output_dir),
         )
         if init_result.returncode != 0:
             error = init_result.stderr.strip() or init_result.stdout.strip()
@@ -604,7 +658,7 @@ class Orchestrator:
             capture_output=True,
             text=True,
             timeout=120,
-            cwd=str(self.project_root / "output"),
+            cwd=str(self.output_dir),
         )
         if apply_result.returncode != 0:
             error = apply_result.stderr.strip() or apply_result.stdout.strip()

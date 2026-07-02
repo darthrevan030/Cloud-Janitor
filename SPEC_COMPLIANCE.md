@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T18:43:46Z
+Generated: 2026-07-02T18:50:48Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -48,10 +48,10 @@ Generated: 2026-07-02T18:43:46Z
 | 42 | 10.2 Write unit tests for UI delegation (`tests/test_ui_delegation.py`) | ❌ Pending | — |
 | 43 | 10.3 Implement NL audit delegation with feature detection | ❌ Pending | — |
 | 44 | 10.4 Write unit tests for NL audit feature detection (`tests/test_nl_audit.py`) | ❌ Pending | — |
-| 45 | 10.5 Implement explicit Phase B/C agent imports | ❌ Pending | — |
+| 45 | 10.5 Implement explicit Phase B/C agent imports | ✅ Done | no mapping |
 | 46 | 10.6 Write unit tests for agent ImportError handling (`tests/test_agent_imports.py`) | ❌ Pending | — |
 | 47 | 10.7 Update `app.py` to import paths from `core/paths.py` | ❌ Pending | — |
-| 48 | 10.8 Update Orchestrator to use `core/paths.py` and call `ensure_output_dirs()` | ❌ Pending | — |
+| 48 | 10.8 Update Orchestrator to use `core/paths.py` and call `ensure_output_dirs()` | ⏳ Partial | no mapping |
 | 49 | 11. Wire structured error telemetry into Orchestrator | ❌ Pending | — |
 | 50 | 11.1 Integrate `core/error_telemetry.py` into Orchestrator error handling | ❌ Pending | — |
 | 51 | 11.2 Write unit tests for `_classify_error()` (`tests/test_error_classification.py`) | ❌ Pending | — |
