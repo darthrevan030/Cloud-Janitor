@@ -131,7 +131,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Assertion: exception has status_or_error string, attempts == 4, mocked sleep calls sum to ~7 seconds (1+2+4) matching the exponential backoff formula
     - **Validates: Requirements 8.4**
 
-  - [ ] 3.9 Write property test for backoff delay calculation
+  - [x] 3.9 Write property test for backoff delay calculation
     - **Property 4: Backoff Delay Calculation**
     - Generator: random attempt number (0–2) × random Retry-After value (None, or float 0.1–120)
     - Assertion: delay follows formula; values > 60 cause immediate LLMRateLimitExceeded raise
