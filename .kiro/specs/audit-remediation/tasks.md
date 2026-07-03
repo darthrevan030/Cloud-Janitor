@@ -202,7 +202,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Display `AuditResult.error` on failure without retrying
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ] 10.2 Write unit tests for UI delegation (`tests/test_ui_delegation.py`)
+  - [x] 10.2 Write unit tests for UI delegation (`tests/test_ui_delegation.py`)
     - Test that "Run Audit" flow calls only public Orchestrator methods (inspect call args, no `_` prefixed calls)
     - Test that `AuditResult.error` is displayed on failure
     - Test that successful result renders findings from `AuditResult` fields only

@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-02T19:32:09Z
+Generated: 2026-07-02T20:09:03Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -53,7 +53,7 @@ Generated: 2026-07-02T19:32:09Z
 | 47 | 10.7 Update `app.py` to import paths from `core/paths.py` | ✅ Done | app.py exists |
 | 48 | 10.8 Update Orchestrator to use `core/paths.py` and call `ensure_output_dirs()` | ✅ Done | no mapping |
 | 49 | 11. Wire structured error telemetry into Orchestrator | ❌ Pending | — |
-| 50 | 11.1 Integrate `core/error_telemetry.py` into Orchestrator error handling | ❌ Pending | — |
+| 50 | 11.1 Integrate `core/error_telemetry.py` into Orchestrator error handling | ✅ Done | no mapping |
 | 51 | 11.2 Write unit tests for `_classify_error()` (`tests/test_error_classification.py`) | ❌ Pending | — |
 | 52 | 11.3 Surface structured error fields in Streamlit UI | ❌ Pending | — |
 | 53 | 12. Update SPEC_COMPLIANCE.md | ❌ Pending | — |
