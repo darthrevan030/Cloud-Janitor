@@ -74,7 +74,7 @@ class QueryInterpreter:
             )
 
             raw_content = response.choices[0].message.content
-            parsed = json.loads(raw_content)
+            parsed = json.loads(raw_content)  # type: ignore[arg-type]
 
             return self._validate(parsed)
 

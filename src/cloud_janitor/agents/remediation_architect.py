@@ -510,7 +510,7 @@ class RemediationArchitect:
         try:
             with open(self.findings_store_path) as f:
                 data = json.load(f)
-            return data.get("findings", [])
+            return data.get("findings", [])  # type: ignore[no-any-return]
         except (json.JSONDecodeError, IOError) as e:
             logger.error(f"[Remediation Architect] ERROR: Could not read findings_store.json: {e}")
             return []

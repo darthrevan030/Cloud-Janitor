@@ -77,7 +77,7 @@ class FinOpsAuditor:
         Uses the monthly_cost field from Cost Explorer fixture data directly.
         Returns the cost rounded to 2 decimal places.
         """
-        return round(resource.get("monthly_cost", 0.0), 2)
+        return round(resource.get("monthly_cost", 0.0), 2)  # type: ignore[no-any-return]
 
     def _build_finding(self, resource: dict) -> dict:
         """Build a Finding dict from a raw resource record."""

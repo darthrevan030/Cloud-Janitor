@@ -17,11 +17,11 @@ class FixtureProvider(CloudProvider):
     def _load_fixture(self, filename: str) -> dict:
         if self._fixtures_dir is not None:
             with open(self._fixtures_dir / filename) as f:
-                return json.load(f)
+                return json.load(f)  # type: ignore[no-any-return]
         ref = importlib.resources.files("cloud_janitor.fixtures").joinpath(filename)
         with importlib.resources.as_file(ref) as path:
             with open(path) as f:
-                return json.load(f)
+                return json.load(f)  # type: ignore[no-any-return]
 
     def get_cost_data(self, resource_type: Optional[str] = None, min_idle_days: int = 7) -> dict:
         """Return idle/orphaned resource data from Cost Explorer fixture."""

@@ -38,37 +38,37 @@ from typing import Optional  # noqa: E402
 try:
     from cloud_janitor.agents.query_interpreter import QueryInterpreter
 except ImportError:
-    QueryInterpreter: Optional[type] = None  # type: ignore[assignment]
+    QueryInterpreter: Optional[type] = None  # type: ignore[no-redef]
 
 try:
     from cloud_janitor.agents.explainer import RemediationExplainer
 except ImportError:
-    RemediationExplainer: Optional[type] = None  # type: ignore[assignment]
+    RemediationExplainer: Optional[type] = None  # type: ignore[no-redef]
 
 try:
     from cloud_janitor.agents.policy_suggester import PolicySuggester
 except ImportError:
-    PolicySuggester: Optional[type] = None  # type: ignore[assignment]
+    PolicySuggester: Optional[type] = None  # type: ignore[no-redef]
 
 try:
     from cloud_janitor.agents.anomaly_detector import AnomalyDetector
 except ImportError:
-    AnomalyDetector: Optional[type] = None  # type: ignore[assignment]
+    AnomalyDetector: Optional[type] = None  # type: ignore[no-redef]
 
 try:
     from cloud_janitor.agents.drift_detector import DriftDetector
 except ImportError:
-    DriftDetector: Optional[type] = None  # type: ignore[assignment]
+    DriftDetector: Optional[type] = None  # type: ignore[no-redef]
 
 try:
     from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 except ImportError:
-    MultiAccountOrchestrator: Optional[type] = None  # type: ignore[assignment]
+    MultiAccountOrchestrator: Optional[type] = None  # type: ignore[no-redef]
 
 try:
     from scheduler import JanitorScheduler
 except ImportError:
-    JanitorScheduler: Optional[type] = None  # type: ignore[assignment]
+    JanitorScheduler: Optional[type] = None  # type: ignore[no-redef]
 
 # ──────────────────────────────────────────────────────────────────────
 # Page config
@@ -596,7 +596,7 @@ def load_findings() -> list[dict]:
     try:
         with open(FINDINGS_STORE_PATH) as f:
             data = json.load(f)
-        return data.get("findings", [])
+        return data.get("findings", [])  # type: ignore[no-any-return]
     except (json.JSONDecodeError, IOError):
         return []
 
@@ -624,7 +624,7 @@ def load_audit_log() -> list[str]:
 
 
 def _calculate_potential_savings() -> float:
-    return sum(f.get("cost_estimate_monthly", 0.0) for f in load_findings())
+    return sum(f.get("cost_estimate_monthly", 0.0) for f in load_findings())  # type: ignore[no-any-return]
 
 
 def parse_reasoning_events(log_path: Path | None = None) -> list[dict]:

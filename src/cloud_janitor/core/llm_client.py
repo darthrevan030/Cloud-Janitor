@@ -89,7 +89,7 @@ def call_llm(client: openai.OpenAI, **kwargs) -> openai.types.chat.ChatCompletio
 
     for attempt in range(_MAX_RETRIES + 1):  # 0, 1, 2, 3
         try:
-            return client.chat.completions.create(**kwargs)
+            return client.chat.completions.create(**kwargs)  # type: ignore[no-any-return]
 
         # ORDER MATTERS: RateLimitError is a subclass of APIStatusError.
         except openai.RateLimitError as exc:

@@ -256,7 +256,7 @@ class SecOpsGuard:
         if self.findings_store_path.exists():
             try:
                 with open(self.findings_store_path) as f:
-                    return json.load(f)
+                    return json.load(f)  # type: ignore[no-any-return]
             except (json.JSONDecodeError, IOError) as e:
                 logger.warning(f"[SecOps Guard] WARNING: Could not read existing findings_store.json: {e}")
 

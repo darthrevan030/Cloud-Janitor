@@ -279,7 +279,7 @@ class DriftDetector:
                 ],
             )
 
-            narrative = response.choices[0].message.content.strip()
+            narrative = response.choices[0].message.content.strip()  # type: ignore[union-attr]
             if narrative:
                 return narrative
 

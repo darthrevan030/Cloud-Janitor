@@ -103,7 +103,7 @@ class SavingsTracker:
         """Load ledger from disk or return empty structure."""
         try:
             content = self._ledger_path.read_text(encoding="utf-8")
-            return json.loads(content)
+            return json.loads(content)  # type: ignore[no-any-return]
         except (FileNotFoundError, json.JSONDecodeError):
             return {"total_lifetime_savings": 0.0, "runs": []}
 
@@ -121,7 +121,7 @@ class SavingsTracker:
         findings = findings_data.get("findings", [])
 
         remediated_set = set(resources_remediated)
-        return sum(
+        return sum(  # type: ignore[no-any-return]
             finding.get("cost_estimate_monthly", 0.0)
             for finding in findings
             if finding.get("resource_id") in remediated_set
@@ -129,10 +129,10 @@ class SavingsTracker:
 
     def _recalculate_total(self, runs: list[dict]) -> float:
         """Sum monthly_savings_added across all runs."""
-        return sum(r["monthly_savings_added"] for r in runs)
+        return sum(r["monthly_savings_added"] for r in runs)  # type: ignore[no-any-return]
 
     def _read_findings_store(self) -> dict:
         """Read and parse findings_store.json."""
         content = self._findings_store_path.read_text(encoding="utf-8")
-        return json.loads(content)
+        return json.loads(content)  # type: ignore[no-any-return]
 

@@ -194,7 +194,7 @@ class IncidentPolicyGenerator:
 
         raw_content = response.choices[0].message.content
         # Strip markdown code fences if present
-        raw_content = raw_content.strip()
+        raw_content = raw_content.strip()  # type: ignore[union-attr]
         if raw_content.startswith("```"):
             lines = raw_content.split("\n")
             lines = [line for line in lines if not line.strip().startswith("```")]

@@ -118,7 +118,7 @@ class ResourceTagger:
             )
 
             raw_content = response.choices[0].message.content
-            parsed = json.loads(raw_content)
+            parsed = json.loads(raw_content)  # type: ignore[arg-type]
 
             return self._validate_single(parsed, existing_tags)
 
@@ -185,7 +185,7 @@ class ResourceTagger:
             )
 
             raw_content = response.choices[0].message.content
-            parsed = json.loads(raw_content)
+            parsed = json.loads(raw_content)  # type: ignore[arg-type]
 
             if not isinstance(parsed, list):
                 # Req 1.9: log unexpected structure

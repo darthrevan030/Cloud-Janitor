@@ -112,7 +112,7 @@ class AWSProvider(CloudProvider):
                 if not points:
                     return 90  # no activity in 90-day window
                 delta = end - points[0]["Timestamp"]
-                return delta.days
+                return delta.days  # type: ignore[no-any-return]
             except botocore.exceptions.ClientError:
                 return 0
 
