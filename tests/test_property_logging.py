@@ -67,7 +67,7 @@ valid_level_random_case = st.one_of(
 
 # Strategy: arbitrary text strings excluding null bytes (OS env var constraint on Windows) and surrogates
 arbitrary_text = st.text(
-    alphabet=st.characters(blacklist_characters="\x00", exclude_categories=["Cs"]),
+    alphabet=st.characters(exclude_characters="\x00", exclude_categories=["Cs"]),
     min_size=0,
     max_size=50,
 )
