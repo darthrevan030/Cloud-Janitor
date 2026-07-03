@@ -19,7 +19,7 @@ import httpx
 import openai
 import pytest
 
-from core.llm_client import (
+from cloud_janitor.core.llm_client import (
     LLMRateLimitExceeded,
     LLMRetryExhausted,
     call_llm,
@@ -86,7 +86,7 @@ def _client_error(status_code: int) -> openai.APIStatusError:
 class TestSuccessOnFirstAttempt:
     """Validates: Requirements 8.1, 8.2, 8.3"""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_returns_response_without_sleeping(self, mock_sleep):
         """When the first call succeeds, no retry and no sleep occur."""
         client = MagicMock()
@@ -99,7 +99,7 @@ class TestSuccessOnFirstAttempt:
         client.chat.completions.create.assert_called_once()
         mock_sleep.assert_not_called()
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_forwards_all_kwargs(self, mock_sleep):
         """call_llm passes all keyword arguments to the client."""
         client = MagicMock()
@@ -122,7 +122,7 @@ class TestRetryOnRetriableStatusCodes:
     """Validates: Requirements 8.1, 8.2"""
 
     @pytest.mark.parametrize("status_code", [429, 500, 502, 503, 504])
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retries_once_then_succeeds(self, mock_sleep, status_code):
         """call_llm retries on each retriable status code, succeeding on attempt 2."""
         client = MagicMock()
@@ -141,7 +141,7 @@ class TestRetryOnRetriableStatusCodes:
         assert client.chat.completions.create.call_count == 2
 
     @pytest.mark.parametrize("status_code", [500, 502, 503, 504])
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retries_twice_then_succeeds(self, mock_sleep, status_code):
         """call_llm retries through 2 failures, succeeds on attempt 3."""
         client = MagicMock()
@@ -156,7 +156,7 @@ class TestRetryOnRetriableStatusCodes:
         assert client.chat.completions.create.call_count == 3
 
     @pytest.mark.parametrize("status_code", [500, 502, 503, 504])
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retries_three_times_then_succeeds(self, mock_sleep, status_code):
         """call_llm retries through 3 failures, succeeds on attempt 4 (last chance)."""
         client = MagicMock()
@@ -179,7 +179,7 @@ class TestRetryOnRetriableStatusCodes:
 class TestRetryOnNetworkTimeout:
     """Validates: Requirements 8.3"""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retries_on_timeout_then_succeeds(self, mock_sleep):
         """call_llm retries on APITimeoutError and returns success on next attempt."""
         client = MagicMock()
@@ -193,7 +193,7 @@ class TestRetryOnNetworkTimeout:
         assert client.chat.completions.create.call_count == 2
         mock_sleep.assert_called_once_with(1.0)
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retries_multiple_timeouts_then_succeeds(self, mock_sleep):
         """call_llm retries through multiple timeouts until success."""
         client = MagicMock()
@@ -210,7 +210,7 @@ class TestRetryOnNetworkTimeout:
         assert result is expected
         assert client.chat.completions.create.call_count == 3
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_timeout_exhaustion_reports_timeout_status(self, mock_sleep):
         """When all attempts timeout, LLMRetryExhausted has status_or_error='timeout'."""
         client = MagicMock()
@@ -231,7 +231,7 @@ class TestRetryOnNetworkTimeout:
 class TestRetryExhausted:
     """Validates: Requirements 8.4"""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_raised_after_4_attempts_on_500(self, mock_sleep):
         """LLMRetryExhausted raised with correct fields after 4 attempts on HTTP 500."""
         client = MagicMock()
@@ -247,7 +247,7 @@ class TestRetryExhausted:
         assert exc.elapsed >= 0
         assert client.chat.completions.create.call_count == 4
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_raised_after_4_attempts_on_429(self, mock_sleep):
         """LLMRetryExhausted raised after 4 attempts on HTTP 429 without large Retry-After."""
         client = MagicMock()
@@ -262,8 +262,8 @@ class TestRetryExhausted:
         assert isinstance(exc.elapsed, float)
         assert exc.elapsed >= 0
 
-    @patch("core.llm_client.time.sleep")
-    @patch("core.llm_client.time.monotonic")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.monotonic")
     def test_elapsed_time_reflects_monotonic_clock(self, mock_monotonic, mock_sleep):
         """LLMRetryExhausted.elapsed reflects difference in time.monotonic() calls."""
         # Simulate real time passing: start at 100.0, end at 107.5
@@ -277,7 +277,7 @@ class TestRetryExhausted:
         assert exc_info.value.elapsed == pytest.approx(7.5)
         assert isinstance(exc_info.value.elapsed, float)
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_sleep_called_3_times_before_exhaustion(self, mock_sleep):
         """3 sleeps occur (between attempts 1-2, 2-3, 3-4) before exhaustion."""
         client = MagicMock()
@@ -297,7 +297,7 @@ class TestRetryExhausted:
 class TestRateLimitExceeded:
     """Validates: Requirements 8.7"""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_raised_immediately_when_retry_after_exceeds_60(self, mock_sleep):
         """LLMRateLimitExceeded raised on first 429 with Retry-After > 60."""
         client = MagicMock()
@@ -311,7 +311,7 @@ class TestRateLimitExceeded:
         # Only 1 attempt made — raises immediately on first failure
         assert client.chat.completions.create.call_count == 1
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_raised_with_boundary_value_61(self, mock_sleep):
         """LLMRateLimitExceeded raised when Retry-After is exactly 61 (just over max)."""
         client = MagicMock()
@@ -322,7 +322,7 @@ class TestRateLimitExceeded:
 
         assert exc_info.value.retry_after == 61.0
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_not_raised_when_retry_after_equals_60(self, mock_sleep):
         """Retry-After == 60 does NOT raise LLMRateLimitExceeded — it's within limit."""
         client = MagicMock()
@@ -346,7 +346,7 @@ class TestRateLimitExceeded:
 class TestRetryAfterHeaderRespected:
     """Validates: Requirements 8.6"""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_uses_retry_after_value_as_delay(self, mock_sleep):
         """When Retry-After is 5, sleep is called with 5.0 instead of backoff."""
         client = MagicMock()
@@ -360,7 +360,7 @@ class TestRetryAfterHeaderRespected:
 
         mock_sleep.assert_called_once_with(5.0)
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_uses_retry_after_30_as_delay(self, mock_sleep):
         """When Retry-After is 30, sleep is called with 30.0."""
         client = MagicMock()
@@ -374,7 +374,7 @@ class TestRetryAfterHeaderRespected:
 
         mock_sleep.assert_called_once_with(30.0)
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retry_after_overrides_exponential_backoff(self, mock_sleep):
         """Retry-After header takes precedence over calculated exponential backoff."""
         client = MagicMock()
@@ -392,7 +392,7 @@ class TestRetryAfterHeaderRespected:
         delays = [call.args[0] for call in mock_sleep.call_args_list]
         assert delays == [10.0, 15.0]
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_falls_back_to_backoff_when_no_retry_after(self, mock_sleep):
         """Without Retry-After header, 429 uses exponential backoff like other errors."""
         client = MagicMock()
@@ -417,7 +417,7 @@ class TestNonRetriableErrors:
     """Validates: Requirements 8.1, 8.2 (by exclusion — only listed codes are retried)"""
 
     @pytest.mark.parametrize("status_code", [400, 401, 403])
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_raises_immediately_without_retry(self, mock_sleep, status_code):
         """Non-retriable errors propagate immediately without any retry."""
         client = MagicMock()
@@ -430,7 +430,7 @@ class TestNonRetriableErrors:
         assert client.chat.completions.create.call_count == 1
         mock_sleep.assert_not_called()
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_400_not_wrapped_in_retry_exhausted(self, mock_sleep):
         """HTTP 400 raises the original APIStatusError, not LLMRetryExhausted."""
         client = MagicMock()
@@ -441,7 +441,7 @@ class TestNonRetriableErrors:
 
         assert not isinstance(exc_info.value, LLMRetryExhausted)
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_401_raises_immediately(self, mock_sleep):
         """HTTP 401 (Unauthorized) raises immediately — no retries."""
         client = MagicMock()
@@ -453,7 +453,7 @@ class TestNonRetriableErrors:
         assert exc_info.value.status_code == 401
         mock_sleep.assert_not_called()
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_403_raises_immediately(self, mock_sleep):
         """HTTP 403 (Forbidden) raises immediately — no retries."""
         client = MagicMock()
@@ -474,7 +474,7 @@ class TestNonRetriableErrors:
 class TestExponentialBackoff:
     """Validates: Requirements 8.6"""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_backoff_sequence_is_1_2_4(self, mock_sleep):
         """Sleep calls follow 1s, 2s, 4s for retries 1, 2, 3 respectively."""
         client = MagicMock()
@@ -486,7 +486,7 @@ class TestExponentialBackoff:
         delays = [call.args[0] for call in mock_sleep.call_args_list]
         assert delays == [1.0, 2.0, 4.0]
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_first_retry_delay_is_1_second(self, mock_sleep):
         """First retry sleeps exactly 1 second (BASE_DELAY * 2^0)."""
         client = MagicMock()
@@ -497,7 +497,7 @@ class TestExponentialBackoff:
 
         mock_sleep.assert_called_once_with(1.0)
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_second_retry_delay_is_2_seconds(self, mock_sleep):
         """Second retry sleeps exactly 2 seconds (BASE_DELAY * 2^1)."""
         client = MagicMock()
@@ -513,7 +513,7 @@ class TestExponentialBackoff:
         delays = [call.args[0] for call in mock_sleep.call_args_list]
         assert delays == [1.0, 2.0]
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_third_retry_delay_is_4_seconds(self, mock_sleep):
         """Third retry sleeps exactly 4 seconds (BASE_DELAY * 2^2)."""
         client = MagicMock()
@@ -530,7 +530,7 @@ class TestExponentialBackoff:
         delays = [call.args[0] for call in mock_sleep.call_args_list]
         assert delays == [1.0, 2.0, 4.0]
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_timeout_errors_use_same_backoff_formula(self, mock_sleep):
         """Timeout errors also use 1s, 2s, 4s backoff (same formula)."""
         client = MagicMock()

@@ -18,12 +18,11 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 # Ensure OPENROUTER_API_KEY is set for tests
 os.environ.setdefault("OPENROUTER_API_KEY", "test-key-for-testing")
 
-from agents.incident_policy_generator import (
+from cloud_janitor.agents.incident_policy_generator import (
     IncidentPolicyGenerator,
     VALID_CHECK_TYPES,
     VALID_RESOURCE_TYPES,
@@ -123,7 +122,7 @@ class TestInputValidation:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(long_desc)
@@ -151,7 +150,7 @@ class TestPolicyGeneration:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("A Redis cluster was compromised via open port.")
@@ -191,7 +190,7 @@ class TestPolicyGeneration:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Major incident description")
@@ -208,7 +207,7 @@ class TestPolicyGeneration:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Incident: open security group exposed Redis.")
@@ -238,7 +237,7 @@ class TestPolicyGeneration:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -259,7 +258,7 @@ class TestIdempotency:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result1 = gen.generate("Test incident for idempotency")
@@ -334,7 +333,7 @@ class TestSecurityValidation:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Incident with unsafe IDs")
@@ -397,7 +396,7 @@ class TestSecurityValidation:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Incident with bad check types")
@@ -456,7 +455,7 @@ class TestSecurityValidation:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Incident with resource type issues")
@@ -482,7 +481,7 @@ class TestErrorHandling:
             mock_client.chat.completions.create.side_effect = Exception("LLM down")
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Some incident description")
@@ -499,7 +498,7 @@ class TestErrorHandling:
             gen = IncidentPolicyGenerator(policies_dir=policies_dir)
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 side_effect=EnvironmentError("OPENROUTER_API_KEY is not set"),
             ):
                 result = gen.generate("Some incident description")
@@ -519,7 +518,7 @@ class TestErrorHandling:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Some incident")
@@ -539,7 +538,7 @@ class TestErrorHandling:
 
             # Make the directory read-only to cause write failure after creation
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 # Patch Path.write_text to fail on the second file
@@ -582,7 +581,7 @@ class TestRetryLogic:
             ]
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Incident needing retry")
@@ -602,7 +601,7 @@ class TestRetryLogic:
             mock_client.chat.completions.create.return_value = response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate("Incident with limited results")

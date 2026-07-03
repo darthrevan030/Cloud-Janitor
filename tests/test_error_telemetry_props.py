@@ -11,10 +11,10 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from core.error_telemetry import (
+from cloud_janitor.core.error_telemetry import (
     ERROR_CATEGORIES,
     build_error_record,
     write_error_record,

@@ -1,12 +1,11 @@
 """Regression tests for rollback apply behavior."""
 
 import subprocess
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from orchestrator import Orchestrator
+from cloud_janitor.orchestrator import Orchestrator
 
 
 @pytest.fixture
@@ -41,7 +40,7 @@ class TestRollbackApply:
             'resource "null_resource" "rollback" {}'
         )
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -73,7 +72,7 @@ class TestRollbackApply:
                 )
             return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-        with patch("orchestrator.subprocess.run", side_effect=fake_run) as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run", side_effect=fake_run) as mock_run:
             orch.rollback("ROLLBACK vol-abc123")
             result = orch.rollback("CONFIRM ROLLBACK vol-abc123")
 

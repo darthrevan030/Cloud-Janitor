@@ -10,13 +10,10 @@ Validates task 3.2 requirements:
 """
 
 import json
-import subprocess
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from orchestrator import Orchestrator, ApprovalResult, RollbackResult
+from cloud_janitor.orchestrator import Orchestrator
 
 
 @pytest.fixture
@@ -41,7 +38,7 @@ def orch_with_plan(tmp_project):
     """Orchestrator with a mocked plan for vol-abc123."""
     orch = Orchestrator(project_root=tmp_project, approver="test-user")
 
-    from agents.remediation_architect import RemediationPlan
+    from cloud_janitor.agents.remediation_architect import RemediationPlan
 
     plans = [
         RemediationPlan(
@@ -99,7 +96,7 @@ class TestGateStorePersistence:
 
     def test_persisted_state_survives_restart(self, tmp_project):
         """Gate state loaded from disk on new Orchestrator init (Req 6.2)."""
-        from agents.remediation_architect import RemediationPlan
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         # Pre-persist gate state as if from a previous run
         gate_path = tmp_project / "output" / "approval_gates.json"
@@ -136,7 +133,7 @@ class TestGateStorePersistence:
 
     def test_persisted_locked_state_survives_restart(self, tmp_project):
         """A locked gate from disk stays locked on restart (Req 1.2)."""
-        from agents.remediation_architect import RemediationPlan
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         gate_path = tmp_project / "output" / "approval_gates.json"
         gate_data = {
@@ -174,7 +171,7 @@ class TestCorruptedGateStore:
 
     def test_corrupted_store_rejects_approval(self, tmp_project):
         """Corrupted gate file rejects approve with descriptive error."""
-        from agents.remediation_architect import RemediationPlan
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         # Write invalid JSON to gate store
         gate_path = tmp_project / "output" / "approval_gates.json"
@@ -262,10 +259,10 @@ class TestRollbackGateEnforcement:
         assert r1.needs_confirmation is True
 
         # Now fail the CONFIRM step with wrong format
-        r2 = orch.rollback("CONFIRM ROLLBACK wrong-id")
+        _r2 = orch.rollback("CONFIRM ROLLBACK wrong-id")
         # This will fail at resource_id extraction (no pending for wrong-id)
         # Let's use the same resource_id but bad format
-        r2 = orch.rollback("CONFIRM ROLLBACK vol-abc123 extra")
+        _r2 = orch.rollback("CONFIRM ROLLBACK vol-abc123 extra")
         # parse_confirm_rollback will fail because it doesn't match exactly
         # Actually the prefix extraction gets "vol-abc123 extra" as resource_id
         # which won't be in pending_rollbacks
@@ -314,7 +311,7 @@ class TestRollbackGateEnforcement:
 
     def test_rollback_persists_gate_on_parse_failure(self, tmp_project):
         """Failed rollback parse persists gate state (Req 6.1)."""
-        from agents.remediation_architect import RemediationPlan
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
         (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")

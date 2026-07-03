@@ -5,10 +5,8 @@ Rewritten from script-style to proper pytest tests with concrete assertions.
 """
 
 import json
-import tempfile
 from pathlib import Path
 
-import pytest
 
 
 # Core parsing function (replicated from app.py to avoid Streamlit import side effects)

@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
-from core.paths import (
+from cloud_janitor.core.paths import (
     LOGS_DIR,
     OUTPUT_DIR,
     POLICIES_DIR,
@@ -69,7 +69,7 @@ class TestEnsureOutputDirsCreation:
         for d in fake_dirs:
             assert not d.exists()
 
-        with patch("core.paths.REQUIRED_DIRS", fake_dirs):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", fake_dirs):
             ensure_output_dirs()
 
         # All should now exist
@@ -81,7 +81,7 @@ class TestEnsureOutputDirsCreation:
         fake_output = tmp_path / "deep" / "nested" / "output"
         fake_dirs = [fake_output]
 
-        with patch("core.paths.REQUIRED_DIRS", fake_dirs):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", fake_dirs):
             ensure_output_dirs()
 
         assert fake_output.is_dir()
@@ -92,7 +92,7 @@ class TestEnsureOutputDirsCreation:
         existing.mkdir()
         assert existing.is_dir()
 
-        with patch("core.paths.REQUIRED_DIRS", [existing]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [existing]):
             ensure_output_dirs()  # Should not raise
 
         assert existing.is_dir()
@@ -105,7 +105,7 @@ class TestEnsureOutputDirsFailure:
         """RuntimeError is raised when os.makedirs fails with OSError."""
         bad_dir = tmp_path / "impossible_dir"
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=OSError("Permission denied")):
                 with pytest.raises(RuntimeError):
                     ensure_output_dirs()
@@ -114,7 +114,7 @@ class TestEnsureOutputDirsFailure:
         """RuntimeError message identifies which directory could not be created."""
         bad_dir = tmp_path / "cannot_create_this"
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=OSError("No space left on device")):
                 with pytest.raises(RuntimeError) as exc_info:
                     ensure_output_dirs()
@@ -127,7 +127,7 @@ class TestEnsureOutputDirsFailure:
         bad_dir = tmp_path / "fail"
         os_error_msg = "Read-only file system"
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=OSError(os_error_msg)):
                 with pytest.raises(RuntimeError) as exc_info:
                     ensure_output_dirs()
@@ -140,7 +140,7 @@ class TestEnsureOutputDirsFailure:
         bad_dir = tmp_path / "fail"
         original = OSError("disk quota exceeded")
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=original):
                 with pytest.raises(RuntimeError) as exc_info:
                     ensure_output_dirs()
@@ -162,7 +162,7 @@ class TestEnsureOutputDirsFailure:
                 raise OSError("failed on second dir")
             original_makedirs(path, **kwargs)
 
-        with patch("core.paths.REQUIRED_DIRS", [good_dir, bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [good_dir, bad_dir]):
             with patch("os.makedirs", side_effect=selective_fail):
                 with pytest.raises(RuntimeError, match="failed on second dir"):
                     ensure_output_dirs()
@@ -181,48 +181,48 @@ class TestUIDisplaysNoDataMessage:
 
     def test_load_findings_returns_empty_for_missing_file(self, tmp_path: Path) -> None:
         """load_findings() returns [] when findings_store.json does not exist."""
-        from app import load_findings
+        from cloud_janitor.app import load_findings
 
         nonexistent = tmp_path / "does_not_exist.json"
-        with patch("app.FINDINGS_STORE_PATH", nonexistent):
+        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", nonexistent):
             result = load_findings()
 
         assert result == []
 
     def test_load_audit_log_returns_empty_for_missing_file(self, tmp_path: Path) -> None:
         """load_audit_log() returns [] when audit.log does not exist."""
-        from app import load_audit_log
+        from cloud_janitor.app import load_audit_log
 
         nonexistent = tmp_path / "nonexistent_audit.log"
-        with patch("app.AUDIT_LOG_PATH", nonexistent):
+        with patch("cloud_janitor.app.AUDIT_LOG_PATH", nonexistent):
             result = load_audit_log()
 
         assert result == []
 
     def test_load_rollback_hcl_returns_empty_for_missing_file(self, tmp_path: Path) -> None:
         """load_rollback_hcl() returns '' when rollback file does not exist."""
-        from app import load_rollback_hcl
+        from cloud_janitor.app import load_rollback_hcl
 
         fake_rollbacks_dir = tmp_path / "rollbacks"
         fake_rollbacks_dir.mkdir()
-        with patch("app.ROLLBACKS_DIR", fake_rollbacks_dir):
+        with patch("cloud_janitor.app.ROLLBACKS_DIR", fake_rollbacks_dir):
             result = load_rollback_hcl("nonexistent-resource")
 
         assert result == ""
 
     def test_load_remediation_hcl_returns_empty_for_missing_file(self, tmp_path: Path) -> None:
         """load_remediation_hcl() returns '' when remediation.tf does not exist."""
-        from app import load_remediation_hcl
+        from cloud_janitor.app import load_remediation_hcl
 
         nonexistent = tmp_path / "remediation.tf"
-        with patch("app.REMEDIATION_PATH", nonexistent):
+        with patch("cloud_janitor.app.REMEDIATION_PATH", nonexistent):
             result = load_remediation_hcl()
 
         assert result == ""
 
     def test_render_findings_shows_no_data_message_for_empty_list(self) -> None:
         """render_findings_html([]) displays informational 'no data' message."""
-        from app import render_findings_html
+        from cloud_janitor.app import render_findings_html
 
         result = render_findings_html([])
 
@@ -233,12 +233,12 @@ class TestUIDisplaysNoDataMessage:
 
     def test_load_findings_no_unhandled_error_on_corrupt_json(self, tmp_path: Path) -> None:
         """load_findings() handles corrupt JSON gracefully (no crash)."""
-        from app import load_findings
+        from cloud_janitor.app import load_findings
 
         corrupt_file = tmp_path / "findings_store.json"
         corrupt_file.write_text("{{not valid json", encoding="utf-8")
 
-        with patch("app.FINDINGS_STORE_PATH", corrupt_file):
+        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", corrupt_file):
             result = load_findings()
 
         # Returns empty list rather than raising
@@ -246,12 +246,12 @@ class TestUIDisplaysNoDataMessage:
 
     def test_load_findings_no_unhandled_error_on_missing_key(self, tmp_path: Path) -> None:
         """load_findings() handles JSON without 'findings' key gracefully."""
-        from app import load_findings
+        from cloud_janitor.app import load_findings
 
         incomplete_file = tmp_path / "findings_store.json"
         incomplete_file.write_text(json.dumps({"schema_version": "1.0.0"}), encoding="utf-8")
 
-        with patch("app.FINDINGS_STORE_PATH", incomplete_file):
+        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", incomplete_file):
             result = load_findings()
 
         # Returns empty list for missing key, not crash

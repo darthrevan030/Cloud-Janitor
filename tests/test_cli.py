@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from cli import main
+from cloud_janitor.cli import main
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ class TestScanCommand:
         mock_result.success = True
         mock_result.findings = [{"id": "vol-1"}, {"id": "vol-2"}, {"id": "vol-3"}]
 
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.execute_audit.return_value = mock_result
 
@@ -47,7 +47,7 @@ class TestScanCommand:
 
     def test_scan_finops_flag_calls_finops_scan(self, runner):
         """scan --finops invokes orch._finops.scan() directly."""
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance._finops.scan.return_value = [{"id": "f1"}, {"id": "f2"}]
 
@@ -60,7 +60,7 @@ class TestScanCommand:
 
     def test_scan_secops_flag_calls_secops_scan(self, runner):
         """scan --secops invokes orch._secops.scan() directly."""
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance._secops.scan.return_value = [{"id": "s1"}]
 
@@ -77,7 +77,7 @@ class TestScanCommand:
         mock_result.success = True
         mock_result.findings = []
 
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.execute_audit.return_value = mock_result
 
@@ -92,7 +92,7 @@ class TestScanCommand:
         mock_result.success = False
         mock_result.error = "FinOps Auditor failed: timeout"
 
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.execute_audit.return_value = mock_result
 
@@ -103,7 +103,7 @@ class TestScanCommand:
 
     def test_scan_exception_prints_to_stderr_and_exits_1(self, runner):
         """scan exception from Orchestrator prints error to stderr and exits 1."""
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.execute_audit.side_effect = RuntimeError("AWS credentials expired")
 
@@ -125,7 +125,7 @@ class TestApproveCommand:
         mock_result = MagicMock()
         mock_result.success = True
 
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.approve.return_value = mock_result
 
@@ -141,7 +141,7 @@ class TestApproveCommand:
         mock_result.success = False
         mock_result.error = "No remediation plan found"
 
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.approve.return_value = mock_result
 
@@ -152,7 +152,7 @@ class TestApproveCommand:
 
     def test_approve_exception_prints_error_and_exits_1(self, runner):
         """approve exits 1 on exception from Orchestrator."""
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.approve.side_effect = RuntimeError("terraform init failed")
 
@@ -163,7 +163,7 @@ class TestApproveCommand:
 
     def test_approve_requires_resource_id_argument(self, runner):
         """approve with no argument exits non-zero (Click enforces required arg)."""
-        with patch("orchestrator.Orchestrator"):
+        with patch("cloud_janitor.orchestrator.Orchestrator"):
             result = runner.invoke(main, ["approve"])
 
         assert result.exit_code != 0
@@ -181,7 +181,7 @@ class TestRollbackCommand:
         mock_result.success = True
         mock_result.needs_confirmation = False
 
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.rollback.return_value = mock_result
 
@@ -197,7 +197,7 @@ class TestRollbackCommand:
         mock_result.success = False
         mock_result.needs_confirmation = True
 
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.rollback.return_value = mock_result
 
@@ -213,7 +213,7 @@ class TestRollbackCommand:
         mock_result.needs_confirmation = False
         mock_result.error = "Rollback artifact not found"
 
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.rollback.return_value = mock_result
 
@@ -224,7 +224,7 @@ class TestRollbackCommand:
 
     def test_rollback_exception_prints_error_and_exits_1(self, runner):
         """rollback exits 1 on exception from Orchestrator."""
-        with patch("orchestrator.Orchestrator") as MockOrch:
+        with patch("cloud_janitor.orchestrator.Orchestrator") as MockOrch:
             instance = MockOrch.return_value
             instance.rollback.side_effect = OSError("disk full")
 
@@ -235,7 +235,7 @@ class TestRollbackCommand:
 
     def test_rollback_requires_resource_id_argument(self, runner):
         """rollback with no argument exits non-zero."""
-        with patch("orchestrator.Orchestrator"):
+        with patch("cloud_janitor.orchestrator.Orchestrator"):
             result = runner.invoke(main, ["rollback"])
 
         assert result.exit_code != 0

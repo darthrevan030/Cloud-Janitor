@@ -19,8 +19,8 @@ from unittest.mock import MagicMock, patch
 import openai
 import pytest
 
-import core.llm_client as llm_client
-from core.llm_client import (
+import cloud_janitor.core.llm_client as llm_client
+from cloud_janitor.core.llm_client import (
     _extract_retry_after,
     _MAX_RETRIES,
     _BASE_DELAY,
@@ -290,7 +290,7 @@ class TestCallLLMSuccess:
 class TestCallLLMRetryOnServerErrors:
     """Tests for call_llm() retrying on HTTP 500/502/503/504 (Req 8.2)."""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retries_on_500_then_succeeds(self, mock_sleep):
         """call_llm() retries on HTTP 500 and returns success on subsequent attempt."""
         client = MagicMock()
@@ -312,7 +312,7 @@ class TestCallLLMRetryOnServerErrors:
         assert client.chat.completions.create.call_count == 2
         mock_sleep.assert_called_once_with(1.0)  # _BASE_DELAY * 2^0
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retries_on_502(self, mock_sleep):
         """call_llm() retries on HTTP 502."""
         client = MagicMock()
@@ -331,7 +331,7 @@ class TestCallLLMRetryOnServerErrors:
         result = llm_client.call_llm(client, model="m", messages=[])
         assert result is expected
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_does_not_retry_on_400(self, mock_sleep):
         """call_llm() does not retry on HTTP 400 (client error)."""
         client = MagicMock()
@@ -356,7 +356,7 @@ class TestCallLLMRetryOnServerErrors:
 class TestCallLLMRetryOnTimeout:
     """Tests for call_llm() retrying on network timeouts (Req 8.3)."""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retries_on_timeout_then_succeeds(self, mock_sleep):
         """call_llm() retries on APITimeoutError and returns success."""
         client = MagicMock()
@@ -375,7 +375,7 @@ class TestCallLLMRetryOnTimeout:
 class TestCallLLMRetryExhaustion:
     """Tests for call_llm() raising LLMRetryExhausted after max attempts (Req 8.4)."""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_raises_after_max_retries_on_500(self, mock_sleep):
         """call_llm() raises LLMRetryExhausted after 4 total attempts on HTTP 500."""
         client = MagicMock()
@@ -399,7 +399,7 @@ class TestCallLLMRetryExhaustion:
         assert client.chat.completions.create.call_count == 4
         assert mock_sleep.call_count == 3  # 3 retries
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_raises_after_max_retries_on_timeout(self, mock_sleep):
         """call_llm() raises LLMRetryExhausted after all attempts on timeout."""
         client = MagicMock()
@@ -417,7 +417,7 @@ class TestCallLLMRetryExhaustion:
 class TestCallLLMExponentialBackoff:
     """Tests for exponential backoff delays (Req 8.6)."""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_backoff_delays_are_1_2_4(self, mock_sleep):
         """Retry delays follow 1s, 2s, 4s exponential backoff."""
         client = MagicMock()
@@ -442,7 +442,7 @@ class TestCallLLMExponentialBackoff:
 class TestCallLLMRateLimit:
     """Tests for HTTP 429 handling with Retry-After (Req 8.1, 8.6, 8.7)."""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_uses_retry_after_header_as_delay(self, mock_sleep):
         """call_llm() uses Retry-After header value when within max (Req 8.6)."""
         client = MagicMock()
@@ -463,7 +463,7 @@ class TestCallLLMRateLimit:
         assert result is expected
         mock_sleep.assert_called_once_with(5.0)
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_raises_rate_limit_exceeded_when_retry_after_too_high(self, mock_sleep):
         """call_llm() raises LLMRateLimitExceeded when Retry-After > 60s (Req 8.7)."""
         client = MagicMock()
@@ -484,7 +484,7 @@ class TestCallLLMRateLimit:
         assert exc_info.value.retry_after == 120.0
         mock_sleep.assert_not_called()
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_uses_exponential_backoff_when_no_retry_after(self, mock_sleep):
         """call_llm() falls back to exponential backoff for 429 without Retry-After."""
         client = MagicMock()
@@ -509,7 +509,7 @@ class TestCallLLMRateLimit:
 class TestCallLLMLogging:
     """Tests for retry logging at WARNING level (Req 8.5)."""
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_logs_retry_on_server_error(self, mock_sleep, caplog):
         """call_llm() logs retry attempt with attempt number, delay, and reason."""
         client = MagicMock()
@@ -525,7 +525,7 @@ class TestCallLLMLogging:
         )
         client.chat.completions.create.side_effect = [exc, expected]
 
-        with caplog.at_level(logging.WARNING, logger="core.llm_client"):
+        with caplog.at_level(logging.WARNING, logger="cloud_janitor.core.llm_client"):
             llm_client.call_llm(client, model="m", messages=[])
 
         assert len(caplog.records) == 1
@@ -535,7 +535,7 @@ class TestCallLLMLogging:
         assert "1.0s" in record.message
         assert "500" in record.message
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_logs_retry_on_timeout(self, mock_sleep, caplog):
         """call_llm() logs timeout retry with relevant info."""
         client = MagicMock()
@@ -544,7 +544,7 @@ class TestCallLLMLogging:
         exc = openai.APITimeoutError(request=MagicMock())
         client.chat.completions.create.side_effect = [exc, expected]
 
-        with caplog.at_level(logging.WARNING, logger="core.llm_client"):
+        with caplog.at_level(logging.WARNING, logger="cloud_janitor.core.llm_client"):
             llm_client.call_llm(client, model="m", messages=[])
 
         assert len(caplog.records) == 1
@@ -553,7 +553,7 @@ class TestCallLLMLogging:
         assert "timed out" in record.message
         assert "retry 1 of 3" in record.message
 
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_logs_retry_on_rate_limit(self, mock_sleep, caplog):
         """call_llm() logs rate limit retry with relevant info."""
         client = MagicMock()
@@ -569,7 +569,7 @@ class TestCallLLMLogging:
         )
         client.chat.completions.create.side_effect = [exc, expected]
 
-        with caplog.at_level(logging.WARNING, logger="core.llm_client"):
+        with caplog.at_level(logging.WARNING, logger="cloud_janitor.core.llm_client"):
             llm_client.call_llm(client, model="m", messages=[])
 
         assert len(caplog.records) == 1

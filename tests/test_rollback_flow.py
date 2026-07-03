@@ -16,13 +16,11 @@ actual behavior.
 import subprocess
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 
-from agents.approval_gate import ApprovalGateStore
-from agents.remediation_architect import RemediationPlan
-from orchestrator import Orchestrator, RollbackResult
+from cloud_janitor.agents.remediation_architect import RemediationPlan
+from cloud_janitor.orchestrator import Orchestrator, RollbackResult
 
 
 # --- Helpers ---
@@ -45,7 +43,7 @@ def _make_project_dirs(tmp_path: Path) -> Path:
 
 def _setup_orchestrator(project_dir: Path, resource_id: str) -> Orchestrator:
     """Create an Orchestrator with a plan and rollback artifact for the given resource."""
-    with patch("orchestrator._validate_tf_cmd", return_value="tflocal"):
+    with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="tflocal"):
         orch = Orchestrator(project_root=project_dir, approver="test-user")
 
     # Inject a remediation plan so rollback flow doesn't short-circuit
@@ -227,7 +225,7 @@ class TestMissingRollbackFileReturnsError:
         project_dir = _make_project_dirs(tmp_path)
         resource_id = "vol-missing"
 
-        with patch("orchestrator._validate_tf_cmd", return_value="tflocal"):
+        with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="tflocal"):
             orch = Orchestrator(project_root=project_dir, approver="test-user")
 
         # Inject a plan but do NOT create the rollback file

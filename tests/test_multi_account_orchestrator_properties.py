@@ -20,7 +20,7 @@ from unittest.mock import patch
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from agents.multi_account_orchestrator import (
+from cloud_janitor.agents.multi_account_orchestrator import (
     MultiAccountOrchestrator,
     PRIORITY_ORDER,
 )
@@ -155,7 +155,7 @@ class TestMultiAccountOrchestratorFaultIsolation:
             accounts_path = _write_accounts_file(Path(tmp_dir), accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)
@@ -205,7 +205,7 @@ class TestMultiAccountOrchestratorFaultIsolation:
             accounts_path = _write_accounts_file(Path(tmp_dir), accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)
@@ -244,7 +244,7 @@ class TestMultiAccountOrchestratorFaultIsolation:
             accounts_path = _write_accounts_file(Path(tmp_dir), accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)
@@ -290,7 +290,7 @@ class TestMultiAccountOrchestratorAccountIDInjection:
             accounts_path = _write_accounts_file(Path(tmp_dir), accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)
@@ -331,7 +331,7 @@ class TestMultiAccountOrchestratorAccountIDInjection:
             accounts_path = _write_accounts_file(Path(tmp_dir), accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)
@@ -368,7 +368,7 @@ class TestMultiAccountOrchestratorAccountIDInjection:
             accounts_path = _write_accounts_file(Path(tmp_dir), accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)
@@ -406,7 +406,7 @@ class TestMultiAccountOrchestratorPrioritySorting:
             accounts_path = _write_accounts_file(Path(tmp_dir), accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)
@@ -452,7 +452,7 @@ class TestMultiAccountOrchestratorPrioritySorting:
             accounts_path = _write_accounts_file(Path(tmp_dir), accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)
@@ -498,7 +498,7 @@ class TestMultiAccountOrchestratorPrioritySorting:
             accounts_path = _write_accounts_file(Path(tmp_dir), unique_accounts)
 
             with patch(
-                "agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
+                "cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account"
             ) as mock:
                 mock.side_effect = mock_audit
                 mao = MultiAccountOrchestrator(accounts_path=accounts_path)

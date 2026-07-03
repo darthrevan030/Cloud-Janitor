@@ -260,8 +260,8 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
             content = path.read_text(encoding="utf-8", errors="ignore")
             # Filter out empty lines and comments
             code_lines = [
-                l for l in content.splitlines()
-                if l.strip() and not l.strip().startswith("#")
+                line for line in content.splitlines()
+                if line.strip() and not line.strip().startswith("#")
             ]
             return len(code_lines) >= min_lines
         except OSError:

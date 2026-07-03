@@ -35,10 +35,10 @@ class TestVersionFromMetadata:
         with patch("importlib.metadata.version", return_value=fake_version):
             # Must reload cli to pick up the patched version at module level
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
-            from cli import main
+            from cloud_janitor.cli import main
 
             result = runner.invoke(main, ["--version"])
 
@@ -51,10 +51,10 @@ class TestVersionFromMetadata:
 
         with patch("importlib.metadata.version", return_value=fake_version):
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
-            from cli import main
+            from cloud_janitor.cli import main
 
             result = runner.invoke(main, ["--version"])
 
@@ -79,10 +79,10 @@ class TestVersionFallback:
 
         with patch("importlib.metadata.version", side_effect=mock_version):
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
-            from cli import main
+            from cloud_janitor.cli import main
 
             result = runner.invoke(main, ["--version"])
 
@@ -101,10 +101,10 @@ class TestVersionFallback:
 
         with patch("importlib.metadata.version", side_effect=mock_version):
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
-            from cli import main
+            from cloud_janitor.cli import main
 
             result = runner.invoke(main, ["--version"])
 
@@ -121,10 +121,10 @@ class TestVersionPEP440Conformance:
 
         with patch("importlib.metadata.version", return_value=fake_version):
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
-            from cli import main
+            from cloud_janitor.cli import main
 
             result = runner.invoke(main, ["--version"])
 
@@ -150,7 +150,7 @@ class TestVersionPEP440Conformance:
 
         with patch("importlib.metadata.version", side_effect=mock_version):
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
 
@@ -168,7 +168,7 @@ class TestVersionPEP440Conformance:
 
         with patch("importlib.metadata.version", return_value=fake_version):
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
 
@@ -183,7 +183,7 @@ class TestVersionPEP440Conformance:
 
         with patch("importlib.metadata.version", return_value=fake_version):
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
 
@@ -201,10 +201,10 @@ class TestVersionNegativeCases:
 
         with patch("importlib.metadata.version", return_value=fake_version):
             import importlib
-            import cli
+            import cloud_janitor.cli as cli
 
             importlib.reload(cli)
-            from cli import main
+            from cloud_janitor.cli import main
 
             result = runner.invoke(main, ["--version"])
 

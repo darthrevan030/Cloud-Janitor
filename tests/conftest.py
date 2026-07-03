@@ -34,19 +34,19 @@ def _stabilize_llm_client_module():
     and after the test) and, if so, reloads it one final time and patches the
     sys.modules entry so all subsequent imports get the fresh version.
     """
-    import core.llm_client as mod_before
+    import cloud_janitor.core.llm_client as mod_before
     id_before = id(mod_before)
 
     yield
 
     # Check if the module was reloaded during the test
-    current_mod = sys.modules.get("core.llm_client")
+    current_mod = sys.modules.get("cloud_janitor.core.llm_client")
     if current_mod is None or id(current_mod) != id_before:
         # Module was reloaded — do a final reload to stabilize it and ensure
         # the module in sys.modules is the canonical version going forward.
         # We also need to patch any test modules that already imported symbols.
-        import core.llm_client
-        importlib.reload(core.llm_client)
+        import cloud_janitor.core.llm_client
+        importlib.reload(cloud_janitor.core.llm_client)
 
 
 @pytest.fixture(autouse=True)
@@ -64,6 +64,6 @@ def _reset_logging_handlers():
     root.handlers.clear()
     root.setLevel(logging.WARNING)
 
-    llm_logger = logging.getLogger("core.llm_client")
+    llm_logger = logging.getLogger("cloud_janitor.core.llm_client")
     llm_logger.handlers.clear()
     llm_logger.setLevel(logging.NOTSET)

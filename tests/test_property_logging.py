@@ -21,7 +21,7 @@ from unittest.mock import patch
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from core.logging_config import configure_logging
+from cloud_janitor.core.logging_config import configure_logging
 
 
 # ─── Independent oracle ──────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ class TestPropertyLogLevelMapping:
         # so we can intercept the warning that configure_logging would emit.
         # But configure_logging uses force=True which clears handlers.
         # So we capture via the specific module logger instead.
-        config_logger = logging.getLogger("core.logging_config")
+        config_logger = logging.getLogger("cloud_janitor.core.logging_config")
         capture = _CaptureHandler()
         capture.setLevel(logging.DEBUG)
         config_logger.addHandler(capture)
@@ -176,7 +176,7 @@ class TestPropertyLogLevelMapping:
         assume(raw_value.upper() not in _ORACLE_VALID_LEVELS)
         _reset_root_logger()
 
-        config_logger = logging.getLogger("core.logging_config")
+        config_logger = logging.getLogger("cloud_janitor.core.logging_config")
         capture = _CaptureHandler()
         capture.setLevel(logging.DEBUG)
         config_logger.addHandler(capture)

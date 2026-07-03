@@ -160,7 +160,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Batch 3 — Package structure migration and CI
-  - [ ] 7.1 Create `src/cloud_janitor/` directory structure and move modules
+  - [x] 7.1 Create `src/cloud_janitor/` directory structure and move modules
     - Create `src/cloud_janitor/` with `__init__.py` (importlib.metadata version)
     - Create `src/cloud_janitor/py.typed` marker file (0 bytes)
     - Move `agents/` → `src/cloud_janitor/agents/` (add `__init__.py`)
@@ -172,26 +172,26 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Move `app.py` → `src/cloud_janitor/app.py`
     - _Requirements: 3.1, 3.2, 3.4, 10.1_
 
-  - [ ] 7.2 Update all source imports to `cloud_janitor.*` paths
+  - [x] 7.2 Update all source imports to `cloud_janitor.*` paths
     - Rewrite imports in all moved source modules to use `cloud_janitor.` prefix
     - Update `cli.py` imports: `from cloud_janitor.orchestrator import Orchestrator`, etc.
     - Update agent imports to reference `cloud_janitor.core.llm_client`
     - Update MCP server imports to reference `cloud_janitor.mcp_server.backends`
     - _Requirements: 3.1, 3.2_
 
-  - [ ] 7.3 Update all test imports to `cloud_janitor.*` paths
+  - [x] 7.3 Update all test imports to `cloud_janitor.*` paths
     - Rewrite every test file in `tests/` to use `from cloud_janitor.` import paths
     - Verify all tests still pass after import rewrite
     - _Requirements: 3.1, 3.2_
 
-  - [ ] 7.4 Update `pyproject.toml` for src-layout
+  - [x] 7.4 Update `pyproject.toml` for src-layout
     - Change `[project.scripts]` to `cloud-janitor = "cloud_janitor.cli:main"`
     - Add `[tool.hatch.build.targets.wheel] packages = ["src/cloud_janitor"]`
     - Add `[tool.mypy]` section with `packages = ["cloud_janitor"]` and `mypy_path = "src"`
     - Add `[tool.ruff] src = ["src"]`
     - _Requirements: 3.1, 3.5, 10.2_
 
-  - [ ] 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`)
+  - [x] 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`)
     - Add `lint` job: ruff check on entire codebase
     - Add `type-check` job: mypy on src/
     - Add `test` job: pytest matrix for Python 3.12 and 3.13
@@ -200,7 +200,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Ensure failed steps prevent dependent steps from executing
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
 
-  - [ ] 7.6 Verify package installability and type annotation marker
+  - [x] 7.6 Verify package installability and type annotation marker
     - Run `pip install -e .` and verify `import cloud_janitor` succeeds
     - Verify `cloud-janitor --help` exits 0
     - Verify `py.typed` is included in installed package

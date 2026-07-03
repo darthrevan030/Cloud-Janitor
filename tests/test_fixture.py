@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 
-FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
+FIXTURES_DIR = Path(__file__).parent.parent / "src" / "cloud_janitor" / "fixtures"
 COST_FIXTURE_PATH = FIXTURES_DIR / "aws_cost_explorer.json"
 SECURITY_FIXTURE_PATH = FIXTURES_DIR / "aws_config_inspector.json"
 

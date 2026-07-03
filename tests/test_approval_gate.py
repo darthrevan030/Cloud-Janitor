@@ -1,8 +1,7 @@
 """Tests for agents.approval_gate module."""
 
-import pytest
 
-from agents.approval_gate import (
+from cloud_janitor.agents.approval_gate import (
     ApprovalGate,
     RollbackGate,
     parse_approval,

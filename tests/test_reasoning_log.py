@@ -13,9 +13,8 @@ import json
 import os
 from pathlib import Path
 
-import pytest
 
-from agents.reasoning_logger import ReasoningLogger
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger
 
 
 def _create_file_with_size(path: Path, size: int) -> None:

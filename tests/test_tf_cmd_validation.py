@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import pytest
 
-from orchestrator import _validate_tf_cmd, TF_CMD_ALLOWLIST
+from cloud_janitor.orchestrator.orchestrator import _validate_tf_cmd, TF_CMD_ALLOWLIST
 
 
 class TestTFCMDPathResolution:

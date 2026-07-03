@@ -132,12 +132,12 @@ class TestQueryInterpreterOutputValidity:
         """For any query + valid JSON LLM response, output satisfies all invariants."""
         assume(query.strip() != "")  # Non-empty queries go to LLM path
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret(query)
@@ -150,12 +150,12 @@ class TestQueryInterpreterOutputValidity:
         """When LLM raises any exception, output still satisfies all invariants."""
         assume(query.strip() != "")  # Non-empty queries attempt LLM call
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = RuntimeError("API failure")
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret(query)
@@ -174,12 +174,12 @@ class TestQueryInterpreterOutputValidity:
         except (json.JSONDecodeError, ValueError):
             pass
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(garbage)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret(query)
@@ -192,10 +192,10 @@ class TestQueryInterpreterOutputValidity:
         """When get_client() itself raises, output still satisfies all invariants."""
         assume(query.strip() != "")
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_get_client.side_effect = EnvironmentError("OPENROUTER_API_KEY is not set")
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret(query)
@@ -206,8 +206,8 @@ class TestQueryInterpreterOutputValidity:
     @settings(max_examples=100, deadline=None)
     def test_empty_whitespace_queries_produce_valid_output(self, query):
         """Empty/whitespace-only queries still produce valid output schema."""
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
-            from agents.query_interpreter import QueryInterpreter
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret(query)

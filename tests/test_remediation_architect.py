@@ -6,17 +6,13 @@ Verifies:
   - plan() generates both remediation and rollback for the same finding
 """
 
-import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
-from agents.remediation_architect import (
+from cloud_janitor.agents.remediation_architect import (
     RemediationArchitect,
-    RemediationPlan,
-    DependencyReport,
     _sanitize_id,
 )
 
@@ -219,7 +215,7 @@ class TestPlanGeneratesBoth:
         self.rollbacks_dir = Path(self.tmp_dir) / "rollbacks"
         self.architect = RemediationArchitect(rollbacks_dir=self.rollbacks_dir)
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
     def test_plan_produces_remediation_and_rollback_for_ebs(self, mock_deps):
         plans = self.architect.plan([_ebs_finding()])
         assert len(plans) == 1
@@ -229,7 +225,7 @@ class TestPlanGeneratesBoth:
         assert len(plan.remediation_hcl) > 0
         assert len(plan.rollback_hcl) > 0
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
     def test_plan_produces_remediation_and_rollback_for_sg(self, mock_deps):
         plans = self.architect.plan([_sg_finding()])
         assert len(plans) == 1
@@ -237,7 +233,7 @@ class TestPlanGeneratesBoth:
         assert plan.remediation_hcl is not None
         assert plan.rollback_hcl is not None
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
     def test_plan_produces_remediation_and_rollback_for_elasticache(self, mock_deps):
         plans = self.architect.plan([_elasticache_finding()])
         assert len(plans) == 1
@@ -245,7 +241,7 @@ class TestPlanGeneratesBoth:
         assert plan.remediation_hcl is not None
         assert plan.rollback_hcl is not None
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
     def test_plan_writes_rollback_file(self, mock_deps):
         finding = _ebs_finding()
         self.architect.plan([finding])
@@ -254,7 +250,7 @@ class TestPlanGeneratesBoth:
         content = rollback_path.read_text()
         assert 'resource "aws_ebs_volume"' in content
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
     def test_plan_rollback_file_contains_tags(self, mock_deps):
         finding = _sg_finding()
         self.architect.plan([finding])
@@ -263,7 +259,7 @@ class TestPlanGeneratesBoth:
         assert "Kiro-Janitor" in content
         assert "var.environment" in content
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_has_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_has_dependencies)
     def test_plan_blocks_when_dependencies_found(self, mock_deps):
         plans = self.architect.plan([_sg_finding()])
         assert len(plans) == 1
@@ -272,7 +268,7 @@ class TestPlanGeneratesBoth:
         assert plan.remediation_hcl is None
         assert plan.rollback_hcl is None
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
     def test_plan_handles_multiple_findings(self, mock_deps):
         findings = [_ebs_finding(), _sg_finding(), _elasticache_finding()]
         plans = self.architect.plan(findings)
@@ -282,7 +278,7 @@ class TestPlanGeneratesBoth:
             assert plan.rollback_hcl is not None
             assert not plan.blocked
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
     def test_rollback_hcl_not_identical_to_remediation_hcl(self, mock_deps):
         """Rollback HCL must NOT be identical to remediation HCL.
 
@@ -297,7 +293,7 @@ class TestPlanGeneratesBoth:
                 f"{finding_fn.__name__} — they must differ"
             )
 
-    @patch("agents.remediation_architect.check_dependencies", side_effect=_mock_has_dependencies)
+    @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_has_dependencies)
     def test_plan_does_not_generate_hcl_before_dependency_check(self, mock_deps):
         """Remediation Architect must NOT generate HCL before dependency check completes.
 

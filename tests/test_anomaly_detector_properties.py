@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from agents.anomaly_detector import (
+from cloud_janitor.agents.anomaly_detector import (
     AnomalyDetector,
     MAX_ANOMALIES,
     REQUIRED_ANOMALY_KEYS,
@@ -170,7 +170,7 @@ class TestAnomalyDetectorDisjointResourceIDs:
         """For any resources and findings, anomaly resource_ids are disjoint from finding resource_ids."""
         finding_resource_ids = _get_finding_resource_ids(findings)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
             mock_get_client.return_value = mock_client
@@ -210,7 +210,7 @@ class TestAnomalyDetectorDisjointResourceIDs:
         ]
         response_json = json.dumps(adversarial_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -244,7 +244,7 @@ class TestAnomalyDetectorDisjointResourceIDs:
         ]
         response_json = json.dumps(valid_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -288,7 +288,7 @@ class TestAnomalyDetectorOutputSchema:
         ]
         response_json = json.dumps(valid_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -320,7 +320,7 @@ class TestAnomalyDetectorOutputSchema:
         ]
         response_json = json.dumps(valid_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -353,7 +353,7 @@ class TestAnomalyDetectorOutputSchema:
         ]
         response_json = json.dumps(valid_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -391,7 +391,7 @@ class TestAnomalyDetectorOutputSchema:
         ]
         response_json = json.dumps(valid_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -425,7 +425,7 @@ class TestAnomalyDetectorOutputSchema:
         ]
         response_json = json.dumps(many_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -451,7 +451,7 @@ class TestAnomalyDetectorOutputSchema:
         except (json.JSONDecodeError, ValueError):
             pass
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(garbage)
             mock_get_client.return_value = mock_client
@@ -468,7 +468,7 @@ class TestAnomalyDetectorOutputSchema:
     @settings(max_examples=200, deadline=None)
     def test_llm_exception_returns_empty_list(self, resources, findings):
         """When LLM raises any exception, output is [] and never raises."""
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = RuntimeError("API down")
             mock_get_client.return_value = mock_client
@@ -485,7 +485,7 @@ class TestAnomalyDetectorOutputSchema:
     @settings(max_examples=200, deadline=None)
     def test_get_client_exception_returns_empty_list(self, resources, findings):
         """When get_client() raises, output is [] and never raises."""
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_get_client.side_effect = EnvironmentError("OPENROUTER_API_KEY is not set")
 
             detector = AnomalyDetector()
@@ -495,7 +495,7 @@ class TestAnomalyDetectorOutputSchema:
 
     def test_empty_resources_returns_empty_list(self):
         """Empty resources list returns [] without calling LLM."""
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             detector = AnomalyDetector()
             result = detector.detect([], [])
 
@@ -536,7 +536,7 @@ class TestAnomalyDetectorNegativeCases:
         ]
         response_json = json.dumps(bad_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -574,7 +574,7 @@ class TestAnomalyDetectorNegativeCases:
         ]
         response_json = json.dumps(incomplete_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -613,7 +613,7 @@ class TestAnomalyDetectorNegativeCases:
         ]
         response_json = json.dumps(bad_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client
@@ -634,7 +634,7 @@ class TestAnomalyDetectorNegativeCases:
         """When LLM returns a JSON dict instead of a list, output is []."""
         response_json = json.dumps({"not": "a list", "anomalies": []})
 
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_json)
             mock_get_client.return_value = mock_client

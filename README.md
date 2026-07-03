@@ -196,7 +196,7 @@ Shared state that passes data between agents.
 
 ## AI Features
 
-All AI features route through OpenRouter via `core/llm_client.py`. Set `OPENROUTER_API_KEY` in your `.env` to enable them. Each agent fails gracefully to a safe default — the pipeline never crashes because of an LLM failure.
+All AI features route through OpenRouter via `src/cloud_janitor/core/llm_client.py`. Set `OPENROUTER_API_KEY` in your `.env` to enable them. Each agent fails gracefully to a safe default — the pipeline never crashes because of an LLM failure.
 
 ### Natural Language Query Interface
 
@@ -207,7 +207,7 @@ Type a free-form question in the dashboard and the `QueryInterpreter` agent maps
 → { resource_types: [], check_types: ["encryption", "public_access"], min_idle_days: 0 }
 ```
 
-**Model string:** `agents/query_interpreter.py` — `QueryInterpreter`
+**Model string:** `src/cloud_janitor/agents/query_interpreter.py` — `QueryInterpreter`
 
 ---
 
@@ -217,7 +217,7 @@ Generates plain-English explanation of each finding alongside the Terraform diff
 
 Returns three sections: why this is risky, what the Terraform does, what rollback restores.
 
-**Model string:** `agents/explainer.py` — `RemediationExplainer`
+**Model string:** `src/cloud_janitor/agents/explainer.py` — `RemediationExplainer`
 
 ---
 
@@ -227,7 +227,7 @@ After a scan, analyses finding patterns and recommends additional checks the use
 
 Returns 0–5 suggestions, each with a query you can paste directly into the NL query interface.
 
-**Model string:** `agents/policy_suggester.py` — `PolicySuggester`
+**Model string:** `src/cloud_janitor/agents/policy_suggester.py` — `PolicySuggester`
 
 ---
 
@@ -237,7 +237,7 @@ Uses an LLM to flag resources that are suspicious even without a matching rule �
 
 Only runs on resources not already in `findings_store.json`.
 
-**Model string:** `agents/anomaly_detector.py` — `AnomalyDetector`
+**Model string:** `src/cloud_janitor/agents/anomaly_detector.py` — `AnomalyDetector`
 
 ---
 
@@ -247,7 +247,7 @@ Compares the current scan against previous scans (stored in `scan_history.json`)
 
 Uses atomic writes with `filelock` for thread safety. Keeps a maximum of 30 snapshots.
 
-**Model string:** `agents/drift_detector.py` — `DriftDetector`
+**Model string:** `src/cloud_janitor/agents/drift_detector.py` — `DriftDetector`
 
 ---
 
@@ -261,7 +261,7 @@ Infers environment, team, owner, and risk level from resource names and IDs when
 
 Supports single inference and batch mode (chunks of 10, one LLM call per chunk).
 
-**Model string:** `agents/tagger.py` — `ResourceTagger`
+**Model string:** `src/cloud_janitor/agents/tagger.py` — `ResourceTagger`
 
 ---
 
@@ -271,7 +271,7 @@ Describe a past incident or breach in natural language — the agent generates 3
 
 Policies are written to `policies/<policy_id>.json` and are idempotent (same incident text returns same policies without a second LLM call).
 
-**Model string:** `agents/incident_policy_generator.py` — `IncidentPolicyGenerator`
+**Model string:** `src/cloud_janitor/agents/incident_policy_generator.py` — `IncidentPolicyGenerator`
 
 ---
 
@@ -281,7 +281,7 @@ Runs concurrent audits across multiple AWS accounts defined in `accounts.json`, 
 
 Results are sorted by priority (high → medium → low), then alphabetically within the same priority.
 
-**Model string:** `agents/multi_account_orchestrator.py` — `MultiAccountOrchestrator`
+**Model string:** `src/cloud_janitor/agents/multi_account_orchestrator.py` — `MultiAccountOrchestrator`
 
 ---
 
@@ -334,7 +334,7 @@ Free tier may queue under heavy load — the codebase retries automatically or r
 
 ### Fixture mode (default)
 
-No AWS account required. All data comes from `fixtures/*.json`.
+No AWS account required. All data comes from bundled `cloud_janitor/fixtures/*.json`.
 
 ```bash
 # .env
@@ -443,7 +443,7 @@ JANITOR_BACKEND=aws
 
 ## MCP Server
 
-The MCP server (`mcp_server/aws_janitor_mcp.py`) exposes infrastructure data and AI tools via the [Model Context Protocol](https://modelcontextprotocol.io/). Built with FastMCP.
+The MCP server (`src/cloud_janitor/mcp_server/aws_janitor_mcp.py`) exposes infrastructure data and AI tools via the [Model Context Protocol](https://modelcontextprotocol.io/). Built with FastMCP.
 
 ### Core tools
 
@@ -468,7 +468,7 @@ The MCP server (`mcp_server/aws_janitor_mcp.py`) exposes infrastructure data and
 ### Running the server
 
 ```bash
-python mcp_server/aws_janitor_mcp.py
+cloud-janitor mcp
 ```
 
 Uses FastMCP's default stdio transport. Can be consumed by any MCP-compatible client (Kiro, Claude Desktop, Cursor, etc.).
@@ -488,37 +488,51 @@ Uses FastMCP's default stdio transport. Can be consumed by any MCP-compatible cl
 
 ```
 cloud-janitor/
+├── src/
+│   └── cloud_janitor/               # Installable package (src-layout)
+│       ├── __init__.py              # __version__ via importlib.metadata
+│       ├── py.typed                 # PEP 561 marker
+│       ├── cli.py                   # Click CLI entry point
+│       ├── app.py                   # Streamlit dashboard
+│       ├── logging_config.py        # Logging setup re-export
+│       ├── agents/                  # All agent classes
+│       │   ├── finops_auditor.py    # Cost waste detection
+│       │   ├── secops_guard.py      # Security findings
+│       │   ├── remediation_architect.py # Terraform HCL generation
+│       │   ├── approval_gate.py     # Human approval state machine
+│       │   ├── audit_logger.py      # Append-only compliance log
+│       │   ├── reasoning_logger.py  # Structured agent reasoning traces
+│       │   ├── schema_validator.py  # findings_store.json validation
+│       │   ├── query_interpreter.py # NL → structured scan params
+│       │   ├── explainer.py         # Plain-English remediation explanation
+│       │   ├── policy_suggester.py  # Post-scan policy recommendations
+│       │   ├── tagger.py           # LLM-inferred resource context
+│       │   ├── anomaly_detector.py  # LLM anomaly detection
+│       │   ├── drift_detector.py    # Snapshot diff with narrative
+│       │   ├── incident_policy_generator.py # Policies from incident descriptions
+│       │   └── multi_account_orchestrator.py # Concurrent multi-account audits
+│       ├── core/                    # Shared infrastructure
+│       │   ├── llm_client.py        # LLM client with retry (OpenRouter)
+│       │   ├── logging_config.py    # Logging configuration
+│       │   ├── paths.py             # Centralized path constants
+│       │   └── error_telemetry.py   # Structured error recording
+│       ├── mcp_server/              # MCP protocol server
+│       │   ├── aws_janitor_mcp.py   # FastMCP tool registrations
+│       │   └── backends/
+│       │       ├── __init__.py      # CloudProvider ABC
+│       │       ├── fixture_provider.py # Fixture backend (complete)
+│       │       ├── aws_provider.py  # AWS backend (complete)
+│       │       ├── gcp_provider.py  # GCP backend (stub)
+│       │       └── azure_provider.py # Azure backend (stub)
+│       ├── fixtures/                # Bundled fixture data (included in wheel)
+│       │   ├── __init__.py
+│       │   ├── aws_cost_explorer.json # Fake cost/idle resource data
+│       │   └── aws_config_inspector.json # Fake security findings + dependency map
+│       └── orchestrator/            # Agent pipeline + approval flow
+│           ├── __init__.py          # Re-exports Orchestrator, AuditResult, etc.
+│           └── orchestrator.py      # Main orchestrator implementation
 ├── bin/
 │   └── tflocal                      # Repo-local wrapper (dry-run or delegates to real binary)
-├── agents/
-│   ├── finops_auditor.py            # Cost waste detection
-│   ├── secops_guard.py              # Security findings
-│   ├── remediation_architect.py     # Terraform HCL generation
-│   ├── approval_gate.py             # Human approval state machine
-│   ├── audit_logger.py              # Append-only compliance log
-│   ├── reasoning_logger.py          # Structured agent reasoning traces
-│   ├── schema_validator.py          # findings_store.json validation
-│   ├── query_interpreter.py         # NL → structured scan params
-│   ├── explainer.py                 # Plain-English remediation explanation
-│   ├── policy_suggester.py          # Post-scan policy recommendations
-│   ├── tagger.py                    # LLM-inferred resource context
-│   ├── anomaly_detector.py          # LLM anomaly detection
-│   ├── drift_detector.py            # Snapshot diff with narrative
-│   ├── incident_policy_generator.py # Policies from incident descriptions
-│   └── multi_account_orchestrator.py# Concurrent multi-account audits
-├── mcp_server/
-│   ├── aws_janitor_mcp.py           # FastMCP tool registrations
-│   └── backends/
-│       ├── __init__.py              # CloudProvider ABC
-│       ├── fixture_provider.py      # Fixture backend (complete)
-│       ├── aws_provider.py          # AWS backend (complete)
-│       ├── gcp_provider.py          # GCP backend (stub)
-│       └── azure_provider.py        # Azure backend (stub)
-├── core/
-│   └── llm_client.py               # Shared LLM client (OpenRouter)
-├── fixtures/
-│   ├── aws_cost_explorer.json       # Fake cost/idle resource data
-│   └── aws_config_inspector.json    # Fake security findings + dependency map
 ├── hooks/
 │   ├── pre-remediation.sh           # HCL validation gate (runtime)
 │   └── post-remediation.sh          # Audit log append (runtime)
@@ -532,8 +546,6 @@ cloud-janitor/
 │   ├── generate_spec_compliance.py  # Dev tool: spec compliance report
 │   └── setup-hooks.sh               # Install git hooks
 ├── tests/                           # pytest + hypothesis property tests
-├── app.py                           # Streamlit dashboard
-├── orchestrator.py                  # Agent pipeline + approval flow
 ├── scheduler.py                     # Cron-based background scans
 ├── .env.example                     # Environment variable template
 ├── docker-compose.yml               # LocalStack container definition
@@ -595,10 +607,10 @@ The suite uses [Hypothesis](https://hypothesis.readthedocs.io/) for property-bas
 
 ## Adding a New Provider
 
-1. Create `mcp_server/backends/<name>_provider.py`:
+1. Create `src/cloud_janitor/mcp_server/backends/<name>_provider.py`:
 
 ```python
-from mcp_server.backends import CloudProvider
+from cloud_janitor.mcp_server.backends import CloudProvider
 
 class MyProvider(CloudProvider):
     def get_cost_data(self, resource_type=None, min_idle_days=7) -> dict: ...
@@ -606,10 +618,10 @@ class MyProvider(CloudProvider):
     def check_dependencies(self, resource_id: str) -> dict: ...
 ```
 
-1. Register it in `mcp_server/aws_janitor_mcp.py`:
+1. Register it in `src/cloud_janitor/mcp_server/aws_janitor_mcp.py`:
 
 ```python
-from mcp_server.backends.my_provider import MyProvider
+from cloud_janitor.mcp_server.backends.my_provider import MyProvider
 PROVIDER_REGISTRY["my_backend"] = MyProvider
 ```
 
@@ -621,7 +633,7 @@ PROVIDER_REGISTRY["my_backend"] = MyProvider
 
 ### Add a resource to `aws_cost_explorer.json`
 
-Required fields: `id`, `type` (`elasticache`/`ebs`/`ec2`), `name`, `idle_days`, `monthly_cost`, `status`, `availability_zone`, `created_at`, `description`. Add type-specific fields (see `fixtures/README.md` for field tables).
+Required fields: `id`, `type` (`elasticache`/`ebs`/`ec2`), `name`, `idle_days`, `monthly_cost`, `status`, `availability_zone`, `created_at`, `description`. Add type-specific fields (see `src/cloud_janitor/fixtures/README.md` for field tables).
 
 ### Add a finding to `aws_config_inspector.json`
 
