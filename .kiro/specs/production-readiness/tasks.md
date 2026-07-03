@@ -156,7 +156,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Remove any references to `requirements.txt` as user-facing installation
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 6. Checkpoint — Verify Batch 2
+- [x] 6. Checkpoint — Verify Batch 2
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Batch 3 — Package structure migration and CI

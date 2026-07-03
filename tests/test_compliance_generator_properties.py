@@ -293,8 +293,8 @@ def test_generate_report_produces_valid_markdown_table(tasks):
     with tempfile.TemporaryDirectory() as tmp_dir:
         project_root = Path(tmp_dir)
 
-        # Generate the report
-        report = generate_report(tasks, project_root)
+        # Generate the report — generate_report expects list of (spec_name, tasks) tuples
+        report = generate_report([("test-spec", tasks)], project_root)
 
         # Split into lines
         lines = report.strip().split("\n")
@@ -341,9 +341,19 @@ def test_generate_report_produces_valid_markdown_table(tasks):
             )
 
         # --- Validate data rows ---
-        data_rows = lines[header_idx + 2:]
-        # Filter out any trailing empty lines
-        data_rows = [row for row in data_rows if row.strip()]
+        # Only count rows that are table rows (start with |) and belong to the task table
+        # Stop at the first non-table line (section headers, blank lines, or different tables)
+        data_rows = []
+        for row in lines[header_idx + 2:]:
+            stripped = row.strip()
+            if not stripped or not stripped.startswith("|"):
+                break
+            # Verify it has 4 columns (task table format)
+            cells = [c.strip() for c in stripped.split("|") if c.strip()]
+            if len(cells) == 4:
+                data_rows.append(row)
+            else:
+                break
 
         assert len(data_rows) == len(tasks), (
             f"Expected {len(tasks)} data rows, got {len(data_rows)}"
