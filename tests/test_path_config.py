@@ -181,48 +181,48 @@ class TestUIDisplaysNoDataMessage:
 
     def test_load_findings_returns_empty_for_missing_file(self, tmp_path: Path) -> None:
         """load_findings() returns [] when findings_store.json does not exist."""
-        from app import load_findings
+        from cloud_janitor.app import load_findings
 
         nonexistent = tmp_path / "does_not_exist.json"
-        with patch("app.FINDINGS_STORE_PATH", nonexistent):
+        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", nonexistent):
             result = load_findings()
 
         assert result == []
 
     def test_load_audit_log_returns_empty_for_missing_file(self, tmp_path: Path) -> None:
         """load_audit_log() returns [] when audit.log does not exist."""
-        from app import load_audit_log
+        from cloud_janitor.app import load_audit_log
 
         nonexistent = tmp_path / "nonexistent_audit.log"
-        with patch("app.AUDIT_LOG_PATH", nonexistent):
+        with patch("cloud_janitor.app.AUDIT_LOG_PATH", nonexistent):
             result = load_audit_log()
 
         assert result == []
 
     def test_load_rollback_hcl_returns_empty_for_missing_file(self, tmp_path: Path) -> None:
         """load_rollback_hcl() returns '' when rollback file does not exist."""
-        from app import load_rollback_hcl
+        from cloud_janitor.app import load_rollback_hcl
 
         fake_rollbacks_dir = tmp_path / "rollbacks"
         fake_rollbacks_dir.mkdir()
-        with patch("app.ROLLBACKS_DIR", fake_rollbacks_dir):
+        with patch("cloud_janitor.app.ROLLBACKS_DIR", fake_rollbacks_dir):
             result = load_rollback_hcl("nonexistent-resource")
 
         assert result == ""
 
     def test_load_remediation_hcl_returns_empty_for_missing_file(self, tmp_path: Path) -> None:
         """load_remediation_hcl() returns '' when remediation.tf does not exist."""
-        from app import load_remediation_hcl
+        from cloud_janitor.app import load_remediation_hcl
 
         nonexistent = tmp_path / "remediation.tf"
-        with patch("app.REMEDIATION_PATH", nonexistent):
+        with patch("cloud_janitor.app.REMEDIATION_PATH", nonexistent):
             result = load_remediation_hcl()
 
         assert result == ""
 
     def test_render_findings_shows_no_data_message_for_empty_list(self) -> None:
         """render_findings_html([]) displays informational 'no data' message."""
-        from app import render_findings_html
+        from cloud_janitor.app import render_findings_html
 
         result = render_findings_html([])
 
@@ -233,12 +233,12 @@ class TestUIDisplaysNoDataMessage:
 
     def test_load_findings_no_unhandled_error_on_corrupt_json(self, tmp_path: Path) -> None:
         """load_findings() handles corrupt JSON gracefully (no crash)."""
-        from app import load_findings
+        from cloud_janitor.app import load_findings
 
         corrupt_file = tmp_path / "findings_store.json"
         corrupt_file.write_text("{{not valid json", encoding="utf-8")
 
-        with patch("app.FINDINGS_STORE_PATH", corrupt_file):
+        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", corrupt_file):
             result = load_findings()
 
         # Returns empty list rather than raising
@@ -246,12 +246,12 @@ class TestUIDisplaysNoDataMessage:
 
     def test_load_findings_no_unhandled_error_on_missing_key(self, tmp_path: Path) -> None:
         """load_findings() handles JSON without 'findings' key gracefully."""
-        from app import load_findings
+        from cloud_janitor.app import load_findings
 
         incomplete_file = tmp_path / "findings_store.json"
         incomplete_file.write_text(json.dumps({"schema_version": "1.0.0"}), encoding="utf-8")
 
-        with patch("app.FINDINGS_STORE_PATH", incomplete_file):
+        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", incomplete_file):
             result = load_findings()
 
         # Returns empty list for missing key, not crash
