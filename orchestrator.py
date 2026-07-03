@@ -114,7 +114,7 @@ BASH_CMD = _find_bash()
 
 SCHEMA_VERSION = "1.0.0"
 
-_RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}$")
+_RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}\Z")
 
 # Schema version for findings_store.json — bump when the schema changes.
 # The orchestrator will warn (not fail) if the store has a newer version than expected.

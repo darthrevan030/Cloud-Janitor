@@ -244,7 +244,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Call `ensure_output_dirs()` during Orchestrator `__init__`, halting with descriptive error on failure
     - _Requirements: 4.1, 4.3, 4.4, 4.5_
 
-- [ ] 11. Wire structured error telemetry into Orchestrator
+- [x] 11. Wire structured error telemetry into Orchestrator
   - [x] 11.1 Integrate `core/error_telemetry.py` into Orchestrator error handling
     - Import `build_error_record` and `write_error_record` from `core/error_telemetry`
     - Implement `_classify_error()` method for error categorization: `context="tf_validate"/"tf_apply"/"tf_plan"` → `"terraform_failure"`, `isinstance(exc, (OSError, IOError, PermissionError))` → `"io_failure"`, `context="schema_check"/"gate_check"/"hook_validation"/"resource_id_check"` → `"validation_failure"`, default → `"agent_failure"`
@@ -261,17 +261,17 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Test `context="hook_validation"` → returns `"validation_failure"`
     - _Requirements: 12.3_
 
-  - [ ] 11.3 Surface structured error fields in Streamlit UI
+  - [x] 11.3 Surface structured error fields in Streamlit UI
     - Display `error_category`, `agent_name`, and `message` from structured error records in UI error displays
     - Replace raw exception string displays with structured field rendering
     - _Requirements: 12.4_
 
-- [ ] 12. Update SPEC_COMPLIANCE.md
-  - [ ] 12.1 Update SPEC_COMPLIANCE.md to reflect NL Audit feature status
+- [x] 12. Update SPEC_COMPLIANCE.md
+  - [x] 12.1 Update SPEC_COMPLIANCE.md to reflect NL Audit feature status
     - Set NL Audit status to "Partial" (UI elements exist with feature detection, but backend method is not yet implemented)
     - _Requirements: 10.4_
 
-- [ ] 13. Final checkpoint - Ensure all tests pass
+- [x] 13. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
