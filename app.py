@@ -450,6 +450,48 @@ div[data-testid="stMetric"] {
     border-radius: 6px !important;
     padding: 0.75rem 1rem !important;
 }
+
+/* ── Structured error display ── */
+.cj-error-structured {
+    background: rgba(248,81,73,0.06);
+    border: 1px solid rgba(248,81,73,0.25);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.cj-error-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.cj-error-category-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: rgba(248,81,73,0.15);
+    color: #f85149;
+    border: 1px solid rgba(248,81,73,0.3);
+}
+.cj-error-agent-label {
+    font-size: 0.72rem;
+    color: #8b949e;
+}
+.cj-error-agent-name {
+    font-size: 0.72rem;
+    color: #58a6ff;
+    font-weight: 600;
+}
+.cj-error-message {
+    font-size: 0.82rem;
+    color: #f85149;
+    line-height: 1.4;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -514,6 +556,40 @@ if "multi_account_results" not in st.session_state:
 
 def _esc(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def render_structured_error(
+    message: str,
+    error_category: str | None = None,
+    agent_name: str | None = None,
+) -> None:
+    """Render a structured error display in the Streamlit UI.
+
+    When structured fields (error_category, agent_name) are available, renders
+    a styled panel showing category badge, agent name, and message.
+    Falls back to a plain st.error() when only the raw message is available.
+    """
+    if error_category or agent_name:
+        category_html = ""
+        if error_category:
+            category_html = (
+                f'<span class="cj-error-category-badge">{_esc(error_category)}</span>'
+            )
+        agent_html = ""
+        if agent_name:
+            agent_html = (
+                f'<span class="cj-error-agent-label">agent:</span> '
+                f'<span class="cj-error-agent-name">{_esc(agent_name)}</span>'
+            )
+        html = (
+            f'<div class="cj-error-structured">'
+            f'<div class="cj-error-header">{category_html}{agent_html}</div>'
+            f'<div class="cj-error-message">{_esc(message)}</div>'
+            f'</div>'
+        )
+        st.markdown(html, unsafe_allow_html=True)
+    else:
+        st.error(message)
 
 
 def load_findings() -> list[dict]:
@@ -813,7 +889,7 @@ else:
                 st.success(f"NL Audit complete — {len(result.findings)} finding(s).")
                 st.rerun()
             except Exception as e:
-                st.error(f"NL Audit failed: {e}")
+                render_structured_error(f"NL Audit failed: {e}")
 
 # Show NL query result summary if available
 if st.session_state.nl_query_result is not None:
@@ -842,7 +918,11 @@ if st.button("▶  Run Audit", type="primary", use_container_width=False):
     _render_live_feed(st.session_state.agent_status)
 
     if not result.success:
-        st.error(result.error)
+        render_structured_error(
+            result.error or "Unknown error",
+            error_category=result.error_category,
+            agent_name=result.error_agent,
+        )
         st.session_state.audit_result = result
         st.stop()
 
@@ -997,6 +1077,7 @@ if audit_result is not None and audit_result.plans:
                     st.session_state.approval_history.append({
                         "action": "approval", "resource_id": result.resource_id or selected_resource,
                         "timestamp": ts, "success": result.success, "error": result.error,
+                        "error_category": result.error_category, "error_agent": result.error_agent,
                         "locked": result.locked, "expected_format": result.expected_format,
                         "attempts_remaining": result.attempts_remaining,
                     })
@@ -1012,7 +1093,7 @@ if audit_result is not None and audit_result.plans:
                     elif result.success:
                         st.session_state.approval_history.append({"action": "rollback", "resource_id": result.resource_id, "timestamp": ts, "success": True})
                     else:
-                        st.session_state.approval_history.append({"action": "rollback_failed", "resource_id": result.resource_id or selected_resource, "timestamp": ts, "success": False, "error": result.error})
+                        st.session_state.approval_history.append({"action": "rollback_failed", "resource_id": result.resource_id or selected_resource, "timestamp": ts, "success": False, "error": result.error, "error_category": result.error_category, "error_agent": result.error_agent})
                     st.rerun()
 
     # Action history
@@ -1033,7 +1114,14 @@ if audit_result is not None and audit_result.plans:
                 err = _esc(entry.get("error", "unknown error"))
                 rem = entry.get("attempts_remaining")
                 rem_str = f" · {rem} attempts remaining" if rem is not None else ""
-                history_html += f'<div class="cj-action-entry fail">✗ {ts} · {resource} · {err}{rem_str}</div>'
+                cat = entry.get("error_category")
+                agent = entry.get("error_agent")
+                structured_parts = ""
+                if cat:
+                    structured_parts += f' · <span class="cj-error-category-badge">{_esc(cat)}</span>'
+                if agent:
+                    structured_parts += f' · <span class="cj-error-agent-name">{_esc(agent)}</span>'
+                history_html += f'<div class="cj-action-entry fail">✗ {ts} · {resource}{structured_parts} · {err}{rem_str}</div>'
         history_html += '</div>'
         st.markdown(history_html, unsafe_allow_html=True)
 
@@ -1292,7 +1380,7 @@ if MultiAccountOrchestrator is not None:
                         st.success(f"Multi-account audit complete — {results.get('accounts_scanned', 0)} account(s) scanned.")
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Multi-account audit failed: {e}")
+                        render_structured_error(f"Multi-account audit failed: {e}")
 
         if st.session_state.multi_account_results is not None:
             ma = st.session_state.multi_account_results

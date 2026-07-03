@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T01:27:11Z
+Generated: 2026-07-03T01:31:37Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -54,7 +54,7 @@ Generated: 2026-07-03T01:27:11Z
 | 48 | 10.8 Update Orchestrator to use `core/paths.py` and call `ensure_output_dirs()` | ✅ Done | no mapping |
 | 49 | 11. Wire structured error telemetry into Orchestrator | ❌ Pending | — |
 | 50 | 11.1 Integrate `core/error_telemetry.py` into Orchestrator error handling | ✅ Done | no mapping |
-| 51 | 11.2 Write unit tests for `_classify_error()` (`tests/test_error_classification.py`) | ❌ Pending | — |
+| 51 | 11.2 Write unit tests for `_classify_error()` (`tests/test_error_classification.py`) | ✅ Done | no mapping |
 | 52 | 11.3 Surface structured error fields in Streamlit UI | ❌ Pending | — |
 | 53 | 12. Update SPEC_COMPLIANCE.md | ❌ Pending | — |
 | 54 | 12.1 Update SPEC_COMPLIANCE.md to reflect NL Audit feature status | ❌ Pending | — |

@@ -199,6 +199,8 @@ class AuditResult:
     blocked_plans: list[RemediationPlan] = field(default_factory=list)
     hook_error: str | None = None
     error: str | None = None
+    error_category: str | None = None
+    error_agent: str | None = None
     anomalies: list[dict] = field(default_factory=list)
     drift_report: dict | None = None
 
@@ -210,6 +212,8 @@ class ApprovalResult:
     success: bool
     resource_id: str = ""
     error: str | None = None
+    error_category: str | None = None
+    error_agent: str | None = None
     locked: bool = False
     expected_format: str | None = None
     attempts_remaining: int | None = None
@@ -222,6 +226,8 @@ class RollbackResult:
     success: bool
     resource_id: str = ""
     error: str | None = None
+    error_category: str | None = None
+    error_agent: str | None = None
     needs_confirmation: bool = False
     exit_code: int | None = None
 
@@ -388,7 +394,7 @@ class Orchestrator:
         except Exception as e:
             _emit("finops", "failure")
             self._record_error(e, "FinOpsAuditor", context="")
-            return AuditResult(success=False, error=f"FinOps Auditor failed: {e}")
+            return AuditResult(success=False, error=f"FinOps Auditor failed: {e}", error_category="agent_failure", error_agent="FinOpsAuditor")
         self._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
         _emit("finops", "success")
 
@@ -404,6 +410,8 @@ class Orchestrator:
                 success=False,
                 findings=finops_findings,
                 error=f"SecOps Guard failed: {e}",
+                error_category="agent_failure",
+                error_agent="SecOpsGuard",
             )
         self._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
         _emit("secops", "success")
@@ -416,7 +424,7 @@ class Orchestrator:
             _emit("remediation", "failure")
             val_exc = RuntimeError(validation_error)
             self._record_error(val_exc, "Orchestrator", context="schema_check")
-            return AuditResult(success=False, error=validation_error)
+            return AuditResult(success=False, error=validation_error, error_category="validation_failure", error_agent="Orchestrator")
 
         # Step 4: Remediation Architect plans
         self._log_action("plan", "all", "started", "Remediation Architect planning")
@@ -429,6 +437,8 @@ class Orchestrator:
                 success=False,
                 findings=finops_findings + secops_findings,
                 error=f"Remediation Architect failed: {e}",
+                error_category="agent_failure",
+                error_agent="RemediationArchitect",
             )
         self._last_plans = plans
 
@@ -458,6 +468,8 @@ class Orchestrator:
                     plans=active_plans,
                     blocked_plans=blocked_plans,
                     hook_error=hook_error,
+                    error_category="validation_failure",
+                    error_agent="Orchestrator",
                 )
 
         _emit("remediation", "success")
@@ -1286,6 +1298,8 @@ class Orchestrator:
                 success=False,
                 resource_id=resource_id,
                 error=f"{self._tf_cmd} init failed: {error}",
+                error_category="terraform_failure",
+                error_agent="Orchestrator",
                 exit_code=init_result.returncode,
             )
 
@@ -1306,6 +1320,8 @@ class Orchestrator:
                 success=False,
                 resource_id=resource_id,
                 error=f"{self._tf_cmd} apply failed: {error}",
+                error_category="terraform_failure",
+                error_agent="Orchestrator",
                 exit_code=apply_result.returncode,
             )
 
