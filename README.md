@@ -28,7 +28,7 @@ Cloud Custodian shows you what's wrong with a YAML rules engine. Cloud Janitor r
 
 ## Quick Start
 
-**Prerequisites:** Docker Desktop, Python 3.11+
+**Prerequisites:** Docker Desktop, Python 3.11+, [Terraform](https://developer.hashicorp.com/terraform/install) (the actual CLI binary — `tflocal` alone is not enough, see [LocalStack & Terraform](#localstack--terraform)), and a free [LocalStack account](<https://app.localstack> cloud/sign-up) with an auth token
 
 ```bash
 # 1. Clone the repo
@@ -60,7 +60,7 @@ Click **Execute Audit** to run the full pipeline against fixture data. No AWS ac
 
 Cloud Janitor runs a multi-agent pipeline in strict sequence:
 
-```
+```text
 ┌─────────────────┐     ┌──────────────┐     ┌────────────────────────┐
 │  FinOps Auditor │ ──▶ │ SecOps Guard │ ──▶ │ Remediation Architect  │
 │  (cost waste)   │     │ (security)   │     │ (generates Terraform)  │
@@ -97,7 +97,7 @@ Detects idle and orphaned resources representing financial waste.
 **Severity rules:**
 
 | Resource | Condition | Severity |
-|---|---|---|
+| --- | --- | --- |
 | ElastiCache | idle ≥ 30 days | HIGH |
 | EBS | unattached ≥ 30 days | MEDIUM |
 | EC2 | idle ≥ 30 days | LOW |
@@ -113,7 +113,7 @@ Detects security vulnerabilities in security groups and unencrypted storage.
 **Severity rules:**
 
 | Check | Condition | Severity |
-|---|---|---|
+| --- | --- | --- |
 | Security group | Ports 6379, 3306, 5432, 27017 open to `0.0.0.0/0` | CRITICAL |
 | Security group | Port 22 open to `0.0.0.0/0` | HIGH |
 | Encryption | Unencrypted ElastiCache or EBS | HIGH |
@@ -152,7 +152,7 @@ Generates Terraform HCL to fix findings, plus rollback HCL for every change.
 
 Agents must run in strict order. **FinOps must run first** (writes the store). **SecOps must run second** (appends). **Remediation runs last** (reads both). No agent may skip its predecessor.
 
-```
+```text
 FinOpsAuditor → SecOpsGuard → RemediationArchitect
 ```
 
@@ -202,7 +202,7 @@ All AI features route through OpenRouter via `src/cloud_janitor/core/llm_client.
 
 Type a free-form question in the dashboard and the `QueryInterpreter` agent maps it to structured scan parameters.
 
-```
+```text
 "find all unencrypted storage with public access"
 → { resource_types: [], check_types: ["encryption", "public_access"], min_idle_days: 0 }
 ```
@@ -255,7 +255,7 @@ Uses atomic writes with `filelock` for thread safety. Keeps a maximum of 30 snap
 
 Infers environment, team, owner, and risk level from resource names and IDs when explicit tags are absent or incomplete.
 
-```
+```text
 "cache-prod-legacy-01" → { env: "production", team: "platform", risk_level: "high" }
 ```
 
@@ -309,7 +309,7 @@ cp .env.example .env
 ```
 
 | Variable | Default | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `OPENROUTER_API_KEY` | — | Yes (for AI) | API key for OpenRouter. Get one free at <https://openrouter.ai/keys> |
 | `JANITOR_BACKEND` | `fixture` | No | Cloud provider: `fixture`, `aws`, `gcp`, `azure` |
 | `TF_CMD` | `tflocal` | No | Terraform binary: `tflocal` (LocalStack) or `terraform` (real AWS) |
@@ -321,7 +321,7 @@ cp .env.example .env
 These models are free on OpenRouter (no credit card needed) and work as drop-in replacements for `JANITOR_LLM_MODEL`:
 
 | Model | Model string | Best for |
-|---|---|---|
+| --- | --- | --- |
 | gpt-oss-120b ⭐ | `openai/gpt-oss-120b:free` | Complex reasoning — incident policy, anomaly detection |
 | Gemma 4 31B | `google/gemma-4-31b-it:free` | Drift narratives, explainer |
 | Gemma 4 26B A4B | `google/gemma-4-26b-a4b-it:free` | Fast, high-volume — tagging, query interpretation |
@@ -364,7 +364,7 @@ Interface stubs exist. Setting `JANITOR_BACKEND=gcp` or `JANITOR_BACKEND=azure` 
 Cloud Janitor provides a CLI interface via the `cloud-janitor` command:
 
 | Command | Syntax | Description |
-|---|---|---|
+| --- | --- | --- |
 | Scan (full) | `cloud-janitor scan` | Execute the full audit pipeline (FinOps + SecOps) |
 | Scan (FinOps only) | `cloud-janitor scan --finops` | Run only the FinOps cost-waste auditor |
 | Scan (SecOps only) | `cloud-janitor scan --secops` | Run only the SecOps security guard |
@@ -382,7 +382,7 @@ Before any infrastructure change executes, the operator must type an exact appro
 ### Command formats
 
 | Action | Command | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Approve a remediation | `APPROVE <resource_id>` | Exact match, case-sensitive |
 | Request rollback | `ROLLBACK <resource_id>` | Advances to awaiting confirmation |
 | Confirm rollback | `CONFIRM ROLLBACK <resource_id>` | Completes the rollback |
@@ -406,12 +406,35 @@ LocalStack emulates AWS services on `localhost:4566`. Cloud Janitor uses it to s
 ### Setup
 
 1. Install Docker Desktop: <https://www.docker.com/products/docker-desktop/>
-2. Sign up for LocalStack (free Hobby plan): <https://app.localstack.cloud/sign-up>
+2. Sign up for LocalStack (free Hobby plan): <https://app.localstack.cloud/sign-up> — as of March 2026, LocalStack requires an auth token for all usage, including the free tier. Set `LOCALSTACK_AUTH_TOKEN` in your `.env` after signing up.
 3. Install the CLI tools:
 
 ```bash
 pip install localstack awscli-local
 ```
+
+1. **Install Terraform itself.** `tflocal` is a thin wrapper around a real `terraform` binary — it does not bundle one. Skipping this fails silently deep inside the approval-gate hook (`terraform init failed`) with no indication the binary is simply missing.
+
+```bash
+# macOS
+brew tap hashicorp/tap && brew install hashicorp/tap/terraform
+# Windows (Chocolatey)
+choco install terraform -y
+# Linux / manual: https://developer.hashicorp.com/terraform/install
+```
+
+Verify both are resolvable before continuing:
+
+```bash
+which tflocal terraform
+```
+
+> **Windows / Git Bash:** a few platform-specific gotchas to know —
+>
+> - `make` doesn't inherit your venv's PATH the same way interactive bash does; if `make demo` fails to find `cloud-janitor`, run `uv run cloud-janitor dashboard` directly instead.
+> - PATH updates from `choco`/`winget`/`pip` installs don't propagate to already-open terminals — open a fresh one after installing anything.
+> - `docker-compose` only auto-loads a file named exactly `.env`, not `.env.local`.
+> - We've seen `docker-compose up` intermittently fail LocalStack's license activation on a fresh network while `localstack start` (the CLI) has been consistently reliable — worth trying that path first if `make demo` won't start LocalStack.
 
 ### Start LocalStack
 
@@ -448,7 +471,7 @@ The MCP server (`src/cloud_janitor/mcp_server/aws_janitor_mcp.py`) exposes infra
 ### Core tools
 
 | Tool | Parameters | Returns |
-|---|---|---|
+| --- | --- | --- |
 | `get_cost_data` | `resource_type?`, `min_idle_days=7` | `{resources: [...], total_monthly_waste: float}` |
 | `get_security_data` | `check_type?` | `{findings: [...], critical_count: int}` |
 | `check_dependencies` | `resource_id` | `{has_dependencies: bool, dependents: [...]}` |
@@ -457,7 +480,7 @@ The MCP server (`src/cloud_janitor/mcp_server/aws_janitor_mcp.py`) exposes infra
 ### AI tools
 
 | Tool | Parameters | Returns |
-|---|---|---|
+| --- | --- | --- |
 | `interpret_query` | `user_query` | Structured scan parameters |
 | `explain_remediation` | `resource_id`, `finding`, `remediation_hcl`, `rollback_hcl` | `{risk_explanation, what_terraform_does, what_rollback_restores}` |
 | `suggest_policies` | `findings`, `already_checked` | List of 0–5 policy suggestions |
@@ -476,7 +499,7 @@ Uses FastMCP's default stdio transport. Can be consumed by any MCP-compatible cl
 ### Provider backends
 
 | Backend | `JANITOR_BACKEND` | Status |
-|---|---|---|
+| --- | --- | --- |
 | Fixture | `fixture` | Complete |
 | AWS | `aws` | Complete |
 | GCP | `gcp` | Interface only |
@@ -486,7 +509,7 @@ Uses FastMCP's default stdio transport. Can be consumed by any MCP-compatible cl
 
 ## Project Structure
 
-```
+```text
 cloud-janitor/
 ├── src/
 │   └── cloud_janitor/               # Installable package (src-layout)
@@ -560,7 +583,7 @@ cloud-janitor/
 The fixture data ships with a pre-built scenario that exercises every agent and demonstrates realistic cross-concern remediation.
 
 | Resource | Type | Problem | Agent | Severity |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `cache-prod-legacy-01` | ElastiCache | Idle 42 days, 0 connections, $45.60/mo | FinOps | HIGH |
 | `vol-0abc123def456789a` | EBS | Unattached 35 days, $12.00/mo | FinOps | MEDIUM |
 | `sg-prod-redis` | Security Group | Port 6379 open to `0.0.0.0/0` | SecOps | CRITICAL |
