@@ -7,7 +7,7 @@ artifact paths via string literals outside this module.
 import os
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+PROJECT_ROOT = Path(os.environ.get("JANITOR_HOME", Path.cwd())).resolve()
 
 # Base output directory
 OUTPUT_DIR = PROJECT_ROOT / "output"

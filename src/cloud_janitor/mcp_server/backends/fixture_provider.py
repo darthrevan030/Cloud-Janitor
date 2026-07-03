@@ -1,5 +1,6 @@
 """Fixture-backed cloud provider for local development and testing."""
 
+import importlib.resources
 import json
 from pathlib import Path
 from typing import Optional
@@ -8,21 +9,31 @@ from cloud_janitor.mcp_server.backends import CloudProvider
 
 
 class FixtureProvider(CloudProvider):
-    """CloudProvider implementation backed by local JSON fixture files."""
+    """CloudProvider backed by bundled JSON fixture files."""
 
     def __init__(self, fixtures_dir: Optional[Path] = None):
-        if fixtures_dir is None:
-            fixtures_dir = Path(__file__).parent.parent.parent.parent.parent / "fixtures"
-        self.fixtures_dir = fixtures_dir
+        self._fixtures_dir = fixtures_dir
+
+    def _load_fixture(self, filename: str) -> dict:
+        if self._fixtures_dir is not None:
+            with open(self._fixtures_dir / filename) as f:
+                return json.load(f)
+        ref = importlib.resources.files("cloud_janitor.fixtures").joinpath(filename)
+        with importlib.resources.as_file(ref) as path:
+            with open(path) as f:
+                return json.load(f)
 
     def get_cost_data(self, resource_type: Optional[str] = None, min_idle_days: int = 7) -> dict:
         """Return idle/orphaned resource data from Cost Explorer fixture."""
-        fixture_path = self.fixtures_dir / "aws_cost_explorer.json"
-        if not fixture_path.exists():
-            return {"error": f"Fixture not found: {fixture_path}", "resources": [], "total_monthly_waste": 0.0}
+        if self._fixtures_dir is not None:
+            fixture_path = self._fixtures_dir / "aws_cost_explorer.json"
+            if not fixture_path.exists():
+                return {"error": f"Fixture not found: {fixture_path}", "resources": [], "total_monthly_waste": 0.0}
 
-        with open(fixture_path) as f:
-            data = json.load(f)
+        try:
+            data = self._load_fixture("aws_cost_explorer.json")
+        except (FileNotFoundError, OSError) as e:
+            return {"error": f"Fixture not found: {e}", "resources": [], "total_monthly_waste": 0.0}
 
         resources = data["resources"]
         if resource_type:
@@ -34,12 +45,15 @@ class FixtureProvider(CloudProvider):
 
     def get_security_data(self, check_type: Optional[str] = None) -> dict:
         """Return security findings from Config/Inspector fixture."""
-        fixture_path = self.fixtures_dir / "aws_config_inspector.json"
-        if not fixture_path.exists():
-            return {"error": f"Fixture not found: {fixture_path}", "findings": [], "critical_count": 0}
+        if self._fixtures_dir is not None:
+            fixture_path = self._fixtures_dir / "aws_config_inspector.json"
+            if not fixture_path.exists():
+                return {"error": f"Fixture not found: {fixture_path}", "findings": [], "critical_count": 0}
 
-        with open(fixture_path) as f:
-            data = json.load(f)
+        try:
+            data = self._load_fixture("aws_config_inspector.json")
+        except (FileNotFoundError, OSError) as e:
+            return {"error": f"Fixture not found: {e}", "findings": [], "critical_count": 0}
 
         findings = data["findings"]
         if check_type:
@@ -50,12 +64,15 @@ class FixtureProvider(CloudProvider):
 
     def check_dependencies(self, resource_id: str) -> dict:
         """Check resource dependency graph."""
-        fixture_path = self.fixtures_dir / "aws_config_inspector.json"
-        if not fixture_path.exists():
-            return {"error": f"Fixture not found: {fixture_path}", "has_dependencies": False, "dependents": []}
+        if self._fixtures_dir is not None:
+            fixture_path = self._fixtures_dir / "aws_config_inspector.json"
+            if not fixture_path.exists():
+                return {"error": f"Fixture not found: {fixture_path}", "has_dependencies": False, "dependents": []}
 
-        with open(fixture_path) as f:
-            data = json.load(f)
+        try:
+            data = self._load_fixture("aws_config_inspector.json")
+        except (FileNotFoundError, OSError) as e:
+            return {"error": f"Fixture not found: {e}", "has_dependencies": False, "dependents": []}
 
         deps = data.get("dependencies", {}).get(resource_id, [])
         return {"has_dependencies": len(deps) > 0, "dependents": deps}

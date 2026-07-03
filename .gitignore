@@ -33,14 +33,10 @@ output/rollbacks/*
 !output/rollbacks/.gitkeep
 output/policies/*.json
 output/remediation.tf
-
-# Root-level runtime artifacts
-findings_store.json
-savings_ledger.json
 audit.log
-remediation.tf
-/rollbacks/*.tf
-!/rollbacks/.gitkeep
+
+# If JANITOR_HOME is set to a path inside the repo
+.janitor_home
 
 # IDE
 .vscode/settings.json

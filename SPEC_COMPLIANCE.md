@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T08:23:34Z
+Generated: 2026-07-03T08:33:43Z
 
-**Summary:** 232 tasks — ✅ 221 done, ⏳ 2 partial, ❌ 9 pending
+**Summary:** 232 tasks — ✅ 222 done, ⏳ 2 partial, ❌ 8 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T08:23:34Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (26/30)
+## Production Readiness (27/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -186,8 +186,8 @@ Generated: 2026-07-03T08:23:34Z
 | 26 | 7.3 Update all test imports to `cloud_janitor.*` paths | ✅ Done | no mapping |
 | 27 | 7.4 Update `pyproject.toml` for src-layout | ✅ Done | no mapping |
 | 28 | 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`) | ✅ Done | no mapping |
-| 29 | 7.6 Verify package installability and type annotation marker | ⏳ Partial | no mapping |
-| 30 | 8. Final checkpoint — Ensure all tests pass | ❌ Pending | — |
+| 29 | 7.6 Verify package installability and type annotation marker | ✅ Done | no mapping |
+| 30 | 8. Final checkpoint — Ensure all tests pass | ⏳ Partial | no mapping |
 
 ## Provider Agnostic Backend (23/23)
 
