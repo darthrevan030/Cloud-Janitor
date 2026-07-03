@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T03:40:05Z
+Generated: 2026-07-03T03:40:16Z
 
 **Summary:** 232 tasks — ✅ 202 done, ⏳ 1 partial, ❌ 29 pending
 

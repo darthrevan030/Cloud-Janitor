@@ -76,7 +76,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Mock Orchestrator (external I/O), never mock the CLI handler itself
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.8, 1.9, 1.10, 1.11, 12.2_
 
-  - [ ] 3.2 Write unit tests for logging config (`tests/test_logging_config.py`)
+  - [x] 3.2 Write unit tests for logging config (`tests/test_logging_config.py`)
     - Test valid levels (DEBUG, INFO, WARNING, ERROR) configure correctly
     - Test case-insensitive matching (e.g., "debug", "Debug")
     - Test missing env var defaults to INFO
