@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T03:23:26Z
+Generated: 2026-07-03T03:40:05Z
 
-**Summary:** 227 tasks — ✅ 199 done, ⏳ 2 partial, ❌ 26 pending
+**Summary:** 232 tasks — ✅ 202 done, ⏳ 1 partial, ❌ 29 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,35 +154,40 @@ Generated: 2026-07-03T03:23:26Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (4/25)
+## Production Readiness (7/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
-| 1 | 1. Batch 1 — Core infrastructure (flat layout) | ❌ Pending | — |
+| 1 | 1. Batch 1 — Core infrastructure (flat layout) | ✅ Done | no mapping |
 | 2 | 1.1 Create `pyproject.toml` with build system, dependencies, and scripts | ✅ Done | no mapping |
 | 3 | 1.2 Create `logging_config.py` at project root | ✅ Done | no mapping |
 | 4 | 1.3 Add retry logic to `core/llm_client.py` | ✅ Done | no mapping |
-| 5 | 1.4 Create `cli.py` at project root with Click CLI | ⏳ Partial | no mapping |
+| 5 | 1.4 Create `cli.py` at project root with Click CLI | ✅ Done | no mapping |
 | 6 | 1.5 Update stub providers with warning pattern | ✅ Done | no mapping |
 | 7 | 2. Checkpoint — Verify Batch 1 | ❌ Pending | — |
 | 8 | 3. Batch 1 — Tests for core infrastructure | ❌ Pending | — |
-| 9 | 3.1 Write unit tests for CLI (`tests/test_cli.py`) | ❌ Pending | — |
+| 9 | 3.1 Write unit tests for CLI (`tests/test_cli.py`) | ✅ Done | no mapping |
 | 10 | 3.2 Write unit tests for logging config (`tests/test_logging_config.py`) | ❌ Pending | — |
 | 11 | 3.3 Write unit tests for LLM retry logic (`tests/test_llm_retry.py`) | ❌ Pending | — |
 | 12 | 3.4 Write unit tests for stub providers (`tests/test_stub_providers.py`) | ❌ Pending | — |
 | 13 | 3.5 Write unit tests for version logic in `cli.py` (`tests/test_version.py`) | ❌ Pending | — |
-| 14 | 4. Checkpoint — Verify Batch 1 tests | ❌ Pending | — |
-| 15 | 5. Batch 2 — README accuracy | ❌ Pending | — |
-| 16 | 5.1 Update README.md with accurate documentation | ❌ Pending | — |
-| 17 | 6. Checkpoint — Verify Batch 2 | ❌ Pending | — |
-| 18 | 7. Batch 3 — Package structure migration and CI | ❌ Pending | — |
-| 19 | 7.1 Create `src/cloud_janitor/` directory structure and move modules | ❌ Pending | — |
-| 20 | 7.2 Update all source imports to `cloud_janitor.*` paths | ❌ Pending | — |
-| 21 | 7.3 Update all test imports to `cloud_janitor.*` paths | ❌ Pending | — |
-| 22 | 7.4 Update `pyproject.toml` for src-layout | ❌ Pending | — |
-| 23 | 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`) | ❌ Pending | — |
-| 24 | 7.6 Verify package installability and type annotation marker | ❌ Pending | — |
-| 25 | 8. Final checkpoint — Ensure all tests pass | ❌ Pending | — |
+| 14 | 3.6 Write property test for log level configuration mapping | ❌ Pending | — |
+| 15 | 3.7 Write property test for retry on retriable errors | ❌ Pending | — |
+| 16 | 3.8 Write property test for retry exhaustion exception content | ❌ Pending | — |
+| 17 | 3.9 Write property test for backoff delay calculation | ❌ Pending | — |
+| 18 | 3.10 Write property test for stub provider NotImplementedError content | ❌ Pending | — |
+| 19 | 4. Checkpoint — Verify Batch 1 tests | ❌ Pending | — |
+| 20 | 5. Batch 2 — README accuracy | ❌ Pending | — |
+| 21 | 5.1 Update README.md with accurate documentation | ❌ Pending | — |
+| 22 | 6. Checkpoint — Verify Batch 2 | ❌ Pending | — |
+| 23 | 7. Batch 3 — Package structure migration and CI | ❌ Pending | — |
+| 24 | 7.1 Create `src/cloud_janitor/` directory structure and move modules | ❌ Pending | — |
+| 25 | 7.2 Update all source imports to `cloud_janitor.*` paths | ❌ Pending | — |
+| 26 | 7.3 Update all test imports to `cloud_janitor.*` paths | ❌ Pending | — |
+| 27 | 7.4 Update `pyproject.toml` for src-layout | ❌ Pending | — |
+| 28 | 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`) | ❌ Pending | — |
+| 29 | 7.6 Verify package installability and type annotation marker | ❌ Pending | — |
+| 30 | 8. Final checkpoint — Ensure all tests pass | ❌ Pending | — |
 
 ## Provider Agnostic Backend (23/23)
 

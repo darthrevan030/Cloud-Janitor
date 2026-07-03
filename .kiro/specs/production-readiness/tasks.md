@@ -6,7 +6,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
 
 ## Tasks
 
-- [ ] 1. Batch 1 — Core infrastructure (flat layout)
+- [x] 1. Batch 1 — Core infrastructure (flat layout)
   - [x] 1.1 Create `pyproject.toml` with build system, dependencies, and scripts
     - Declare `[build-system]` with hatchling backend
     - Add `[project]` metadata (name, version 0.1.0, description, requires-python >=3.12)
@@ -37,7 +37,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Replace any `print()` calls with `logging.getLogger(__name__)` calls
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 7.1_
 
-  - [-] 1.4 Create `cli.py` at project root with Click CLI
+  - [x] 1.4 Create `cli.py` at project root with Click CLI
     - Implement `main()` Click group with `--version` option (version read inline via `importlib.metadata.version("cloud-janitor")` with `PackageNotFoundError` fallback to `"0.0.0-dev"` — do NOT import from `cloud_janitor`)
     - Implement `scan` command with `--finops` and `--secops` flags
     - Implement `approve <resource_id>` command
@@ -63,7 +63,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
   - Verify logging configuration tests pass
 
 - [ ] 3. Batch 1 — Tests for core infrastructure
-  - [ ] 3.1 Write unit tests for CLI (`tests/test_cli.py`)
+  - [x] 3.1 Write unit tests for CLI (`tests/test_cli.py`)
     - Use Click's `CliRunner` to test all subcommands
     - Test `scan` calls `execute_audit()` and prints finding count
     - Test `scan --finops` and `scan --secops` flags
@@ -113,31 +113,31 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - The full `cloud_janitor.__version__` test (Req 9.1, 9.5) is deferred to task 7.6 after src-layout migration
     - _Requirements: 9.2, 9.3, 9.4_
 
-  - [ ]* 3.6 Write property test for log level configuration mapping
+  - [ ] 3.6 Write property test for log level configuration mapping
     - **Property 1: Log Level Configuration Mapping**
     - Generator: random strings (mix of valid levels in random casing + invalid strings)
     - Assertion: root logger level matches expected mapping; invalid values emit WARNING
     - **Validates: Requirements 7.2, 7.6**
 
-  - [ ]* 3.7 Write property test for retry on retriable errors
+  - [ ] 3.7 Write property test for retry on retriable errors
     - **Property 2: Retry on Retriable Errors**
     - Generator: random retriable error type × random failure count (1–3) × random success/fail on final
     - Assertion: correct total attempts made, correct WARNING log records per retry
     - **Validates: Requirements 8.1, 8.2, 8.3, 8.5**
 
-  - [ ]* 3.8 Write property test for retry exhaustion exception content
+  - [ ] 3.8 Write property test for retry exhaustion exception content
     - **Property 3: Retry Exhaustion Exception Content**
     - Generator: random retriable error type that persists for all 4 attempts
     - Assertion: exception has status_or_error string, attempts == 4, mocked sleep calls sum to ~7 seconds (1+2+4) matching the exponential backoff formula
     - **Validates: Requirements 8.4**
 
-  - [ ]* 3.9 Write property test for backoff delay calculation
+  - [ ] 3.9 Write property test for backoff delay calculation
     - **Property 4: Backoff Delay Calculation**
     - Generator: random attempt number (0–2) × random Retry-After value (None, or float 0.1–120)
     - Assertion: delay follows formula; values > 60 cause immediate LLMRateLimitExceeded raise
     - **Validates: Requirements 8.6, 8.7**
 
-  - [ ]* 3.10 Write property test for stub provider NotImplementedError content
+  - [ ] 3.10 Write property test for stub provider NotImplementedError content
     - **Property 5: Stub Provider NotImplementedError Content**
     - Generator: random choice of (GCPProvider, AzureProvider) × random method name
     - Assertion: NotImplementedError message contains both provider class name and method name
