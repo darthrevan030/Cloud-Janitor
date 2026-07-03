@@ -6,7 +6,7 @@ demo:
 	docker-compose up -d
 	@echo "Waiting for LocalStack..."
 	@i=0; while [ $$i -lt 30 ]; do \
-		if curl -s http://localhost:4566/_localstack/health | grep -q '"ready"'; then \
+		if curl -s http://localhost:4566/_localstack/health | grep -q '"elasticache": "available"'; then \
 			echo " ready!"; break; \
 		fi; \
 		printf "."; \
