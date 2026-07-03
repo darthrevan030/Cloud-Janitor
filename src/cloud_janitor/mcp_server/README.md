@@ -68,7 +68,7 @@ Checks the resource dependency graph to determine if other resources reference t
 
 ## Fixture Data Format
 
-Fixtures live in `fixtures/` at the project root.
+Fixtures live in `src/cloud_janitor/fixtures/` (bundled inside the installed package).
 
 ### `aws_cost_explorer.json`
 
@@ -147,7 +147,7 @@ When `JANITOR_BACKEND` is unset, it defaults to `"fixture"`. Setting it to an in
 
 ```text
 CloudProvider (ABC)
-├── FixtureProvider   — reads fixtures/*.json
+├── FixtureProvider   — reads bundled cloud_janitor/fixtures/*.json via importlib.resources
 ├── AWSProvider       — complete, queries live AWS via boto3
 ├── GCPProvider       — stub
 └── AzureProvider     — stub
@@ -202,6 +202,6 @@ This is a genuine MCP server built with FastMCP — it implements the real MCP p
 
 ## Adding New Fixtures
 
-1. Add or edit JSON files in `fixtures/`.
+1. Add or edit JSON files in `src/cloud_janitor/fixtures/`.
 2. Follow the schema above — `get_cost_data` expects a top-level `resources` array; `get_security_data` expects `findings` + `dependencies`.
 3. Restart the server to pick up changes (fixture files are read on each tool invocation, so no restart is actually needed for data changes).

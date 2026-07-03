@@ -49,7 +49,8 @@ class IncidentPolicyGenerator:
     def __init__(self, model: str = DEFAULT_MODEL, policies_dir: Path | None = None):
         self._model = model
         if policies_dir is None:
-            self._policies_dir = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))) / "output" / "policies"
+            from cloud_janitor.core.paths import POLICIES_DIR
+            self._policies_dir = POLICIES_DIR
         else:
             self._policies_dir = Path(policies_dir)
 

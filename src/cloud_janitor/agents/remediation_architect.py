@@ -32,10 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 # Project root for output files
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
-OUTPUT_DIR = PROJECT_ROOT / "output"
-ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
+from cloud_janitor.core.paths import FINDINGS_STORE_PATH, OUTPUT_DIR, ROLLBACKS_DIR
 
 
 def _sanitize_id(resource_id: str) -> str:

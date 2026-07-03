@@ -200,7 +200,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Ensure failed steps prevent dependent steps from executing
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
 
-  - [-] 7.6 Verify package installability and type annotation marker
+  - [x] 7.6 Verify package installability and type annotation marker
     - Run `pip install -e .` and verify `import cloud_janitor` succeeds
     - Verify `cloud-janitor --help` exits 0
     - Verify `py.typed` is included in installed package

@@ -334,7 +334,7 @@ Free tier may queue under heavy load — the codebase retries automatically or r
 
 ### Fixture mode (default)
 
-No AWS account required. All data comes from `fixtures/*.json`.
+No AWS account required. All data comes from bundled `cloud_janitor/fixtures/*.json`.
 
 ```bash
 # .env
@@ -524,14 +524,15 @@ cloud-janitor/
 │       │       ├── aws_provider.py  # AWS backend (complete)
 │       │       ├── gcp_provider.py  # GCP backend (stub)
 │       │       └── azure_provider.py # Azure backend (stub)
+│       ├── fixtures/                # Bundled fixture data (included in wheel)
+│       │   ├── __init__.py
+│       │   ├── aws_cost_explorer.json # Fake cost/idle resource data
+│       │   └── aws_config_inspector.json # Fake security findings + dependency map
 │       └── orchestrator/            # Agent pipeline + approval flow
 │           ├── __init__.py          # Re-exports Orchestrator, AuditResult, etc.
 │           └── orchestrator.py      # Main orchestrator implementation
 ├── bin/
 │   └── tflocal                      # Repo-local wrapper (dry-run or delegates to real binary)
-├── fixtures/
-│   ├── aws_cost_explorer.json       # Fake cost/idle resource data
-│   └── aws_config_inspector.json    # Fake security findings + dependency map
 ├── hooks/
 │   ├── pre-remediation.sh           # HCL validation gate (runtime)
 │   └── post-remediation.sh          # Audit log append (runtime)
@@ -632,7 +633,7 @@ PROVIDER_REGISTRY["my_backend"] = MyProvider
 
 ### Add a resource to `aws_cost_explorer.json`
 
-Required fields: `id`, `type` (`elasticache`/`ebs`/`ec2`), `name`, `idle_days`, `monthly_cost`, `status`, `availability_zone`, `created_at`, `description`. Add type-specific fields (see `fixtures/README.md` for field tables).
+Required fields: `id`, `type` (`elasticache`/`ebs`/`ec2`), `name`, `idle_days`, `monthly_cost`, `status`, `availability_zone`, `created_at`, `description`. Add type-specific fields (see `src/cloud_janitor/fixtures/README.md` for field tables).
 
 ### Add a finding to `aws_config_inspector.json`
 

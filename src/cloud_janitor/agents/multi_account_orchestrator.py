@@ -46,8 +46,8 @@ class MultiAccountOrchestrator:
         max_workers: int = DEFAULT_MAX_WORKERS,
     ):
         if accounts_path is None:
-            project_root = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-            self._accounts_path = project_root / "accounts.json"
+            from cloud_janitor.core.paths import PROJECT_ROOT
+            self._accounts_path = PROJECT_ROOT / "accounts.json"
         else:
             self._accounts_path = Path(accounts_path)
 

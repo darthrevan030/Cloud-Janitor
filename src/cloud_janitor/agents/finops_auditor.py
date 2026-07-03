@@ -29,8 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 # Project root for output files
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
+from cloud_janitor.core.paths import FINDINGS_STORE_PATH
 
 
 class FinOpsAuditor:

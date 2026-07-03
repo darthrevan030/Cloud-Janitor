@@ -53,8 +53,8 @@ class DriftDetector:
         model: str = DEFAULT_MODEL,
     ):
         if history_path is None:
-            project_root = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-            self._history_path = project_root / "output" / "scan_history.json"
+            from cloud_janitor.core.paths import OUTPUT_DIR
+            self._history_path = OUTPUT_DIR / "scan_history.json"
         else:
             self._history_path = Path(history_path)
         self._history_path.parent.mkdir(parents=True, exist_ok=True)

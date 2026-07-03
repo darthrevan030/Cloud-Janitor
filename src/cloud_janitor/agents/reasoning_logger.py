@@ -45,7 +45,8 @@ class ReasoningLogger:
         if log_path is not None:
             self._log_path = log_path
         else:
-            self._log_path = Path(__file__).resolve().parent.parent.parent.parent / "output" / "logs" / "agent_reasoning.log"
+            from cloud_janitor.core.paths import REASONING_LOG_PATH
+            self._log_path = REASONING_LOG_PATH
 
     @property
     def log_path(self) -> Path:

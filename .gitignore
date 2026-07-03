@@ -18,7 +18,7 @@ venv/
 .terraform.lock.hcl
 *.tfplan
 
-# Runtime outputs
+# Runtime outputs (repo-root output/)
 output/logs/audit.log
 output/findings_store.json
 findings_store_*.json
@@ -34,6 +34,9 @@ output/rollbacks/*
 output/policies/*.json
 output/remediation.tf
 audit.log
+
+# Runtime outputs accidentally written inside src if any
+src/cloud_janitor/output/
 
 # If JANITOR_HOME is set to a path inside the repo
 .janitor_home

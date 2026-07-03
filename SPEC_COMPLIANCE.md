@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T08:33:43Z
+Generated: 2026-07-03T09:09:27Z
 
-**Summary:** 232 tasks — ✅ 222 done, ⏳ 2 partial, ❌ 8 pending
+**Summary:** 232 tasks — ✅ 222 done, ⏳ 1 partial, ❌ 9 pending
 
 ## Audit Remediation (55/55)
 
@@ -187,7 +187,7 @@ Generated: 2026-07-03T08:33:43Z
 | 27 | 7.4 Update `pyproject.toml` for src-layout | ✅ Done | no mapping |
 | 28 | 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`) | ✅ Done | no mapping |
 | 29 | 7.6 Verify package installability and type annotation marker | ✅ Done | no mapping |
-| 30 | 8. Final checkpoint — Ensure all tests pass | ⏳ Partial | no mapping |
+| 30 | 8. Final checkpoint — Ensure all tests pass | ❌ Pending | — |
 
 ## Provider Agnostic Backend (23/23)
 
