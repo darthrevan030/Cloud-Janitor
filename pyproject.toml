@@ -35,6 +35,8 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.4.0",
     "pytest-xdist",
+    "build>=1.5.0",
+    "twine>=6.2.0",
 ]
 
 [tool.hatch.build.targets.wheel]

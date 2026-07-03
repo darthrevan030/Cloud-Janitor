@@ -10,6 +10,9 @@ build/
 venv/
 .env*
 !.env.example
+.mypy_*
+*_cache
+.hypothesis
 
 # Terraform
 .terraform/
