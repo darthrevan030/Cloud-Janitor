@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T01:22:40Z
+Generated: 2026-07-03T01:27:11Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -43,13 +43,13 @@ Generated: 2026-07-03T01:22:40Z
 | 37 | 8.1 Wrap `savings_tracker.record_run()` with broad exception handling | ✅ Done | agents/savings_tracker.py exists |
 | 38 | 8.2 Write property test for savings tracker exception swallowing | ✅ Done | agents/savings_tracker.py exists |
 | 39 | 9. Checkpoint - Ensure all tests pass | ✅ Done | no mapping |
-| 40 | 10. Implement UI–Orchestrator contract alignment | ❌ Pending | — |
+| 40 | 10. Implement UI–Orchestrator contract alignment | ✅ Done | app.py exists |
 | 41 | 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only | ✅ Done | app.py exists |
 | 42 | 10.2 Write unit tests for UI delegation (`tests/test_ui_delegation.py`) | ✅ Done | app.py exists |
 | 43 | 10.3 Implement NL audit delegation with feature detection | ✅ Done | no mapping |
 | 44 | 10.4 Write unit tests for NL audit feature detection (`tests/test_nl_audit.py`) | ✅ Done | no mapping |
 | 45 | 10.5 Implement explicit Phase B/C agent imports | ✅ Done | no mapping |
-| 46 | 10.6 Write unit tests for agent ImportError handling (`tests/test_agent_imports.py`) | ❌ Pending | — |
+| 46 | 10.6 Write unit tests for agent ImportError handling (`tests/test_agent_imports.py`) | ✅ Done | no mapping |
 | 47 | 10.7 Update `app.py` to import paths from `core/paths.py` | ✅ Done | app.py exists |
 | 48 | 10.8 Update Orchestrator to use `core/paths.py` and call `ensure_output_dirs()` | ✅ Done | no mapping |
 | 49 | 11. Wire structured error telemetry into Orchestrator | ❌ Pending | — |

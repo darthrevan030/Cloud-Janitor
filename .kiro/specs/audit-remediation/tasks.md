@@ -252,7 +252,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Write JSONL errors to audit log path
     - _Requirements: 12.1, 12.2, 12.3_
 
-  - [ ] 11.2 Write unit tests for `_classify_error()` (`tests/test_error_classification.py`)
+  - [x] 11.2 Write unit tests for `_classify_error()` (`tests/test_error_classification.py`)
     - Test `context="tf_validate"` → returns `"terraform_failure"`
     - Test `isinstance(exc, OSError)` → returns `"io_failure"`
     - Test `context="schema_check"` → returns `"validation_failure"`
