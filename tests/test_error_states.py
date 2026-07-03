@@ -47,6 +47,7 @@ def tmp_project(tmp_path):
 def findings_store(tmp_project):
     """Write a findings_store.json with entries from both agents."""
     store = {
+        "schema_version": "1.0.0",
         "scan_id": "error-state-test",
         "started_at": "2025-01-20T00:00:00Z",
         "completed_at": "2025-01-20T00:01:00Z",

@@ -34,7 +34,7 @@ def tmp_orchestrator(tmp_path: Path) -> Orchestrator:
     # Create a minimal findings_store.json so validation passes
     findings_store = tmp_path / "output" / "findings_store.json"
     findings_store.write_text(
-        '{"findings": [{"agent":"finops","resource_id":"vol-1"},{"agent":"secops","resource_id":"sg-1"}]}'
+        '{"schema_version": "1.0.0", "findings": [{"agent":"finops","resource_id":"vol-1"},{"agent":"secops","resource_id":"sg-1"}]}'
     )
 
     with patch("orchestrator.get_cost_data") as mock_cost, \

@@ -18,15 +18,46 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 import os
 import platform
+import re
+import shutil
 import subprocess
 import sys
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+
+def _find_bash() -> str:
+    """Locate a working bash binary.
+
+    Resolution order:
+      1. BASH_PATH environment variable (explicit override)
+      2. Git Bash on Windows (C:/Program Files/Git/bin/bash.exe)
+      3. 'bash' on PATH (works on Linux/macOS; on Windows may hit WSL wrapper)
+
+    Returns the path string to use in subprocess calls.
+    """
+    # Allow explicit override via env var
+    env_bash = os.environ.get("BASH_PATH")
+    if env_bash and shutil.which(env_bash):
+        return env_bash
+
+    # On Windows, prefer Git Bash over WSL wrapper
+    if platform.system() == "Windows":
+        git_bash = r"C:\Program Files\Git\bin\bash.exe"
+        if os.path.isfile(git_bash):
+            return git_bash
+
+    # Fall back to whatever 'bash' resolves to on PATH
+    return "bash"
 
 
 def _to_bash_path(p: Path) -> str:
@@ -44,6 +75,7 @@ def _to_bash_path(p: Path) -> str:
 
 from agents.approval_gate import (
     ApprovalGate,
+    ApprovalGateStore,
     parse_approval,
     parse_confirm_rollback,
     parse_rollback,
@@ -58,16 +90,81 @@ from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
 from mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
 from agents.savings_tracker import SavingsTracker
+from core.paths import (
+    PROJECT_ROOT as _CORE_PROJECT_ROOT,
+    OUTPUT_DIR as _CORE_OUTPUT_DIR,
+    ROLLBACKS_DIR as _CORE_ROLLBACKS_DIR,
+    LOGS_DIR as _CORE_LOGS_DIR,
+    FINDINGS_STORE_PATH as _CORE_FINDINGS_STORE_PATH,
+    AUDIT_LOG_PATH as _CORE_AUDIT_LOG_PATH,
+    REASONING_LOG_PATH as _CORE_REASONING_LOG_PATH,
+    APPROVAL_GATES_PATH as _CORE_APPROVAL_GATES_PATH,
+    SAVINGS_LEDGER_PATH as _CORE_SAVINGS_LEDGER_PATH,
+    HOOKS_DIR as _CORE_HOOKS_DIR,
+    ensure_output_dirs,
+)
+from core.error_telemetry import build_error_record, write_error_record
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
-PROJECT_ROOT = Path(__file__).parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
-HOOKS_DIR = PROJECT_ROOT / "hooks"
-OUTPUT_DIR = PROJECT_ROOT / "output"
-ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
-AUDIT_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "audit.log"
+TF_CMD_ALLOWLIST = {"terraform", "tflocal"}
+
+BASH_CMD = _find_bash()
+
+SCHEMA_VERSION = "1.0.0"
+
+_RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}\Z")
+
+# Schema version for findings_store.json — bump when the schema changes.
+# The orchestrator will warn (not fail) if the store has a newer version than expected.
+FINDINGS_STORE_SCHEMA_VERSION = "1.0.0"
+
+
+def _validate_tf_cmd() -> str:
+    """Validate and resolve TF_CMD from environment.
+
+    Returns:
+        Absolute path to the validated binary.
+
+    Raises:
+        RuntimeError: If TF_CMD fails any validation check.
+    """
+    raw = os.environ.get("TF_CMD", "tflocal")
+
+    # Reject path separators
+    if "/" in raw or "\\" in raw:
+        raise RuntimeError(
+            f"TF_CMD contains path separators: '{raw}'. "
+            f"Only bare binary names are permitted: {sorted(TF_CMD_ALLOWLIST)}"
+        )
+
+    # Extract basename (redundant given separator check, but defense-in-depth)
+    basename = os.path.basename(raw)
+
+    # Validate against allowlist
+    if basename not in TF_CMD_ALLOWLIST:
+        raise RuntimeError(
+            f"TF_CMD '{basename}' is not in the allowlist. "
+            f"Permitted values: {sorted(TF_CMD_ALLOWLIST)}"
+        )
+
+    # Resolve to absolute path via PATH lookup
+    resolved = shutil.which(basename)
+    if resolved is None:
+        raise RuntimeError(
+            f"TF_CMD '{basename}' could not be found on PATH."
+        )
+
+    return resolved
+
+
+PROJECT_ROOT = _CORE_PROJECT_ROOT
+FINDINGS_STORE_PATH = _CORE_FINDINGS_STORE_PATH
+HOOKS_DIR = _CORE_HOOKS_DIR
+OUTPUT_DIR = _CORE_OUTPUT_DIR
+ROLLBACKS_DIR = _CORE_ROLLBACKS_DIR
+AUDIT_LOG_PATH = _CORE_AUDIT_LOG_PATH
 
 
 @dataclass
@@ -102,6 +199,8 @@ class AuditResult:
     blocked_plans: list[RemediationPlan] = field(default_factory=list)
     hook_error: str | None = None
     error: str | None = None
+    error_category: str | None = None
+    error_agent: str | None = None
     anomalies: list[dict] = field(default_factory=list)
     drift_report: dict | None = None
 
@@ -113,6 +212,8 @@ class ApprovalResult:
     success: bool
     resource_id: str = ""
     error: str | None = None
+    error_category: str | None = None
+    error_agent: str | None = None
     locked: bool = False
     expected_format: str | None = None
     attempts_remaining: int | None = None
@@ -125,7 +226,10 @@ class RollbackResult:
     success: bool
     resource_id: str = ""
     error: str | None = None
+    error_category: str | None = None
+    error_agent: str | None = None
     needs_confirmation: bool = False
+    exit_code: int | None = None
 
 
 class Orchestrator:
@@ -148,20 +252,54 @@ class Orchestrator:
         approver: str = "system",
     ):
         self.project_root = project_root or PROJECT_ROOT
-        self.findings_store_path = self.project_root / "output" / "findings_store.json"
-        # Ensure output directories exist
-        (self.project_root / "output" / "logs").mkdir(parents=True, exist_ok=True)
-        (self.project_root / "output" / "rollbacks").mkdir(parents=True, exist_ok=True)
-        (self.project_root / "output" / "policies").mkdir(parents=True, exist_ok=True)
-        self.hooks_dir = self.project_root / "hooks"
-        self.output_dir = self.project_root / "output"
-        self.rollbacks_dir = self.project_root / "output" / "rollbacks"
-        self.audit_log_path = self.project_root / "output" / "logs" / "audit.log"
+
+        # Determine whether to use centralized path constants or custom-root paths
+        using_default_root = (project_root is None)
+
+        if using_default_root:
+            # Use centralized path constants from core/paths.py (Req 4.4)
+            # Ensure output directories exist — halt on failure (Req 4.3, 4.5)
+            try:
+                ensure_output_dirs()
+            except RuntimeError as e:
+                raise RuntimeError(
+                    f"Orchestrator initialization failed: {e}"
+                ) from e
+
+            self.findings_store_path = FINDINGS_STORE_PATH
+            self.hooks_dir = HOOKS_DIR
+            self.output_dir = OUTPUT_DIR
+            self.rollbacks_dir = ROLLBACKS_DIR
+            self.audit_log_path = AUDIT_LOG_PATH
+        else:
+            # Custom project root (tests) — construct paths relative to it
+            self.output_dir = self.project_root / "output"
+            self.rollbacks_dir = self.output_dir / "rollbacks"
+            self.findings_store_path = self.output_dir / "findings_store.json"
+            self.hooks_dir = self.project_root / "hooks"
+            self.audit_log_path = self.output_dir / "logs" / "audit.log"
+            # Create required directories for custom root
+            try:
+                for d in [self.output_dir, self.rollbacks_dir,
+                          self.output_dir / "logs", self.output_dir / "policies"]:
+                    os.makedirs(d, exist_ok=True)
+            except OSError as e:
+                raise RuntimeError(
+                    f"Orchestrator initialization failed: could not create directory: {e}"
+                ) from e
+
         self.approver = approver
 
+        # Validate and resolve TF_CMD binary
+        self._tf_cmd = _validate_tf_cmd()
+
         # Reasoning logger (shared across all agents)
+        reasoning_log_path = (
+            _CORE_REASONING_LOG_PATH if using_default_root
+            else self.output_dir / "logs" / "agent_reasoning.log"
+        )
         self._reasoning_logger = ReasoningLogger(
-            log_path=self.project_root / "output" / "logs" / "agent_reasoning.log"
+            log_path=reasoning_log_path
         )
 
         # Agent instances
@@ -187,14 +325,28 @@ class Orchestrator:
         self._query_interpreter = QueryInterpreter()
         self._anomaly_detector = AnomalyDetector()
         self._drift_detector = DriftDetector(
-            history_path=self.project_root / "output" / "scan_history.json"
+            history_path=(
+                OUTPUT_DIR / "scan_history.json" if using_default_root
+                else self.output_dir / "scan_history.json"
+            )
         )
 
         # Savings tracker
         self._savings_tracker = SavingsTracker(
-            ledger_path=self.project_root / "output" / "savings_ledger.json",
+            ledger_path=(
+                _CORE_SAVINGS_LEDGER_PATH if using_default_root
+                else self.output_dir / "savings_ledger.json"
+            ),
             findings_store_path=self.findings_store_path,
         )
+
+        # Persistent approval gate store
+        gate_store_path = (
+            _CORE_APPROVAL_GATES_PATH if using_default_root
+            else self.output_dir / "approval_gates.json"
+        )
+        self._gate_store = ApprovalGateStore(gate_store_path)
+        self._gate_store.load()
 
         # Approval gates per resource (keyed by resource_id)
         self._approval_gates: dict[str, ApprovalGate] = {}
@@ -212,35 +364,82 @@ class Orchestrator:
     # Public API
     # ──────────────────────────────────────────────────────────────────────
 
-    def execute_audit(self) -> AuditResult:
+    def execute_audit(
+        self,
+        status_callback: Callable[[str, str], None] | None = None,
+    ) -> AuditResult:
         """
         Execute the full audit pipeline: FinOps → SecOps → Remediation Architect.
+
+        Args:
+            status_callback: Optional callable (agent_name, status) invoked at each
+                pipeline stage. Status values: "idle", "running", "success", "failure".
 
         Returns:
             AuditResult with findings, plans, and any errors.
         """
+
+        def _emit(agent: str, status: str) -> None:
+            if status_callback is not None:
+                status_callback(agent, status)
+
         # Truncate reasoning log at the start of each new audit run
         self._reasoning_logger.truncate()
 
         # Step 1: FinOps Auditor scan
+        _emit("finops", "running")
         self._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
-        finops_findings = self._finops.scan()
+        try:
+            finops_findings = self._finops.scan()
+        except Exception as e:
+            _emit("finops", "failure")
+            self._record_error(e, "FinOpsAuditor", context="")
+            return AuditResult(success=False, error=f"FinOps Auditor failed: {e}", error_category="agent_failure", error_agent="FinOpsAuditor")
         self._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
+        _emit("finops", "success")
 
         # Step 2: SecOps Guard scan
+        _emit("secops", "running")
         self._log_action("scan", "all", "started", "SecOps Guard scan initiated")
-        secops_findings = self._secops.scan()
+        try:
+            secops_findings = self._secops.scan()
+        except Exception as e:
+            _emit("secops", "failure")
+            self._record_error(e, "SecOpsGuard", context="")
+            return AuditResult(
+                success=False,
+                findings=finops_findings,
+                error=f"SecOps Guard failed: {e}",
+                error_category="agent_failure",
+                error_agent="SecOpsGuard",
+            )
         self._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
+        _emit("secops", "success")
 
         # Step 3: Validate findings_store has entries from both agents
+        _emit("remediation", "running")
         validation_error = self._validate_findings_store()
         if validation_error:
             self._log_action("plan", "all", "failure", validation_error)
-            return AuditResult(success=False, error=validation_error)
+            _emit("remediation", "failure")
+            val_exc = RuntimeError(validation_error)
+            self._record_error(val_exc, "Orchestrator", context="schema_check")
+            return AuditResult(success=False, error=validation_error, error_category="validation_failure", error_agent="Orchestrator")
 
         # Step 4: Remediation Architect plans
         self._log_action("plan", "all", "started", "Remediation Architect planning")
-        plans = self._architect.plan()
+        try:
+            plans = self._architect.plan()
+        except Exception as e:
+            _emit("remediation", "failure")
+            self._record_error(e, "RemediationArchitect", context="")
+            return AuditResult(
+                success=False,
+                findings=finops_findings + secops_findings,
+                error=f"Remediation Architect failed: {e}",
+                error_category="agent_failure",
+                error_agent="RemediationArchitect",
+            )
         self._last_plans = plans
 
         blocked_plans = [p for p in plans if p.blocked]
@@ -260,14 +459,20 @@ class Orchestrator:
             hook_error = self._run_pre_remediation_hook(active_plans)
             if hook_error:
                 self._log_action("plan", "all", "blocked", f"Pre-remediation hook failed: {hook_error}")
+                _emit("remediation", "failure")
+                hook_exc = RuntimeError(hook_error)
+                self._record_error(hook_exc, "Orchestrator", context="hook_validation")
                 return AuditResult(
                     success=False,
                     findings=finops_findings + secops_findings,
                     plans=active_plans,
                     blocked_plans=blocked_plans,
                     hook_error=hook_error,
+                    error_category="validation_failure",
+                    error_agent="Orchestrator",
                 )
 
+        _emit("remediation", "success")
         all_findings = finops_findings + secops_findings
 
         # Step 6: Anomaly Detection (post-scan, before drift) — Req 6.4
@@ -312,6 +517,7 @@ class Orchestrator:
                 f"[Orchestrator] QueryInterpreter error: {type(exc).__name__}: {exc}",
                 file=sys.stderr,
             )
+            self._record_error(exc, "QueryInterpreter", context="")
             # Req 1.10: fall back to full scan on failure
             return self.execute_audit()
 
@@ -450,11 +656,24 @@ class Orchestrator:
                 error=f"No remediation plan found for resource: {resource_id}",
             )
 
+        # Guard: reject if gate store is corrupted
+        if self._gate_store.is_corrupted:
+            return ApprovalResult(
+                success=False,
+                resource_id=resource_id,
+                error="Approval gate store is corrupted — all operations locked until operator resets the store file",
+                locked=True,
+            )
+
         # Use approval gate (creates one if needed)
         gate = self._get_or_create_gate(resource_id)
         result = gate.attempt_approval(command, resource_id)
 
         if not result["valid"]:
+            # Persist gate state on every failed attempt or lockout
+            self._gate_store.set_gate(
+                resource_id, gate.attempts, gate.locked, gate.max_attempts
+            )
             if result.get("locked"):
                 self._log_action("approval", resource_id, "failure", "Max attempts exceeded")
                 return ApprovalResult(
@@ -475,20 +694,43 @@ class Orchestrator:
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
 
-        # Execute terraform apply against LocalStack
-        apply_result = subprocess.run(
-            [TF_CMD, "apply", "-auto-approve"],
+        # Initialize the working directory before apply. Without this, terraform
+        # has no provider plugin selected and no lock file, causing apply to fail
+        # with "inconsistent dependency lock file" or similar init-required errors.
+        init_result = subprocess.run(
+            [self._tf_cmd, "init", "-input=false"],
             capture_output=True,
             text=True,
             timeout=120,
-            cwd=str(self.project_root / "output"),
+            cwd=str(self.output_dir),
+        )
+        if init_result.returncode != 0:
+            error = init_result.stderr.strip() or init_result.stdout.strip()
+            self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
+            tf_exc = RuntimeError(f"{self._tf_cmd} init failed: {error}")
+            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+            return ApprovalResult(
+                success=False,
+                error=f"{self._tf_cmd} init failed: {error}",
+                resource_id=resource_id,
+            )
+
+        # Execute terraform apply against LocalStack
+        apply_result = subprocess.run(
+            [self._tf_cmd, "apply", "-auto-approve"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.output_dir),
         )
         if apply_result.returncode != 0:
             error = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action("execution", resource_id, "failure", f"{TF_CMD} apply failed: {error}")
+            self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
+            tf_exc = RuntimeError(f"{self._tf_cmd} apply failed: {error}")
+            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             return ApprovalResult(
                 success=False,
-                error=f"{TF_CMD} apply failed: {error}",
+                error=f"{self._tf_cmd} apply failed: {error}",
                 resource_id=resource_id,
             )
 
@@ -500,10 +742,13 @@ class Orchestrator:
         # Record savings (non-blocking — errors are logged but don't fail approval)
         try:
             self._savings_tracker.record_run(resources_remediated=[resource_id])
-        except (FileNotFoundError, OSError) as e:
+        except Exception as e:
+            logging.getLogger(__name__).warning(
+                "Savings tracking failed (%s): %s", type(e).__name__, e
+            )
             self._log_action(
                 "savings", resource_id, "warning",
-                f"Savings tracking failed: {e}",
+                f"Savings tracking failed ({type(e).__name__}): {e}",
             )
 
         return ApprovalResult(success=True, resource_id=resource_id)
@@ -530,6 +775,24 @@ class Orchestrator:
                 error="Invalid command format. Expected: ROLLBACK <resource-id>",
             )
 
+        # Guard: reject if gate store is corrupted
+        if self._gate_store.is_corrupted:
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Approval gate store is corrupted — all operations locked until operator resets the store file",
+            )
+
+        # Enforce gate: check attempts / lockout for rollback
+        gate = self._get_or_create_gate(resource_id)
+        if gate.locked:
+            self._log_action("rollback", resource_id, "failure", "Max attempts exceeded")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Max attempts exceeded — rollback locked for this resource",
+            )
+
         # Validate rollback artifact exists
         rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
         if not rollback_path.exists():
@@ -543,6 +806,20 @@ class Orchestrator:
         # Parse the rollback command
         result = parse_rollback(command, resource_id)
         if not result["valid"]:
+            # Count as a failed attempt against the gate
+            gate._attempts += 1
+            if gate._attempts >= gate.max_attempts:
+                gate._locked = True
+            self._gate_store.set_gate(
+                resource_id, gate.attempts, gate.locked, gate.max_attempts
+            )
+            if gate.locked:
+                self._log_action("rollback", resource_id, "failure", "Max attempts exceeded")
+                return RollbackResult(
+                    success=False,
+                    resource_id=resource_id,
+                    error="Max attempts exceeded — rollback locked for this resource",
+                )
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
@@ -585,34 +862,34 @@ class Orchestrator:
         if not remediation_path.exists():
             return "remediation.tf not found in output directory"
 
-        # Find a rollback file for validation (use first active plan's resource)
-        rollback_path = None
+        # Validate each rollback file (not just the first one)
+        rollback_paths = []
         for plan in plans:
             candidate = self.rollbacks_dir / f"{plan.resource_id}.tf"
             if candidate.exists():
-                rollback_path = candidate
-                break
+                rollback_paths.append(candidate)
 
-        if not rollback_path:
+        if not rollback_paths:
             return "No rollback file found for validation"
 
         try:
-            result = subprocess.run(
-                [
-                    "bash",
-                    _to_bash_path(hook_path),
-                    _to_bash_path(remediation_path),
-                    _to_bash_path(rollback_path),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                cwd=str(self.project_root),
-            )
+            for rollback_path in rollback_paths:
+                result = subprocess.run(
+                    [
+                        BASH_CMD,
+                        _to_bash_path(hook_path),
+                        _to_bash_path(remediation_path),
+                        _to_bash_path(rollback_path),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                    cwd=str(self.project_root),
+                )
 
-            if result.returncode != 0:
-                error_output = result.stderr.strip() or result.stdout.strip()
-                return f"Pre-remediation hook failed: {error_output}"
+                if result.returncode != 0:
+                    error_output = result.stderr.strip() or result.stdout.strip()
+                    return f"Pre-remediation hook failed: {error_output}"
 
         except subprocess.TimeoutExpired:
             return "Pre-remediation hook timed out"
@@ -641,7 +918,7 @@ class Orchestrator:
         try:
             subprocess.run(
                 [
-                    "bash",
+                    BASH_CMD,
                     _to_bash_path(hook_path),
                     resource_id,
                     action,
@@ -656,6 +933,65 @@ class Orchestrator:
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             # Post-remediation hook is non-blocking — log but don't fail
             pass
+
+    def _run_pre_remediation_hook_full(
+        self, plans: list[RemediationPlan]
+    ) -> tuple[list[Path], list[str]]:
+        """Validate rollback files for ALL active plans.
+
+        Returns:
+            (validated_paths, failures) — failures is a list of
+            resource_ids missing rollback coverage.
+
+        Raises:
+            TimeoutError: If total validation exceeds 60 seconds.
+        """
+        start = time.monotonic()
+        timeout = 60.0
+        validated: list[Path] = []
+        failures: list[str] = []
+
+        for plan in plans:
+            if time.monotonic() - start > timeout:
+                raise TimeoutError(
+                    "Pre-remediation hook exceeded 60s timeout"
+                )
+
+            rollback_path = self.rollbacks_dir / f"{plan.resource_id}.tf"
+
+            # Check existence and non-empty
+            if not rollback_path.exists() or rollback_path.stat().st_size == 0:
+                failures.append(plan.resource_id)
+                continue
+
+            # Run hook script validation
+            hook_path = self.hooks_dir / "pre-remediation.sh"
+            if not hook_path.exists():
+                # Missing hook cannot confirm exit 0 — validation failure
+                failures.append(plan.resource_id)
+                continue
+
+            remaining = timeout - (time.monotonic() - start)
+            try:
+                result = subprocess.run(
+                    ["bash", _to_bash_path(hook_path), _to_bash_path(rollback_path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=max(remaining, 1),
+                    cwd=str(self.project_root),
+                )
+            except subprocess.TimeoutExpired:
+                raise TimeoutError(
+                    "Pre-remediation hook exceeded 60s timeout"
+                )
+
+            if result.returncode != 0:
+                failures.append(plan.resource_id)
+                continue
+
+            validated.append(rollback_path)
+
+        return validated, failures
 
     # ──────────────────────────────────────────────────────────────────────
     # Private: AI agent helpers
@@ -713,9 +1049,65 @@ class Orchestrator:
     # Private: Validation and helpers
     # ──────────────────────────────────────────────────────────────────────
 
+    def _write_findings_store(self, findings: list[dict], metadata: dict) -> None:
+        """Write findings store with schema version.
+
+        Args:
+            findings: List of finding dicts to persist.
+            metadata: Additional top-level metadata fields.
+        """
+        store = {
+            "schema_version": SCHEMA_VERSION,
+            **metadata,
+            "findings": findings,
+        }
+        self.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.findings_store_path, "w") as f:
+            json.dump(store, f, indent=2)
+
+    def _validate_schema_version(self, store: dict) -> str | None:
+        """Validate schema_version field.
+
+        Returns error string or None.
+        """
+        version_str = store.get("schema_version")
+        if version_str is None:
+            return "schema_version field is missing"
+
+        try:
+            parts = version_str.split(".")
+            found_major = int(parts[0])
+        except (ValueError, IndexError, AttributeError):
+            return f"Invalid schema_version format: '{version_str}'"
+
+        expected_major = int(SCHEMA_VERSION.split(".")[0])
+
+        if found_major != expected_major:
+            return (
+                f"Incompatible schema version: found {version_str}, "
+                f"expected major version {expected_major}"
+            )
+
+        # Warn on higher minor version
+        if len(parts) >= 2:
+            try:
+                found_minor = int(parts[1])
+                expected_minor = int(SCHEMA_VERSION.split(".")[1])
+                if found_minor > expected_minor:
+                    logging.getLogger(__name__).warning(
+                        "Findings store minor version %s is higher than expected %s. "
+                        "Proceeding with best-effort parsing.",
+                        version_str, SCHEMA_VERSION,
+                    )
+            except (ValueError, IndexError):
+                return f"Invalid schema_version format: '{version_str}'"
+
+        return None
+
     def _validate_findings_store(self) -> str | None:
         """
-        Validate findings_store.json has entries from both FinOps and SecOps agents.
+        Validate findings_store.json has entries from both FinOps and SecOps agents
+        and a compatible schema version.
 
         Returns:
             Error string if validation fails, None if valid.
@@ -729,6 +1121,11 @@ class Orchestrator:
         except (json.JSONDecodeError, IOError) as e:
             return f"Cannot read findings_store.json: {e}"
 
+        # Validate schema version first
+        schema_error = self._validate_schema_version(store)
+        if schema_error:
+            return schema_error
+
         findings = store.get("findings", [])
         agents_present = {f.get("agent") for f in findings}
 
@@ -740,14 +1137,32 @@ class Orchestrator:
         return None
 
     def _extract_resource_id_from_command(self, command: str, prefix: str) -> str | None:
-        """Extract the resource_id portion from a command string."""
+        """Extract and validate resource_id from a command string.
+
+        Validates against an allowlist regex permitting only:
+        alphanumeric, hyphens, underscores, colons, periods, forward slashes.
+        Total length: 1-256 characters.
+
+        Returns None and logs at DEBUG level if validation fails.
+        """
         expected_prefix = prefix + " "
         if not command.startswith(expected_prefix):
             return None
-        resource_id = command[len(expected_prefix):]
-        if not resource_id or " " in resource_id:
+
+        candidate = command[len(expected_prefix):]
+
+        # Reject empty or whitespace-only before regex
+        if not candidate or candidate.isspace():
             return None
-        return resource_id
+
+        # Allowlist validation
+        if not _RESOURCE_ID_PATTERN.match(candidate):
+            logging.getLogger(__name__).debug(
+                "Rejected resource ID: %s", candidate[:64]
+            )
+            return None
+
+        return candidate
 
     def _find_plan(self, resource_id: str) -> RemediationPlan | None:
         """Find a remediation plan by resource_id."""
@@ -757,9 +1172,19 @@ class Orchestrator:
         return None
 
     def _get_or_create_gate(self, resource_id: str) -> ApprovalGate:
-        """Get or create an approval gate for a resource."""
+        """Get or create an approval gate for a resource.
+
+        Restores persisted state (attempts, locked) from the gate store
+        when creating a new in-memory gate instance.
+        """
         if resource_id not in self._approval_gates:
-            self._approval_gates[resource_id] = ApprovalGate(max_attempts=3)
+            gate = ApprovalGate(max_attempts=3)
+            # Restore persisted state if available
+            persisted = self._gate_store.get_gate(resource_id)
+            if persisted:
+                gate._attempts = persisted.get("attempts", 0)
+                gate._locked = persisted.get("locked", False)
+            self._approval_gates[resource_id] = gate
         return self._approval_gates[resource_id]
 
     def _handle_confirm_rollback(self, command: str) -> RollbackResult:
@@ -779,6 +1204,24 @@ class Orchestrator:
                 error="Missing resource ID in confirm rollback command",
             )
 
+        # Guard: reject if gate store is corrupted
+        if self._gate_store.is_corrupted:
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Approval gate store is corrupted — all operations locked until operator resets the store file",
+            )
+
+        # Enforce gate: check attempts / lockout
+        gate = self._get_or_create_gate(resource_id)
+        if gate.locked:
+            self._log_action("rollback", resource_id, "failure", "Max attempts exceeded")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Max attempts exceeded — rollback locked for this resource",
+            )
+
         # Validate resource was pending rollback
         if resource_id not in self._pending_rollbacks:
             return RollbackResult(
@@ -791,6 +1234,20 @@ class Orchestrator:
         # Parse the confirm rollback command
         result = parse_confirm_rollback(command, resource_id)
         if not result["valid"]:
+            # Count as a failed attempt against the gate
+            gate._attempts += 1
+            if gate._attempts >= gate.max_attempts:
+                gate._locked = True
+            self._gate_store.set_gate(
+                resource_id, gate.attempts, gate.locked, gate.max_attempts
+            )
+            if gate.locked:
+                self._log_action("rollback", resource_id, "failure", "Max attempts exceeded")
+                return RollbackResult(
+                    success=False,
+                    resource_id=resource_id,
+                    error="Max attempts exceeded — rollback locked for this resource",
+                )
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
@@ -807,11 +1264,72 @@ class Orchestrator:
                 error=f"Rollback artifact not found: rollbacks/{resource_id}.tf",
             )
 
-        # Execute rollback
+        # Stage the rollback HCL as the active config, then init + apply it
+        # against LocalStack — mirrors the same init/apply pattern approve() uses.
+        # Without this, CONFIRM ROLLBACK only updated bookkeeping and never
+        # touched real infrastructure.
+        remediation_path = self.output_dir / "remediation.tf"
+        try:
+            remediation_path.write_text(rollback_path.read_text())
+        except OSError as e:
+            self._log_action(
+                "rollback", resource_id, "failure",
+                f"Failed to stage rollback artifact: {e}",
+            )
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"Failed to stage rollback artifact: {e}",
+            )
+
+        init_result = subprocess.run(
+            [self._tf_cmd, "init", "-input=false"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.output_dir),
+        )
+        if init_result.returncode != 0:
+            error = init_result.stderr.strip() or init_result.stdout.strip()
+            self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
+            tf_exc = RuntimeError(f"{self._tf_cmd} init failed: {error}")
+            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"{self._tf_cmd} init failed: {error}",
+                error_category="terraform_failure",
+                error_agent="Orchestrator",
+                exit_code=init_result.returncode,
+            )
+
+        apply_result = subprocess.run(
+            [self._tf_cmd, "apply", "-auto-approve"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.output_dir),
+        )
+        if apply_result.returncode != 0:
+            error = apply_result.stderr.strip() or apply_result.stdout.strip()
+            self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
+            tf_exc = RuntimeError(f"{self._tf_cmd} apply failed: {error}")
+            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+            # Leave the resource pending so the caller can retry CONFIRM ROLLBACK
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"{self._tf_cmd} apply failed: {error}",
+                error_category="terraform_failure",
+                error_agent="Orchestrator",
+                exit_code=apply_result.returncode,
+            )
+
+        # Rollback applied successfully
         self._pending_rollbacks.discard(resource_id)
         self._log_action("rollback", resource_id, "success", f"Rollback executed by {self.approver}")
 
-        # Run post-remediation hook for rollback
+        # Run post-remediation hook for rollback (only after apply actually succeeded)
         self._run_post_remediation_hook(resource_id, "rollback", "success")
 
         return RollbackResult(success=True, resource_id=resource_id)
@@ -829,3 +1347,45 @@ class Orchestrator:
         self._audit_trail.append(entry)
         # Persist to append-only file log (failures are non-blocking)
         self._audit_logger.append(entry.to_dict())
+
+    def _classify_error(self, exc: Exception, context: str = "") -> str:
+        """Classify an exception into one of the structured error categories.
+
+        Classification logic:
+          - context in {"tf_validate", "tf_apply", "tf_plan"} → "terraform_failure"
+          - isinstance(exc, (OSError, IOError, PermissionError)) → "io_failure"
+          - context in {"schema_check", "gate_check", "hook_validation", "resource_id_check"} → "validation_failure"
+          - default → "agent_failure"
+
+        Args:
+            exc: The caught exception.
+            context: Optional context string indicating where the error occurred.
+
+        Returns:
+            One of: "terraform_failure", "io_failure", "validation_failure", "agent_failure".
+        """
+        if context in ("tf_validate", "tf_apply", "tf_plan"):
+            return "terraform_failure"
+        if isinstance(exc, (OSError, IOError, PermissionError)):
+            return "io_failure"
+        if context in ("schema_check", "gate_check", "hook_validation", "resource_id_check"):
+            return "validation_failure"
+        return "agent_failure"
+
+    def _record_error(self, exc: Exception, agent_name: str, context: str = "") -> None:
+        """Build and write a structured error record to the audit log.
+
+        Args:
+            exc: The caught exception.
+            agent_name: Identifying string for the failing agent/component.
+            context: Optional context string for error classification.
+        """
+        category = self._classify_error(exc, context)
+        record = build_error_record(exc, agent_name, category)
+        try:
+            write_error_record(record, self.audit_log_path)
+        except Exception as write_exc:
+            logger.warning(
+                "Failed to write error record: %s: %s",
+                type(write_exc).__name__, write_exc,
+            )

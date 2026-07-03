@@ -14,6 +14,11 @@ from pathlib import Path
 
 from core.llm_client import get_client, DEFAULT_MODEL
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 VALID_CHECK_TYPES: set[str] = {"security_group", "encryption", "public_access", "idle_resource"}
 VALID_RESOURCE_TYPES: set[str] = {"elasticache", "ebs", "ec2"}
 POLICY_ID_PATTERN: re.Pattern = re.compile(r"^[a-z0-9\-]+$")

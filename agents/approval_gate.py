@@ -20,6 +20,13 @@ Usage:
 
 from __future__ import annotations
 
+import json
+import logging
+import os
+import tempfile
+from pathlib import Path
+from typing import Any
+
 
 def parse_approval(input_str: str, expected_resource_id: str) -> dict:
     """Parse an approval command string.
@@ -360,6 +367,96 @@ class RollbackGate:
         """Reset state back to initial, clear attempts and unlock."""
         self._attempts = 0
         self._state = "awaiting_rollback"
+
+
+logger = logging.getLogger(__name__)
+
+
+class ApprovalGateStore:
+    """Persists approval gate state with atomic write-then-rename.
+
+    Gate state schema per resource:
+    {
+        "resource_id": str,
+        "attempts": int,
+        "locked": bool,
+        "max_attempts": int
+    }
+    """
+
+    def __init__(self, store_path: Path) -> None:
+        self._path = store_path
+        self._gates: dict[str, dict[str, Any]] = {}
+
+    def load(self) -> None:
+        """Load gates from disk. On parse failure, log WARNING and lock all gates."""
+        if not self._path.exists():
+            self._gates = {}
+            return
+
+        try:
+            content = self._path.read_text(encoding="utf-8")
+            data = json.loads(content)
+            if not isinstance(data, dict) or "gates" not in data:
+                raise ValueError("Missing 'gates' key")
+            if not isinstance(data["gates"], list):
+                raise ValueError("'gates' must be a list")
+            self._gates = {
+                g["resource_id"]: g
+                for g in data["gates"]
+                if isinstance(g, dict) and "resource_id" in g
+            }
+        except (json.JSONDecodeError, ValueError, OSError, KeyError) as exc:
+            logger.warning(
+                "Failed to parse approval gate store at %s: %s. "
+                "All gates initialized as locked.",
+                self._path,
+                exc,
+            )
+            self._gates = {"__corrupted__": {"locked": True}}
+
+    def save(self) -> None:
+        """Atomically persist all gate states (write-then-rename)."""
+        data = {"gates": list(self._gates.values())}
+        content = json.dumps(data, indent=2)
+
+        # Write to temp file in same directory, then rename
+        dir_path = self._path.parent
+        dir_path.mkdir(parents=True, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(dir=str(dir_path), suffix=".tmp")
+        closed = False
+        try:
+            os.write(fd, content.encode("utf-8"))
+            os.close(fd)
+            closed = True
+            os.replace(tmp_path, str(self._path))
+        except Exception:
+            if not closed:
+                os.close(fd)
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            raise
+
+    def get_gate(self, resource_id: str) -> dict[str, Any] | None:
+        """Get gate state for a resource, or None if not found."""
+        return self._gates.get(resource_id)
+
+    def set_gate(
+        self, resource_id: str, attempts: int, locked: bool, max_attempts: int
+    ) -> None:
+        """Set gate state for a resource and persist immediately."""
+        self._gates[resource_id] = {
+            "resource_id": resource_id,
+            "attempts": attempts,
+            "locked": locked,
+            "max_attempts": max_attempts,
+        }
+        self.save()
+
+    @property
+    def is_corrupted(self) -> bool:
+        """Whether the store was corrupted on load."""
+        return "__corrupted__" in self._gates
 
 
 if __name__ == "__main__":

@@ -468,6 +468,8 @@ Uses FastMCP's default stdio transport. Can be consumed by any MCP-compatible cl
 
 ```
 cloud-janitor/
+├── bin/
+│   └── tflocal                      # Repo-local wrapper (dry-run or delegates to real binary)
 ├── agents/
 │   ├── finops_auditor.py            # Cost waste detection
 │   ├── secops_guard.py              # Security findings

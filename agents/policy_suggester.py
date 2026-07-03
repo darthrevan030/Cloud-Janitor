@@ -9,6 +9,11 @@ import sys
 
 from core.llm_client import get_client, DEFAULT_MODEL
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 VALID_PRIORITIES: set[str] = {"high", "medium", "low"}
 
 # Known check_types that can be inferred from suggestion content

@@ -108,10 +108,12 @@ class SavingsTracker:
             return {"total_lifetime_savings": 0.0, "runs": []}
 
     def _write_ledger(self, ledger: dict) -> None:
-        """Write ledger to disk."""
-        self._ledger_path.write_text(
+        """Write ledger to disk (atomic: tmp + rename)."""
+        tmp_path = self._ledger_path.with_suffix(".json.tmp")
+        tmp_path.write_text(
             json.dumps(ledger, indent=2), encoding="utf-8"
         )
+        tmp_path.replace(self._ledger_path)
 
     def _compute_monthly_savings(self, resources_remediated: list[str]) -> float:
         """Sum cost_estimate_monthly for matching findings. Missing cost treated as 0.0."""

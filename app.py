@@ -21,25 +21,56 @@ from packaging.version import Version
 import streamlit as st
 
 from orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
+from core.logging_config import configure_logging
+from core.paths import (
+    FINDINGS_STORE_PATH,
+    ROLLBACKS_DIR,
+    AUDIT_LOG_PATH,
+    REASONING_LOG_PATH,
+    OUTPUT_DIR,
+    PROJECT_ROOT,
+)
 
-# Phase B+C agent imports — optional modules that may not be installed yet.
-# Each tuple is (module_path, attribute_name). On ImportError the global is set to None,
-# preserving the same fallback behavior the rest of the UI relies on.
-_PHASE_BC_AGENTS = [
-    ("agents.query_interpreter", "QueryInterpreter"),
-    ("agents.explainer", "RemediationExplainer"),
-    ("agents.policy_suggester", "PolicySuggester"),
-    ("agents.anomaly_detector", "AnomalyDetector"),
-    ("agents.drift_detector", "DriftDetector"),
-    ("agents.multi_account_orchestrator", "MultiAccountOrchestrator"),
-    ("scheduler", "JanitorScheduler"),
-]
-for _mod_name, _attr_name in _PHASE_BC_AGENTS:
-    try:
-        _mod = __import__(_mod_name, fromlist=[_attr_name])
-        globals()[_attr_name] = getattr(_mod, _attr_name)
-    except (ImportError, AttributeError):
-        globals()[_attr_name] = None
+configure_logging()
+
+# Phase B/C agent imports — each agent imported individually with explicit
+# ImportError handling so that type checkers see the fallback as Optional[type].
+from typing import Optional
+
+try:
+    from agents.query_interpreter import QueryInterpreter
+except ImportError:
+    QueryInterpreter: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.explainer import RemediationExplainer
+except ImportError:
+    RemediationExplainer: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.policy_suggester import PolicySuggester
+except ImportError:
+    PolicySuggester: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.anomaly_detector import AnomalyDetector
+except ImportError:
+    AnomalyDetector: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.drift_detector import DriftDetector
+except ImportError:
+    DriftDetector: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from agents.multi_account_orchestrator import MultiAccountOrchestrator
+except ImportError:
+    MultiAccountOrchestrator: Optional[type] = None  # type: ignore[assignment]
+
+try:
+    from scheduler import JanitorScheduler
+except ImportError:
+    JanitorScheduler: Optional[type] = None  # type: ignore[assignment]
 
 # ──────────────────────────────────────────────────────────────────────
 # Page config
@@ -419,6 +450,48 @@ div[data-testid="stMetric"] {
     border-radius: 6px !important;
     padding: 0.75rem 1rem !important;
 }
+
+/* ── Structured error display ── */
+.cj-error-structured {
+    background: rgba(248,81,73,0.06);
+    border: 1px solid rgba(248,81,73,0.25);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.cj-error-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.cj-error-category-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: rgba(248,81,73,0.15);
+    color: #f85149;
+    border: 1px solid rgba(248,81,73,0.3);
+}
+.cj-error-agent-label {
+    font-size: 0.72rem;
+    color: #8b949e;
+}
+.cj-error-agent-name {
+    font-size: 0.72rem;
+    color: #58a6ff;
+    font-weight: 600;
+}
+.cj-error-message {
+    font-size: 0.82rem;
+    color: #f85149;
+    line-height: 1.4;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -426,12 +499,7 @@ div[data-testid="stMetric"] {
 # Constants
 # ──────────────────────────────────────────────────────────────────────
 
-PROJECT_ROOT = Path(__file__).parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
-REMEDIATION_PATH = PROJECT_ROOT / "output" / "remediation.tf"
-ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
-AUDIT_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "audit.log"
-REASONING_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "agent_reasoning.log"
+REMEDIATION_PATH = OUTPUT_DIR / "remediation.tf"
 
 _STREAMLIT_HAS_FRAGMENT = Version(st.__version__) >= Version("1.33.0")
 
@@ -488,6 +556,40 @@ if "multi_account_results" not in st.session_state:
 
 def _esc(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def render_structured_error(
+    message: str,
+    error_category: str | None = None,
+    agent_name: str | None = None,
+) -> None:
+    """Render a structured error display in the Streamlit UI.
+
+    When structured fields (error_category, agent_name) are available, renders
+    a styled panel showing category badge, agent name, and message.
+    Falls back to a plain st.error() when only the raw message is available.
+    """
+    if error_category or agent_name:
+        category_html = ""
+        if error_category:
+            category_html = (
+                f'<span class="cj-error-category-badge">{_esc(error_category)}</span>'
+            )
+        agent_html = ""
+        if agent_name:
+            agent_html = (
+                f'<span class="cj-error-agent-label">agent:</span> '
+                f'<span class="cj-error-agent-name">{_esc(agent_name)}</span>'
+            )
+        html = (
+            f'<div class="cj-error-structured">'
+            f'<div class="cj-error-header">{category_html}{agent_html}</div>'
+            f'<div class="cj-error-message">{_esc(message)}</div>'
+            f'</div>'
+        )
+        st.markdown(html, unsafe_allow_html=True)
+    else:
+        st.error(message)
 
 
 def load_findings() -> list[dict]:
@@ -757,33 +859,37 @@ _render_live_feed(st.session_state.agent_status)
 # Natural Language Query Input
 # ──────────────────────────────────────────────────────────────────────
 
-nl_query = st.text_input(
-    "Ask in plain English",
-    key="nl_query_input",
-    placeholder="e.g. Find idle EC2 instances older than 30 days",
-    help="Describe what you want to audit — the system will interpret your query.",
-)
+orch = st.session_state.orchestrator
 
-nl_col1, nl_col2 = st.columns([1, 4])
-with nl_col1:
-    nl_submitted = st.button("🔍  NL Audit", use_container_width=True)
+if not hasattr(orch, "execute_natural_language_audit"):
+    st.info("Natural-language audit feature is not yet available.")
+else:
+    nl_query = st.text_input(
+        "Ask in plain English",
+        key="nl_query_input",
+        placeholder="e.g. Find idle EC2 instances older than 30 days",
+        help="Describe what you want to audit — the system will interpret your query.",
+    )
 
-if nl_submitted and nl_query and nl_query.strip():
-    orch = st.session_state.orchestrator
-    with st.spinner("Interpreting query and running audit..."):
-        try:
-            result = orch.execute_natural_language_audit(nl_query.strip())
-            st.session_state.nl_query_result = result
-            st.session_state.audit_result = result
-            # Cache anomalies and drift from NL audit result
-            if hasattr(result, "anomalies") and result.anomalies:
-                st.session_state.anomaly_results = result.anomalies
-            if hasattr(result, "drift_report") and result.drift_report:
-                st.session_state.drift_report = result.drift_report
-            st.success(f"NL Audit complete — {len(result.findings)} finding(s).")
-            st.rerun()
-        except Exception as e:
-            st.error(f"NL Audit failed: {e}")
+    nl_col1, nl_col2 = st.columns([1, 4])
+    with nl_col1:
+        nl_submitted = st.button("🔍  NL Audit", use_container_width=True)
+
+    if nl_submitted and nl_query and nl_query.strip():
+        with st.spinner("Interpreting query and running audit..."):
+            try:
+                result = orch.execute_natural_language_audit(nl_query.strip())
+                st.session_state.nl_query_result = result
+                st.session_state.audit_result = result
+                # Cache anomalies and drift from NL audit result
+                if hasattr(result, "anomalies") and result.anomalies:
+                    st.session_state.anomaly_results = result.anomalies
+                if hasattr(result, "drift_report") and result.drift_report:
+                    st.session_state.drift_report = result.drift_report
+                st.success(f"NL Audit complete — {len(result.findings)} finding(s).")
+                st.rerun()
+            except Exception as e:
+                render_structured_error(f"NL Audit failed: {e}")
 
 # Show NL query result summary if available
 if st.session_state.nl_query_result is not None:
@@ -801,84 +907,26 @@ st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 if st.button("▶  Run Audit", type="primary", use_container_width=False):
     orch = st.session_state.orchestrator
-    statuses = {"finops": "idle", "secops": "idle", "remediation": "idle"}
-    _render_live_feed(statuses)
 
-    # FinOps
-    statuses["finops"] = "running"
-    _render_live_feed(statuses)
-    try:
-        orch._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
-        finops_findings = orch._finops.scan()
-        orch._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
-        statuses["finops"] = "success"
-    except Exception as e:
-        statuses["finops"] = "failure"
-        _render_live_feed(statuses)
-        st.session_state.agent_status = statuses
-        st.error(f"FinOps Auditor failed: {e}")
-        st.stop()
-    _render_live_feed(statuses)
+    def _on_agent_status(agent_name: str, status: str) -> None:
+        st.session_state.setdefault("agent_status", {})[agent_name] = status
 
-    # SecOps
-    statuses["secops"] = "running"
-    _render_live_feed(statuses)
-    try:
-        orch._log_action("scan", "all", "started", "SecOps Guard scan initiated")
-        secops_findings = orch._secops.scan()
-        orch._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
-        statuses["secops"] = "success"
-    except Exception as e:
-        statuses["secops"] = "failure"
-        _render_live_feed(statuses)
-        st.session_state.agent_status = statuses
-        st.error(f"SecOps Guard failed: {e}")
-        st.stop()
-    _render_live_feed(statuses)
+    with st.spinner("Running audit pipeline..."):
+        result = orch.execute_audit(status_callback=_on_agent_status)
 
-    # Remediation
-    statuses["remediation"] = "running"
-    _render_live_feed(statuses)
-    try:
-        validation_error = orch._validate_findings_store()
-        if validation_error:
-            raise RuntimeError(validation_error)
-        orch._log_action("plan", "all", "started", "Remediation Architect planning")
-        plans = orch._architect.plan()
-        orch._last_plans = plans
-        blocked_plans = [p for p in plans if p.blocked]
-        active_plans = [p for p in plans if not p.blocked]
-        for p in blocked_plans:
-            orch._log_action("plan", p.resource_id, "blocked", p.block_reason)
-        orch._log_action("plan", "all", "success", f"Generated {len(active_plans)} plan(s), {len(blocked_plans)} blocked")
-        hook_error = None
-        if active_plans:
-            hook_error = orch._run_pre_remediation_hook(active_plans)
-        if hook_error:
-            orch._log_action("plan", "all", "blocked", f"Pre-remediation hook failed: {hook_error}")
-            statuses["remediation"] = "failure"
-            _render_live_feed(statuses)
-            st.session_state.agent_status = statuses
-            st.session_state.audit_result = AuditResult(
-                success=False, findings=finops_findings + secops_findings,
-                plans=active_plans, blocked_plans=blocked_plans, hook_error=hook_error,
-            )
-            st.error(f"Pre-remediation hook failed: {hook_error}")
-            st.stop()
-        statuses["remediation"] = "success"
-        st.session_state.audit_result = AuditResult(
-            success=True, findings=finops_findings + secops_findings,
-            plans=active_plans, blocked_plans=blocked_plans,
+    # Render final agent statuses
+    _render_live_feed(st.session_state.agent_status)
+
+    if not result.success:
+        render_structured_error(
+            result.error or "Unknown error",
+            error_category=result.error_category,
+            agent_name=result.error_agent,
         )
-    except Exception as e:
-        statuses["remediation"] = "failure"
-        _render_live_feed(statuses)
-        st.session_state.agent_status = statuses
-        st.error(f"Remediation Architect failed: {e}")
+        st.session_state.audit_result = result
         st.stop()
 
-    _render_live_feed(statuses)
-    st.session_state.agent_status = statuses
+    st.session_state.audit_result = result
     st.success("Audit complete.")
     st.rerun()
 
@@ -1029,6 +1077,7 @@ if audit_result is not None and audit_result.plans:
                     st.session_state.approval_history.append({
                         "action": "approval", "resource_id": result.resource_id or selected_resource,
                         "timestamp": ts, "success": result.success, "error": result.error,
+                        "error_category": result.error_category, "error_agent": result.error_agent,
                         "locked": result.locked, "expected_format": result.expected_format,
                         "attempts_remaining": result.attempts_remaining,
                     })
@@ -1044,7 +1093,7 @@ if audit_result is not None and audit_result.plans:
                     elif result.success:
                         st.session_state.approval_history.append({"action": "rollback", "resource_id": result.resource_id, "timestamp": ts, "success": True})
                     else:
-                        st.session_state.approval_history.append({"action": "rollback_failed", "resource_id": result.resource_id or selected_resource, "timestamp": ts, "success": False, "error": result.error})
+                        st.session_state.approval_history.append({"action": "rollback_failed", "resource_id": result.resource_id or selected_resource, "timestamp": ts, "success": False, "error": result.error, "error_category": result.error_category, "error_agent": result.error_agent})
                     st.rerun()
 
     # Action history
@@ -1065,7 +1114,14 @@ if audit_result is not None and audit_result.plans:
                 err = _esc(entry.get("error", "unknown error"))
                 rem = entry.get("attempts_remaining")
                 rem_str = f" · {rem} attempts remaining" if rem is not None else ""
-                history_html += f'<div class="cj-action-entry fail">✗ {ts} · {resource} · {err}{rem_str}</div>'
+                cat = entry.get("error_category")
+                agent = entry.get("error_agent")
+                structured_parts = ""
+                if cat:
+                    structured_parts += f' · <span class="cj-error-category-badge">{_esc(cat)}</span>'
+                if agent:
+                    structured_parts += f' · <span class="cj-error-agent-name">{_esc(agent)}</span>'
+                history_html += f'<div class="cj-action-entry fail">✗ {ts} · {resource}{structured_parts} · {err}{rem_str}</div>'
         history_html += '</div>'
         st.markdown(history_html, unsafe_allow_html=True)
 
@@ -1324,7 +1380,7 @@ if MultiAccountOrchestrator is not None:
                         st.success(f"Multi-account audit complete — {results.get('accounts_scanned', 0)} account(s) scanned.")
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Multi-account audit failed: {e}")
+                        render_structured_error(f"Multi-account audit failed: {e}")
 
         if st.session_state.multi_account_results is not None:
             ma = st.session_state.multi_account_results
