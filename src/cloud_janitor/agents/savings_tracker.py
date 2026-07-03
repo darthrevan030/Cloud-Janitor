@@ -16,7 +16,7 @@ class SavingsTracker:
         ledger_path: Path | None = None,
         findings_store_path: Path | None = None,
     ):
-        root = Path(__file__).parent.parent
+        root = Path(__file__).parent.parent.parent.parent
         self._ledger_path = ledger_path or root / "output" / "savings_ledger.json"
         self._ledger_path.parent.mkdir(parents=True, exist_ok=True)
         self._findings_store_path = findings_store_path or root / "output" / "findings_store.json"

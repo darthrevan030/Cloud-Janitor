@@ -46,7 +46,7 @@ class MultiAccountOrchestrator:
         max_workers: int = DEFAULT_MAX_WORKERS,
     ):
         if accounts_path is None:
-            project_root = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            project_root = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
             self._accounts_path = project_root / "accounts.json"
         else:
             self._accounts_path = Path(accounts_path)

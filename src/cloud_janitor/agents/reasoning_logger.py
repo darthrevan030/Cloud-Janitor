@@ -45,7 +45,7 @@ class ReasoningLogger:
         if log_path is not None:
             self._log_path = log_path
         else:
-            self._log_path = Path(__file__).resolve().parent.parent / "output" / "logs" / "agent_reasoning.log"
+            self._log_path = Path(__file__).resolve().parent.parent.parent.parent / "output" / "logs" / "agent_reasoning.log"
 
     @property
     def log_path(self) -> Path:

@@ -53,7 +53,7 @@ class DriftDetector:
         model: str = DEFAULT_MODEL,
     ):
         if history_path is None:
-            project_root = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            project_root = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
             self._history_path = project_root / "output" / "scan_history.json"
         else:
             self._history_path = Path(history_path)
