@@ -125,7 +125,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Assertion: correct total attempts made, correct WARNING log records per retry
     - **Validates: Requirements 8.1, 8.2, 8.3, 8.5**
 
-  - [ ] 3.8 Write property test for retry exhaustion exception content
+  - [x] 3.8 Write property test for retry exhaustion exception content
     - **Property 3: Retry Exhaustion Exception Content**
     - Generator: random retriable error type that persists for all 4 attempts
     - Assertion: exception has status_or_error string, attempts == 4, mocked sleep calls sum to ~7 seconds (1+2+4) matching the exponential backoff formula

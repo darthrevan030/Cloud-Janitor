@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T04:05:51Z
+Generated: 2026-07-03T04:11:33Z
 
-**Summary:** 232 tasks — ✅ 207 done, ⏳ 1 partial, ❌ 24 pending
+**Summary:** 232 tasks — ✅ 208 done, ⏳ 1 partial, ❌ 23 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T04:05:51Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (12/30)
+## Production Readiness (13/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -172,7 +172,7 @@ Generated: 2026-07-03T04:05:51Z
 | 12 | 3.4 Write unit tests for stub providers (`tests/test_stub_providers.py`) | ✅ Done | no mapping |
 | 13 | 3.5 Write unit tests for version logic in `cli.py` (`tests/test_version.py`) | ✅ Done | no mapping |
 | 14 | 3.6 Write property test for log level configuration mapping | ✅ Done | no mapping |
-| 15 | 3.7 Write property test for retry on retriable errors | ❌ Pending | — |
+| 15 | 3.7 Write property test for retry on retriable errors | ✅ Done | no mapping |
 | 16 | 3.8 Write property test for retry exhaustion exception content | ❌ Pending | — |
 | 17 | 3.9 Write property test for backoff delay calculation | ❌ Pending | — |
 | 18 | 3.10 Write property test for stub provider NotImplementedError content | ❌ Pending | — |
