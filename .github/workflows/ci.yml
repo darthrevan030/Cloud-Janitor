@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v6
       - run: uv sync --group dev
       - run: uv run ruff check .
 
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-extras --group dev
       - run: uv run mypy src/
 
@@ -30,9 +30,10 @@ jobs:
         python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-extras --group dev
       - run: uv run pytest -n auto --tb=short -q
 
@@ -41,10 +42,10 @@ jobs:
     needs: [lint, type-check, test]
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-extras --group dev
       - run: uv build
       - run: uv run twine check dist/*
-      - run: pip install dist/*.whl
-      - run: python -c "import cloud_janitor; print(cloud_janitor.__version__)"
-      - run: cloud-janitor --help
+      - run: uv pip install dist/*.whl
+      - run: uv run python -c "import cloud_janitor; print(cloud_janitor.__version__)"
+      - run: uv run cloud-janitor --help
