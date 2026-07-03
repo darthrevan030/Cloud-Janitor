@@ -26,7 +26,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Output to stderr via `logging.StreamHandler(sys.stderr)`
     - _Requirements: 7.2, 7.3, 7.4, 7.6_
 
-  - [ ] 1.3 Add retry logic to `core/llm_client.py`
+  - [x] 1.3 Add retry logic to `core/llm_client.py`
     - Add `LLMRetryExhausted` and `LLMRateLimitExceeded` exception classes
     - Implement `call_llm()` function with manual retry loop (no tenacity)
     - Retry on HTTP 429, 500, 502, 503, 504 and network timeouts

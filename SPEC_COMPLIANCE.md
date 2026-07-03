@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T02:23:53Z
+Generated: 2026-07-03T02:28:17Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -142,7 +142,7 @@ Generated: 2026-07-03T02:23:53Z
 | 136 | 1. Batch 1 — Core infrastructure (flat layout) | ❌ Pending | — |
 | 137 | 1.1 Create `pyproject.toml` with build system, dependencies, and scripts | ✅ Done | no mapping |
 | 138 | 1.2 Create `logging_config.py` at project root | ✅ Done | no mapping |
-| 139 | 1.3 Add retry logic to `core/llm_client.py` | ❌ Pending | — |
+| 139 | 1.3 Add retry logic to `core/llm_client.py` | ⏳ Partial | no mapping |
 | 140 | 1.4 Create `cli.py` at project root with Click CLI | ❌ Pending | — |
 | 141 | 1.5 Update stub providers with warning pattern | ❌ Pending | — |
 | 142 | 2. Checkpoint — Verify Batch 1 | ❌ Pending | — |
