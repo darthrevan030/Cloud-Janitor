@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T01:18:25Z
+Generated: 2026-07-03T01:22:40Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -47,7 +47,7 @@ Generated: 2026-07-03T01:18:25Z
 | 41 | 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only | ✅ Done | app.py exists |
 | 42 | 10.2 Write unit tests for UI delegation (`tests/test_ui_delegation.py`) | ✅ Done | app.py exists |
 | 43 | 10.3 Implement NL audit delegation with feature detection | ✅ Done | no mapping |
-| 44 | 10.4 Write unit tests for NL audit feature detection (`tests/test_nl_audit.py`) | ❌ Pending | — |
+| 44 | 10.4 Write unit tests for NL audit feature detection (`tests/test_nl_audit.py`) | ✅ Done | no mapping |
 | 45 | 10.5 Implement explicit Phase B/C agent imports | ✅ Done | no mapping |
 | 46 | 10.6 Write unit tests for agent ImportError handling (`tests/test_agent_imports.py`) | ❌ Pending | — |
 | 47 | 10.7 Update `app.py` to import paths from `core/paths.py` | ✅ Done | app.py exists |

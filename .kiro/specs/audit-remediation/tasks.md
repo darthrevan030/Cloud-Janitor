@@ -194,7 +194,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
 - [x] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Implement UI–Orchestrator contract alignment
+- [x] 10. Implement UI–Orchestrator contract alignment
   - [x] 10.1 Refactor `app.py` audit delegation to use public Orchestrator API only
     - "Run Audit" button must call `Orchestrator.execute_audit(status_callback=...)` exclusively
     - Remove any direct calls to private methods/attributes (prefixed with `_`)
@@ -228,7 +228,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Ensure type annotations are visible to mypy/pyright
     - _Requirements: 13.1, 13.2, 13.3, 13.4_
 
-  - [ ] 10.6 Write unit tests for agent ImportError handling (`tests/test_agent_imports.py`)
+  - [x] 10.6 Write unit tests for agent ImportError handling (`tests/test_agent_imports.py`)
     - Test that a missing agent module results in the name being `None` (mock `ImportError`)
     - Test that all 7 Phase B/C agents are imported individually (not via registry loop)
     - Test that type annotations are `Optional[type]` for fallback values
