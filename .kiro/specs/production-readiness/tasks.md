@@ -37,7 +37,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Replace any `print()` calls with `logging.getLogger(__name__)` calls
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 7.1_
 
-  - [ ] 1.4 Create `cli.py` at project root with Click CLI
+  - [-] 1.4 Create `cli.py` at project root with Click CLI
     - Implement `main()` Click group with `--version` option (version read inline via `importlib.metadata.version("cloud-janitor")` with `PackageNotFoundError` fallback to `"0.0.0-dev"` — do NOT import from `cloud_janitor`)
     - Implement `scan` command with `--finops` and `--secops` flags
     - Implement `approve <resource_id>` command

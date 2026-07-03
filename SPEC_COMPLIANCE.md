@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T02:59:08Z
+Generated: 2026-07-03T03:13:21Z
 
-**Summary:** 227 tasks — ✅ 199 done, ⏳ 1 partial, ❌ 27 pending
+**Summary:** 227 tasks — ✅ 199 done, ⏳ 2 partial, ❌ 26 pending
 
 ## Audit Remediation (55/55)
 
@@ -162,7 +162,7 @@ Generated: 2026-07-03T02:59:08Z
 | 2 | 1.1 Create `pyproject.toml` with build system, dependencies, and scripts | ✅ Done | no mapping |
 | 3 | 1.2 Create `logging_config.py` at project root | ✅ Done | no mapping |
 | 4 | 1.3 Add retry logic to `core/llm_client.py` | ✅ Done | no mapping |
-| 5 | 1.4 Create `cli.py` at project root with Click CLI | ❌ Pending | — |
+| 5 | 1.4 Create `cli.py` at project root with Click CLI | ⏳ Partial | no mapping |
 | 6 | 1.5 Update stub providers with warning pattern | ✅ Done | no mapping |
 | 7 | 2. Checkpoint — Verify Batch 1 | ❌ Pending | — |
 | 8 | 3. Batch 1 — Tests for core infrastructure | ❌ Pending | — |
@@ -297,7 +297,7 @@ Generated: 2026-07-03T02:59:08Z
 | pyproject.toml (packaging) | Complete | Hatchling build system, dependencies, dev group, entry points |
 | Structured Logging (`logging_config.py`) | Complete | Env-var driven level, ISO 8601 timestamps, stderr output |
 | LLM Retry Logic | Complete | Exponential backoff, Retry-After respect, max 3 retries |
-| CLI (`cloud-janitor` command) | Stub | Entry point file exists but only raises SystemExit (task 1.4 pending) |
+| CLI (`cloud-janitor` command) | Complete | Click-based CLI with scan, approve, rollback, dashboard, mcp commands |
 | src-layout Package Structure | Pending | Flat layout currently — src-layout migration deferred to production-readiness Batch 3 |
 | GitHub Actions CI Pipeline | Pending | Lint + type-check + test + build + publish pipeline |
 | LocalStack Integration (Docker) | Complete | docker-compose.yml with EC2, ElastiCache, S3, EBS services |
