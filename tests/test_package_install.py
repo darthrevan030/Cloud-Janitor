@@ -34,10 +34,20 @@ class TestVersion:
         assert str(parsed) == __version__
 
     def test_version_matches_pyproject(self) -> None:
-        """__version__ should match the version declared in pyproject.toml (0.1.0)."""
+        """__version__ should match the version declared in pyproject.toml."""
         from cloud_janitor import __version__
 
-        assert __version__ == "0.1.0"
+        pyproject_path = pathlib.Path(__file__).resolve().parent.parent / "pyproject.toml"
+        content = pyproject_path.read_text(encoding="utf-8")
+        # Extract version from pyproject.toml [project] section
+        for line in content.splitlines():
+            if line.strip().startswith("version") and "=" in line:
+                expected = line.split("=", 1)[1].strip().strip('"')
+                break
+        else:
+            pytest.fail("Could not find version in pyproject.toml")
+
+        assert __version__ == expected
 
     def test_version_fallback_on_package_not_found(self) -> None:
         """When importlib.metadata.version raises PackageNotFoundError, fallback to 0.0.0-dev."""
