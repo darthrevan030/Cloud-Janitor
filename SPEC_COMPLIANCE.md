@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T03:59:32Z
+Generated: 2026-07-03T04:05:51Z
 
-**Summary:** 232 tasks — ✅ 206 done, ⏳ 1 partial, ❌ 25 pending
+**Summary:** 232 tasks — ✅ 207 done, ⏳ 1 partial, ❌ 24 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T03:59:32Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (11/30)
+## Production Readiness (12/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -171,7 +171,7 @@ Generated: 2026-07-03T03:59:32Z
 | 11 | 3.3 Write unit tests for LLM retry logic (`tests/test_llm_retry.py`) | ✅ Done | no mapping |
 | 12 | 3.4 Write unit tests for stub providers (`tests/test_stub_providers.py`) | ✅ Done | no mapping |
 | 13 | 3.5 Write unit tests for version logic in `cli.py` (`tests/test_version.py`) | ✅ Done | no mapping |
-| 14 | 3.6 Write property test for log level configuration mapping | ❌ Pending | — |
+| 14 | 3.6 Write property test for log level configuration mapping | ✅ Done | no mapping |
 | 15 | 3.7 Write property test for retry on retriable errors | ❌ Pending | — |
 | 16 | 3.8 Write property test for retry exhaustion exception content | ❌ Pending | — |
 | 17 | 3.9 Write property test for backoff delay calculation | ❌ Pending | — |

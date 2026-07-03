@@ -119,7 +119,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Assertion: root logger level matches expected mapping; invalid values emit WARNING
     - **Validates: Requirements 7.2, 7.6**
 
-  - [ ] 3.7 Write property test for retry on retriable errors
+  - [x] 3.7 Write property test for retry on retriable errors
     - **Property 2: Retry on Retriable Errors**
     - Generator: random retriable error type × random failure count (1–3) × random success/fail on final
     - Assertion: correct total attempts made, correct WARNING log records per retry
