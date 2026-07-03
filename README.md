@@ -14,6 +14,7 @@ Cloud Custodian shows you what's wrong with a YAML rules engine. Cloud Janitor r
 - [AI Features](#ai-features)
 - [Environment Variables](#environment-variables)
 - [Running Modes](#running-modes)
+- [CLI Commands](#cli-commands)
 - [The Approval Gate](#the-approval-gate)
 - [LocalStack & Terraform](#localstack--terraform)
 - [MCP Server](#mcp-server)
@@ -34,8 +35,11 @@ Cloud Custodian shows you what's wrong with a YAML rules engine. Cloud Janitor r
 git clone https://github.com/darthrevan030/Cloud-Janitor.git
 cd Cloud-Janitor
 
-# 2. Install dependencies
-pip install -r requirements.txt
+# 2. Install the package
+pip install cloud-janitor
+
+# For the optional Streamlit dashboard:
+# pip install cloud-janitor[dashboard]
 
 # 3. Set up environment
 cp .env.example .env
@@ -339,7 +343,7 @@ JANITOR_BACKEND=fixture
 
 ### AWS mode
 
-Points at a real AWS account via boto3. Currently a stub — `NotImplementedError` is raised on all methods. Implementation is planned.
+Queries live AWS infrastructure via boto3. The AWS provider is a complete implementation that connects to your real AWS account, retrieves cost and security data, and checks resource dependencies.
 
 ```bash
 # .env
@@ -352,6 +356,22 @@ AWS_DEFAULT_REGION=us-east-1
 ### GCP / Azure
 
 Interface stubs exist. Setting `JANITOR_BACKEND=gcp` or `JANITOR_BACKEND=azure` instantiates the provider class but raises `NotImplementedError` on all calls.
+
+---
+
+## CLI Commands
+
+Cloud Janitor provides a CLI interface via the `cloud-janitor` command:
+
+| Command | Syntax | Description |
+|---|---|---|
+| Scan (full) | `cloud-janitor scan` | Execute the full audit pipeline (FinOps + SecOps) |
+| Scan (FinOps only) | `cloud-janitor scan --finops` | Run only the FinOps cost-waste auditor |
+| Scan (SecOps only) | `cloud-janitor scan --secops` | Run only the SecOps security guard |
+| Approve | `cloud-janitor approve <resource-id>` | Approve a remediation plan for the specified resource |
+| Rollback | `cloud-janitor rollback <resource-id>` | Roll back a previously applied remediation |
+| Dashboard | `cloud-janitor dashboard` | Launch the Streamlit dashboard (requires `[dashboard]` extra) |
+| MCP | `cloud-janitor mcp` | Start the MCP server on stdio transport |
 
 ---
 
@@ -458,7 +478,7 @@ Uses FastMCP's default stdio transport. Can be consumed by any MCP-compatible cl
 | Backend | `JANITOR_BACKEND` | Status |
 |---|---|---|
 | Fixture | `fixture` | Complete |
-| AWS | `aws` | Stub (`NotImplementedError`) |
+| AWS | `aws` | Complete |
 | GCP | `gcp` | Interface only |
 | Azure | `azure` | Interface only |
 
@@ -491,7 +511,7 @@ cloud-janitor/
 │   └── backends/
 │       ├── __init__.py              # CloudProvider ABC
 │       ├── fixture_provider.py      # Fixture backend (complete)
-│       ├── aws_provider.py          # AWS backend (stub)
+│       ├── aws_provider.py          # AWS backend (complete)
 │       ├── gcp_provider.py          # GCP backend (stub)
 │       └── azure_provider.py        # Azure backend (stub)
 ├── core/
@@ -518,7 +538,6 @@ cloud-janitor/
 ├── .env.example                     # Environment variable template
 ├── docker-compose.yml               # LocalStack container definition
 ├── Makefile                         # make demo entry point
-├── requirements.txt                 # Python dependencies
 └── pyproject.toml                   # Project metadata
 ```
 
@@ -556,16 +575,16 @@ The fixture data ships with a pre-built scenario that exercises every agent and 
 
 ```bash
 # Full suite
-pytest
+uv run pytest
 
 # Verbose (shows each test name)
-pytest -v
+uv run pytest -v
 
 # Single file
-pytest tests/test_orchestrator.py
+uv run pytest tests/test_orchestrator.py
 
 # Single test by name
-pytest tests/test_approval_gate.py -k "test_valid_approval"
+uv run pytest tests/test_approval_gate.py -k "test_valid_approval"
 ```
 
 649 tests. No AWS credentials required — all tests run against fixture data or mocks.

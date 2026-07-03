@@ -4,16 +4,16 @@
 
 ```bash
 # Full suite
-pytest
+uv run pytest
 
 # Skip slow property tests
-pytest --ignore=tests/test_*_properties.py
+uv run pytest --ignore=tests/test_*_properties.py
 
 # Single file
-pytest tests/test_orchestrator.py
+uv run pytest tests/test_orchestrator.py
 
 # By keyword
-pytest -k "approval"
+uv run pytest -k "approval"
 ```
 
 ## Test Files
@@ -104,4 +104,4 @@ pytest -k "approval"
 4. Validate output schema (required keys, correct types)
 5. Test `findings_store.json` side effects (written/appended correctly)
 6. Include a negative test (empty list when no flaggable data)
-7. Run pytest — if a previously-passing test now fails, fix the implementation, not the test
+7. Run `uv run pytest` — if a previously-passing test now fails, fix the implementation, not the test

@@ -137,7 +137,7 @@ The MCP server uses a pluggable provider architecture. The active backend is sel
 | Backend | `JANITOR_BACKEND` value | Status | Required env vars | Description |
 |---------|------------------------|--------|-------------------|-------------|
 | Fixture | `fixture` | **Complete** | None | Reads from local JSON fixture files. Default backend. |
-| AWS | `aws` | Stub | AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`) | Live AWS API calls via boto3. All methods raise `NotImplementedError`. |
+| AWS | `aws` | **Complete** | AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`) | Queries live AWS infrastructure via boto3. |
 | GCP | `gcp` | Interface only | — | Placeholder for Google Cloud Platform. All methods raise `NotImplementedError`. |
 | Azure | `azure` | Interface only | — | Placeholder for Microsoft Azure. All methods raise `NotImplementedError`. |
 
@@ -148,7 +148,7 @@ When `JANITOR_BACKEND` is unset, it defaults to `"fixture"`. Setting it to an in
 ```text
 CloudProvider (ABC)
 ├── FixtureProvider   — reads fixtures/*.json
-├── AWSProvider       — stub, requires boto3
+├── AWSProvider       — complete, queries live AWS via boto3
 ├── GCPProvider       — stub
 └── AzureProvider     — stub
 ```

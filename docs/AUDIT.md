@@ -24,6 +24,7 @@
 Cloud Janitor is a well-architected multi-agent system that demonstrates strong software engineering practices for a buildathon project. The codebase implements 17 agents, a FastMCP server with 10 tools, a polished Streamlit dashboard, and a full Terraform remediation pipeline with human-in-the-loop approval. The design exhibits clear separation of concerns, consistent error handling patterns, and meaningful test coverage (44 test files including property-based tests with Hypothesis).
 
 **Key Strengths:**
+
 - Excellent defensive programming: every AI agent returns safe defaults on failure — the pipeline never crashes due to an LLM outage
 - Clean provider abstraction (CloudProvider ABC) enabling fixture/AWS/GCP/Azure backends
 - Well-designed approval gate with deliberate friction (exact-match, 3-attempt lockout, 2-step rollback)
@@ -32,6 +33,7 @@ Cloud Janitor is a well-architected multi-agent system that demonstrates strong 
 - Comprehensive documentation (README, per-directory READMEs, SPEC_COMPLIANCE tracking)
 
 **Key Weaknesses:**
+
 - No build system or CLI entry point — cannot be `pip install`-ed
 - No retry/rate-limiting on LLM calls — a single 429 from OpenRouter cascades to a pipeline failure
 - File-based state (JSON on disk) won't survive concurrent access at scale
@@ -60,6 +62,7 @@ The `CloudProvider` ABC in `mcp_server/backends/__init__.py` is clean and minima
 **Consistent Internal API Patterns**
 
 Every AI agent follows the same pattern:
+
 1. Import `get_client, DEFAULT_MODEL` from `core/llm_client.py`
 2. Accept inputs, validate, build prompt
 3. Call LLM, parse JSON response
@@ -254,6 +257,7 @@ File: `core/llm_client.py`
 **Approval Gate is Deliberately Strict**
 
 The command parser rejects:
+
 - Leading/trailing whitespace
 - Case variations (`approve` vs `APPROVE`)
 - Double spaces between command and resource ID
@@ -361,10 +365,12 @@ Mounting the Docker socket gives the LocalStack container full control over the 
 **Severity Classification is Correct and Documented**
 
 FinOps:
+
 - ElastiCache idle >30d = HIGH (expensive, easy to forget)
 - EBS unattached >30d = MEDIUM (cheaper but still waste)
 
 SecOps:
+
 - Database/cache ports open to 0.0.0.0/0 = CRITICAL
 - SSH open to 0.0.0.0/0 = HIGH
 - Unencrypted storage = HIGH
@@ -556,5 +562,28 @@ No file in the codebase imports `anthropic`. All LLM calls go through the `opena
 5. **Add [build-system] and CLI entry point** — Without this, the project can't be distributed or installed cleanly. The existing production-readiness audit details the exact changes needed. Effort: 2-3 hours.
 
 ---
+
+---
+
+## Addendum: Findings Addressed (2026-07-03)
+
+The following audit findings have been resolved by the Production Readiness spec (Batch 1 and Batch 2):
+
+| Finding | Severity | Resolution |
+|---------|----------|------------|
+| No build system or CLI entry point | HIGH | `pyproject.toml` with hatchling build system; Click-based `cloud-janitor` CLI with scan/approve/rollback/dashboard/mcp commands |
+| No retry/rate-limiting on LLM calls | HIGH | Manual retry loop in `core/llm_client.py` — exponential backoff (1s, 2s, 4s), Retry-After respect, max 3 retries |
+| No structured logging | HIGH | `logging_config.py` with configurable `JANITOR_LOG_LEVEL`, ISO 8601 timestamps, stderr output |
+| README claims AWS provider is a stub | LOW | README updated — AWS provider correctly described as complete boto3 implementation |
+| `hypothesis` is a production dependency | LOW | Moved to `[dependency-groups] dev` in `pyproject.toml` |
+| `anthropic` package is declared but never used | LOW | Removed from `[project.dependencies]` |
+| Dependency versions use minimum bounds only | MEDIUM | Project now uses `uv.lock` for deterministic dependency resolution |
+
+**Still pending** (deferred to Batch 3 — src-layout migration):
+
+- Flat project layout prevents packaging (requires src-layout migration)
+- No CI/CD pipeline (GitHub Actions workflow)
+- No type checking (mypy configuration)
+- sys.path manipulation in agent modules (resolved by proper package structure)
 
 *End of audit.*

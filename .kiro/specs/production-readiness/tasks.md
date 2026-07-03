@@ -143,11 +143,11 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Assertion: NotImplementedError message contains both provider class name and method name
     - **Validates: Requirements 11.3**
 
-- [ ] 4. Checkpoint — Verify Batch 1 tests
+- [x] 4. Checkpoint — Verify Batch 1 tests
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Batch 2 — README accuracy
-  - [ ] 5.1 Update README.md with accurate documentation
+- [x] 5. Batch 2 — README accuracy
+  - [x] 5.1 Update README.md with accurate documentation
     - Update Quick Start: replace `pip install -r requirements.txt` with `pip install cloud-janitor`
     - Document all CLI commands (scan, approve, rollback, dashboard, mcp) with invocation syntax
     - Document optional dashboard dependency: `pip install cloud-janitor[dashboard]`

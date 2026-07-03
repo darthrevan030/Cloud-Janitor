@@ -75,14 +75,25 @@ configure_logging()  # Call once at startup
 
 ## `llm_client.py`
 
-Centralised LLM client — every AI agent imports from here instead of using the OpenAI SDK directly.
+Centralised LLM client — every AI agent imports from here instead of using the OpenAI SDK directly. Includes retry logic with exponential backoff for transient failures.
 
 ### Exports
 
 | Symbol | Type | Description |
 |--------|------|-------------|
 | `get_client()` | `openai.OpenAI` | Returns an OpenAI client configured for OpenRouter |
+| `call_llm(client, **kwargs)` | `ChatCompletion` | Makes an LLM call with automatic retry on transient failures |
 | `DEFAULT_MODEL` | `str` | Model string from `JANITOR_LLM_MODEL` env var (default: `anthropic/claude-haiku-4-5`) |
+| `LLMRetryExhausted` | `Exception` | Raised when all retry attempts are exhausted |
+| `LLMRateLimitExceeded` | `Exception` | Raised when Retry-After exceeds 60s |
+
+### Retry Behaviour
+
+- Retries on HTTP 429, 500, 502, 503, 504, and network timeouts
+- Max 3 retries (4 total attempts), exponential backoff: 1s, 2s, 4s
+- Respects `Retry-After` header for 429 responses (up to 60s)
+- Raises `LLMRateLimitExceeded` immediately if Retry-After > 60s
+- Logs each retry at WARNING level with attempt number, delay, and error reason
 
 ### Environment Variables
 
@@ -94,10 +105,11 @@ Centralised LLM client — every AI agent imports from here instead of using the
 ### Usage
 
 ```python
-from core.llm_client import get_client, DEFAULT_MODEL
+from core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 client = get_client()
-response = client.chat.completions.create(
+response = call_llm(
+    client,
     model=DEFAULT_MODEL,
     messages=[{"role": "user", "content": "..."}],
 )
@@ -107,4 +119,5 @@ response = client.chat.completions.create(
 
 - **Single import point** — swapping LLM providers means changing one file, not six agents.
 - **No anthropic SDK** — uses the OpenAI-compatible endpoint from OpenRouter so only one SDK is needed.
+- **Manual retry loop** — no tenacity dependency; allows deterministic control over delay calculation and Retry-After inspection.
 - **Fails loud** — raises `EnvironmentError` immediately if the API key is missing, rather than failing silently mid-pipeline.

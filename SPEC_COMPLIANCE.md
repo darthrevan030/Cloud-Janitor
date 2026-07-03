@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T04:20:15Z
+Generated: 2026-07-03T04:37:42Z
 
-**Summary:** 232 tasks — ✅ 210 done, ⏳ 2 partial, ❌ 20 pending
+**Summary:** 232 tasks — ✅ 215 done, ⏳ 1 partial, ❌ 16 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T04:20:15Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (15/30)
+## Production Readiness (20/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -165,7 +165,7 @@ Generated: 2026-07-03T04:20:15Z
 | 5 | 1.4 Create `cli.py` at project root with Click CLI | ✅ Done | no mapping |
 | 6 | 1.5 Update stub providers with warning pattern | ✅ Done | no mapping |
 | 7 | 2. Checkpoint — Verify Batch 1 | ❌ Pending | — |
-| 8 | 3. Batch 1 — Tests for core infrastructure | ❌ Pending | — |
+| 8 | 3. Batch 1 — Tests for core infrastructure | ✅ Done | no mapping |
 | 9 | 3.1 Write unit tests for CLI (`tests/test_cli.py`) | ✅ Done | no mapping |
 | 10 | 3.2 Write unit tests for logging config (`tests/test_logging_config.py`) | ✅ Done | no mapping |
 | 11 | 3.3 Write unit tests for LLM retry logic (`tests/test_llm_retry.py`) | ✅ Done | no mapping |
@@ -175,10 +175,10 @@ Generated: 2026-07-03T04:20:15Z
 | 15 | 3.7 Write property test for retry on retriable errors | ✅ Done | no mapping |
 | 16 | 3.8 Write property test for retry exhaustion exception content | ✅ Done | no mapping |
 | 17 | 3.9 Write property test for backoff delay calculation | ✅ Done | no mapping |
-| 18 | 3.10 Write property test for stub provider NotImplementedError content | ⏳ Partial | no mapping |
-| 19 | 4. Checkpoint — Verify Batch 1 tests | ❌ Pending | — |
-| 20 | 5. Batch 2 — README accuracy | ❌ Pending | — |
-| 21 | 5.1 Update README.md with accurate documentation | ❌ Pending | — |
+| 18 | 3.10 Write property test for stub provider NotImplementedError content | ✅ Done | no mapping |
+| 19 | 4. Checkpoint — Verify Batch 1 tests | ✅ Done | no mapping |
+| 20 | 5. Batch 2 — README accuracy | ✅ Done | no mapping |
+| 21 | 5.1 Update README.md with accurate documentation | ✅ Done | no mapping |
 | 22 | 6. Checkpoint — Verify Batch 2 | ❌ Pending | — |
 | 23 | 7. Batch 3 — Package structure migration and CI | ❌ Pending | — |
 | 24 | 7.1 Create `src/cloud_janitor/` directory structure and move modules | ❌ Pending | — |
