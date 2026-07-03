@@ -209,7 +209,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Verify `import cloud_janitor.nonexistent` raises `ModuleNotFoundError`
     - _Requirements: 3.2, 3.3, 3.5, 3.6, 9.1, 9.5, 10.1, 10.3_
 
-- [ ] 8. Final checkpoint — Ensure all tests pass
+- [x] 8. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
   - Verify full test suite passes on editable install
   - Verify `pip wheel .` + `twine check` passes
