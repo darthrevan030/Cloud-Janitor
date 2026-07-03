@@ -12,8 +12,8 @@ import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from mcp_server.backends import CloudProvider
-from mcp_server.aws_janitor_mcp import PROVIDER_REGISTRY, _load_provider
+from cloud_janitor.mcp_server.backends import CloudProvider
+from cloud_janitor.mcp_server.aws_janitor_mcp import PROVIDER_REGISTRY, _load_provider
 
 
 # --- Property 5: Provider registry completeness ---
@@ -34,7 +34,7 @@ def test_valid_backend_returns_cloud_provider_instance(backend_name):
     with patch.dict(os.environ, {"JANITOR_BACKEND": backend_name}):
         # AWSProvider lazily imports boto3 on __init__. Mock it so the test
         # doesn't require boto3 to be installed.
-        with patch("mcp_server.backends.aws_provider.boto3", create=True):
+        with patch("cloud_janitor.mcp_server.backends.aws_provider.boto3", create=True):
             # Patch the import inside AWSProvider.__init__
             with patch("builtins.__import__", side_effect=_mock_import):
                 provider = _load_provider()

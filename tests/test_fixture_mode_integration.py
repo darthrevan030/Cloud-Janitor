@@ -163,13 +163,13 @@ def fixture_backend_env(monkeypatch, tmp_path):
 class TestFullPipelineFixtureMode:
     """Test full pipeline runs end-to-end in fixture mode without exceptions."""
 
-    @patch("orchestrator.Orchestrator._run_pre_remediation_hook", return_value=None)
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.orchestrator.orchestrator.Orchestrator._run_pre_remediation_hook", return_value=None)
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_execute_audit_completes_without_exceptions(self, mock_get_client, mock_hook, fixture_backend_env):
         """Full audit pipeline completes without raising unhandled exceptions."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from orchestrator import Orchestrator
+        from cloud_janitor.orchestrator import Orchestrator
 
         orch = Orchestrator(project_root=PROJECT_ROOT)
         result = orch.execute_audit()
@@ -180,13 +180,13 @@ class TestFullPipelineFixtureMode:
         assert isinstance(result.anomalies, list)
         assert result.drift_report is not None
 
-    @patch("orchestrator.Orchestrator._run_pre_remediation_hook", return_value=None)
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.orchestrator.orchestrator.Orchestrator._run_pre_remediation_hook", return_value=None)
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_nl_query_pipeline_completes_without_exceptions(self, mock_get_client, mock_hook, fixture_backend_env):
         """NL query → scan → anomaly → drift pipeline completes without exceptions."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from orchestrator import Orchestrator
+        from cloud_janitor.orchestrator import Orchestrator
 
         orch = Orchestrator(project_root=PROJECT_ROOT)
 
@@ -201,13 +201,13 @@ class TestFullPipelineFixtureMode:
         assert isinstance(result2.anomalies, list)
         assert result2.drift_report is not None
 
-    @patch("orchestrator.Orchestrator._run_pre_remediation_hook", return_value=None)
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.orchestrator.orchestrator.Orchestrator._run_pre_remediation_hook", return_value=None)
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_pipeline_produces_non_empty_findings(self, mock_get_client, mock_hook, fixture_backend_env):
         """Fixture mode produces non-empty findings as required by Req 12.3."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from orchestrator import Orchestrator
+        from cloud_janitor.orchestrator import Orchestrator
 
         orch = Orchestrator(project_root=PROJECT_ROOT)
         result = orch.execute_audit()
@@ -228,12 +228,12 @@ class TestFullPipelineFixtureMode:
 class TestMCPToolsSchemasFixtureMode:
     """Test that all MCP tools return valid schemas in fixture mode."""
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_interpret_query_returns_valid_schema(self, mock_get_client, fixture_backend_env):
         """interpret_query returns dict with exactly 5 required keys."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from mcp_server.aws_janitor_mcp import interpret_query
+        from cloud_janitor.mcp_server.aws_janitor_mcp import interpret_query
 
         result = interpret_query("Find idle EC2 instances")
 
@@ -247,12 +247,12 @@ class TestMCPToolsSchemasFixtureMode:
         assert isinstance(result["confidence"], float)
         assert 0.0 <= result["confidence"] <= 1.0
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_explain_remediation_returns_valid_schema(self, mock_get_client, fixture_backend_env):
         """explain_remediation returns dict with exactly 3 required keys."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from mcp_server.aws_janitor_mcp import explain_remediation
+        from cloud_janitor.mcp_server.aws_janitor_mcp import explain_remediation
 
         result = explain_remediation(
             "sg-prod-redis",
@@ -268,12 +268,12 @@ class TestMCPToolsSchemasFixtureMode:
             assert isinstance(result[key], str)
             assert len(result[key]) > 0
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_suggest_policies_returns_valid_schema(self, mock_get_client, fixture_backend_env):
         """suggest_policies returns list of dicts with required keys."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from mcp_server.aws_janitor_mcp import suggest_policies
+        from cloud_janitor.mcp_server.aws_janitor_mcp import suggest_policies
 
         findings = [{"resource_id": "sg-prod-redis", "type": "security_group"}]
         result = suggest_policies(findings, [])
@@ -285,12 +285,12 @@ class TestMCPToolsSchemasFixtureMode:
             assert required_keys.issubset(set(item.keys()))
             assert item["priority"] in {"high", "medium", "low"}
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_infer_resource_context_returns_valid_schema(self, mock_get_client, fixture_backend_env):
         """infer_resource_context returns dict with 5 required keys."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from mcp_server.aws_janitor_mcp import infer_resource_context
+        from cloud_janitor.mcp_server.aws_janitor_mcp import infer_resource_context
 
         result = infer_resource_context("cache-prod-legacy-01", "prod-session-cache")
 
@@ -302,12 +302,12 @@ class TestMCPToolsSchemasFixtureMode:
         assert 0.0 <= result["confidence"] <= 1.0
         assert result["risk_level"] in {"high", "medium", "low"}
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_detect_anomalies_returns_valid_schema(self, mock_get_client, fixture_backend_env):
         """detect_anomalies returns list of dicts with required keys."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from mcp_server.aws_janitor_mcp import detect_anomalies
+        from cloud_janitor.mcp_server.aws_janitor_mcp import detect_anomalies
 
         resources = [
             {"id": "vol-0def456abc789012b", "type": "ebs"},
@@ -324,12 +324,12 @@ class TestMCPToolsSchemasFixtureMode:
             assert required_keys == set(item.keys())
             assert item["severity"] in {"high", "medium", "low"}
 
-    @patch("agents.incident_policy_generator.get_client")
+    @patch("cloud_janitor.agents.incident_policy_generator.get_client")
     def test_policy_from_incident_returns_valid_schema(self, mock_get_client, fixture_backend_env, tmp_path):
         """policy_from_incident returns list of dicts with required keys."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from agents.incident_policy_generator import IncidentPolicyGenerator
+        from cloud_janitor.agents.incident_policy_generator import IncidentPolicyGenerator
 
         generator = IncidentPolicyGenerator(policies_dir=tmp_path / "policies")
         result = generator.generate("Redis cluster was publicly exposed through open security group")
@@ -358,12 +358,12 @@ class TestMCPToolsSchemasFixtureMode:
 class TestMultiAccountFixtureMode:
     """Test multi-account orchestration completes without exceptions in fixture mode."""
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_multi_account_run_all_completes(self, mock_get_client, fixture_backend_env):
         """MultiAccountOrchestrator.run_all() completes without exceptions."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from agents.multi_account_orchestrator import MultiAccountOrchestrator
+        from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 
         orch = MultiAccountOrchestrator(
             accounts_path=PROJECT_ROOT / "accounts.json",
@@ -382,12 +382,12 @@ class TestMultiAccountFixtureMode:
         assert isinstance(result["aggregate_findings"], list)
         assert isinstance(result["cross_account_duplicates"], int)
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_multi_account_scans_all_accounts(self, mock_get_client, fixture_backend_env):
         """All 3 fixture accounts should be scanned."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from agents.multi_account_orchestrator import MultiAccountOrchestrator
+        from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 
         orch = MultiAccountOrchestrator(
             accounts_path=PROJECT_ROOT / "accounts.json",
@@ -398,12 +398,12 @@ class TestMultiAccountFixtureMode:
         assert result["accounts_scanned"] == 3
         assert len(result["by_account"]) == 3
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_multi_account_sorted_by_priority(self, mock_get_client, fixture_backend_env):
         """by_account should be sorted high → medium → low."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from agents.multi_account_orchestrator import MultiAccountOrchestrator
+        from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 
         orch = MultiAccountOrchestrator(
             accounts_path=PROJECT_ROOT / "accounts.json",
@@ -451,10 +451,10 @@ class TestNoBoto3InFixtureMode:
             return original_import(name, *args, **kwargs)
 
         # Patch the LLM client and run the pipeline
-        with patch("core.llm_client.get_client") as mock_get_client:
+        with patch("cloud_janitor.core.llm_client.get_client") as mock_get_client:
             mock_get_client.return_value = _make_mock_llm_client()
 
-            from mcp_server.aws_janitor_mcp import (
+            from cloud_janitor.mcp_server.aws_janitor_mcp import (
                 get_cost_data,
                 get_security_data,
                 interpret_query,
@@ -474,7 +474,7 @@ class TestNoBoto3InFixtureMode:
             detect_anomalies(cost_data.get("resources", []), [])
 
         # Verify the fixture provider itself doesn't use boto3
-        from mcp_server.backends.fixture_provider import FixtureProvider
+        from cloud_janitor.mcp_server.backends.fixture_provider import FixtureProvider
 
         # Check source code of fixture provider module for boto3 imports
         import inspect
@@ -483,7 +483,7 @@ class TestNoBoto3InFixtureMode:
 
     def test_fixture_provider_source_has_no_boto3_import(self, fixture_backend_env):
         """FixtureProvider module source should not contain boto3 imports."""
-        fixture_provider_path = PROJECT_ROOT / "mcp_server" / "backends" / "fixture_provider.py"
+        fixture_provider_path = PROJECT_ROOT / "src" / "cloud_janitor" / "mcp_server" / "backends" / "fixture_provider.py"
         source = fixture_provider_path.read_text(encoding="utf-8")
 
         # Should not have import boto3 or from boto3
@@ -493,14 +493,14 @@ class TestNoBoto3InFixtureMode:
     def test_phase_bc_agents_dont_import_boto3(self, fixture_backend_env):
         """Phase B+C agent modules should not import boto3 directly."""
         agent_files = [
-            "agents/query_interpreter.py",
-            "agents/explainer.py",
-            "agents/policy_suggester.py",
-            "agents/tagger.py",
-            "agents/anomaly_detector.py",
-            "agents/incident_policy_generator.py",
-            "agents/drift_detector.py",
-            "agents/multi_account_orchestrator.py",
+            "src/cloud_janitor/agents/query_interpreter.py",
+            "src/cloud_janitor/agents/explainer.py",
+            "src/cloud_janitor/agents/policy_suggester.py",
+            "src/cloud_janitor/agents/tagger.py",
+            "src/cloud_janitor/agents/anomaly_detector.py",
+            "src/cloud_janitor/agents/incident_policy_generator.py",
+            "src/cloud_janitor/agents/drift_detector.py",
+            "src/cloud_janitor/agents/multi_account_orchestrator.py",
         ]
 
         for rel_path in agent_files:
@@ -520,12 +520,12 @@ class TestNoBoto3InFixtureMode:
 class TestDeterministicOutput:
     """Verify deterministic output when both backend is fixture and LLM is mocked."""
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_repeated_audit_produces_same_findings(self, mock_get_client, fixture_backend_env):
         """Two sequential audits with same fixture data produce identical findings."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from orchestrator import Orchestrator
+        from cloud_janitor.orchestrator import Orchestrator
 
         orch1 = Orchestrator(project_root=PROJECT_ROOT)
         result1 = orch1.execute_audit()
@@ -542,12 +542,12 @@ class TestDeterministicOutput:
         )
         assert findings1 == findings2, "Fixture mode with mocked LLM should be deterministic"
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_repeated_nl_query_produces_same_params(self, mock_get_client, fixture_backend_env):
         """Same NL query with mocked LLM produces same interpreted parameters."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from agents.query_interpreter import QueryInterpreter
+        from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
         qi = QueryInterpreter()
         result1 = qi.interpret("Find idle Redis clusters")
@@ -555,12 +555,12 @@ class TestDeterministicOutput:
 
         assert result1 == result2, "Same query should produce same parameters"
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_repeated_anomaly_detection_produces_same_results(self, mock_get_client, fixture_backend_env):
         """Same resources with mocked LLM produce same anomaly results."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from agents.anomaly_detector import AnomalyDetector
+        from cloud_janitor.agents.anomaly_detector import AnomalyDetector
 
         detector = AnomalyDetector()
         resources = [
@@ -574,12 +574,12 @@ class TestDeterministicOutput:
 
         assert result1 == result2, "Same input should produce same anomalies"
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_mcp_tools_produce_deterministic_results(self, mock_get_client, fixture_backend_env):
         """MCP tools with fixture backend and mocked LLM produce deterministic results."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
+        from cloud_janitor.mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
 
         # Fixture data should always be the same
         cost1 = get_cost_data()
@@ -590,12 +590,12 @@ class TestDeterministicOutput:
         sec2 = get_security_data()
         assert sec1 == sec2
 
-    @patch("core.llm_client.get_client")
+    @patch("cloud_janitor.core.llm_client.get_client")
     def test_explain_remediation_deterministic(self, mock_get_client, fixture_backend_env):
         """explain_remediation produces same result for same input."""
         mock_get_client.return_value = _make_mock_llm_client()
 
-        from mcp_server.aws_janitor_mcp import explain_remediation
+        from cloud_janitor.mcp_server.aws_janitor_mcp import explain_remediation
 
         args = (
             "sg-prod-redis",

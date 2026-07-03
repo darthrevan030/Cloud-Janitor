@@ -10,7 +10,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from agents.multi_account_orchestrator import (
+from cloud_janitor.agents.multi_account_orchestrator import (
     MultiAccountOrchestrator,
     PRIORITY_ORDER,
     _empty_result,
@@ -150,7 +150,7 @@ class TestRunAll:
         }
         assert set(result.keys()) == required_keys
 
-    @patch("agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
+    @patch("cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
     def test_successful_audit_populates_result(self, mock_audit, tmp_path):
         """Req 9.3, 9.8: Successful audit → findings aggregated with account_id."""
         mock_audit.return_value = {
@@ -172,7 +172,7 @@ class TestRunAll:
         # Account ID injected (Req 9.3)
         assert result["aggregate_findings"][0]["account_id"] == "123456789012"
 
-    @patch("agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
+    @patch("cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
     def test_failed_account_continues_others(self, mock_audit, tmp_path):
         """Req 9.2, 14.7: One account failure doesn't stop others."""
         def side_effect(account):
@@ -196,7 +196,7 @@ class TestRunAll:
         assert len(success) == 1
         assert "RuntimeError" in failed[0]["error"]
 
-    @patch("agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
+    @patch("cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
     def test_priority_sorting(self, mock_audit, tmp_path):
         """Req 9.4: by_account sorted high → medium → low, alphabetically within."""
         mock_audit.return_value = {"findings": [], "waste": 0.0, "critical_count": 0}
@@ -210,7 +210,7 @@ class TestRunAll:
         names = [a["account_name"] for a in result["by_account"]]
         assert names == ["Production", "Staging", "Development"]
 
-    @patch("agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
+    @patch("cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
     def test_cross_account_duplicates(self, mock_audit, tmp_path):
         """Req 9.6: Duplicates counted by (resource_type, check_type) across accounts."""
         def side_effect(account):
@@ -243,7 +243,7 @@ class TestRunAll:
         # ec2/idle_resource only in account 1 → not a duplicate
         assert result["cross_account_duplicates"] == 2
 
-    @patch("agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
+    @patch("cloud_janitor.agents.multi_account_orchestrator.MultiAccountOrchestrator._audit_account")
     def test_account_id_injected_into_every_finding(self, mock_audit, tmp_path):
         """Req 9.3: Every finding in aggregate_findings has account_id."""
         mock_audit.return_value = {

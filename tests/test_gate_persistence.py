@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agents.approval_gate import ApprovalGateStore
+from cloud_janitor.agents.approval_gate import ApprovalGateStore
 
 
 class TestAtomicWritePersistsState:
@@ -90,7 +90,7 @@ class TestOsReplaceFailure:
         store_path = tmp_path / "gates.json"
         store = ApprovalGateStore(store_path)
 
-        with patch("agents.approval_gate.os.replace", side_effect=OSError("disk full")):
+        with patch("cloud_janitor.agents.approval_gate.os.replace", side_effect=OSError("disk full")):
             with pytest.raises(OSError, match="disk full"):
                 store.set_gate(
                     resource_id="vol-xyz",
@@ -123,7 +123,7 @@ class TestOsReplaceFailure:
         original_content = store_path.read_text(encoding="utf-8")
 
         # Now attempt a write that will fail at os.replace
-        with patch("agents.approval_gate.os.replace", side_effect=OSError("permission denied")):
+        with patch("cloud_janitor.agents.approval_gate.os.replace", side_effect=OSError("permission denied")):
             with pytest.raises(OSError, match="permission denied"):
                 store.set_gate(
                     resource_id="vol-new",

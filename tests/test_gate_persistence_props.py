@@ -13,8 +13,8 @@ from pathlib import Path
 from hypothesis import given, settings, HealthCheck
 from hypothesis import strategies as st
 
-from agents.approval_gate import ApprovalGateStore
-from orchestrator import Orchestrator
+from cloud_janitor.agents.approval_gate import ApprovalGateStore
+from cloud_janitor.orchestrator import Orchestrator
 
 
 # --- Strategies ---
@@ -164,7 +164,7 @@ class TestProperty9CorruptedStoreLocks:
         self, corrupt_data, rid
     ):
         """Orchestrator rejects approve/rollback when gate file is corrupted."""
-        from agents.remediation_architect import RemediationPlan
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_dir = _make_project_dirs(Path(tmp_dir))

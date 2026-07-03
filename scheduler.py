@@ -22,7 +22,7 @@ from pathlib import Path
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from orchestrator import Orchestrator
+from cloud_janitor.orchestrator import Orchestrator
 
 DEFAULT_SCHEDULE = "0 6 * * *"
 JOB_ID = "janitor_scheduled_scan"

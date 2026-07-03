@@ -2,7 +2,7 @@
 
 import pytest
 
-from agents.schema_validator import (
+from cloud_janitor.agents.schema_validator import (
     ALL_VALID_RESOURCE_TYPES,
     VALID_AGENTS,
     VALID_CATEGORIES,

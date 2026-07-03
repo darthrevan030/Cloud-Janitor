@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from orchestrator import (
+from cloud_janitor.orchestrator import (
     ApprovalResult,
     AuditEntry,
     AuditResult,
@@ -155,7 +155,7 @@ def _make_orchestrator_with_mocked_agents(tmp_project, findings_store_both_agent
 
 def _setup_successful_audit(orch, tmp_project):
     """Set up mocked architect plans and output files for a successful audit."""
-    from agents.remediation_architect import RemediationPlan
+    from cloud_janitor.agents.remediation_architect import RemediationPlan
 
     plans = [
         RemediationPlan(
@@ -197,7 +197,7 @@ class TestHappyPath:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -238,7 +238,7 @@ class TestHappyPath:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -268,7 +268,7 @@ class TestPreRemediationHook:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=1, stdout="", stderr="Error: Invalid HCL syntax"
             )
@@ -288,7 +288,7 @@ class TestPreRemediationHook:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -307,7 +307,7 @@ class TestPreRemediationHook:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired(cmd="bash", timeout=60)
 
             result = orch.execute_audit()
@@ -332,7 +332,7 @@ class TestPostRemediationHook:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -357,7 +357,7 @@ class TestPostRemediationHook:
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
         (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -401,7 +401,7 @@ class TestPostRemediationHook:
             # Post-remediation hook explodes
             raise OSError("disk full")
 
-        with patch("orchestrator.subprocess.run", side_effect=side_effect):
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run", side_effect=side_effect):
             orch.execute_audit()
             # Approval should still succeed even if post-hook fails
             approval = orch.approve("APPROVE vol-abc123")
@@ -429,7 +429,7 @@ class TestApprovalGateRejection:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -447,7 +447,7 @@ class TestApprovalGateRejection:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -472,7 +472,7 @@ class TestApprovalGateRejection:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -515,7 +515,7 @@ class TestApprovalGateRejection:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -570,7 +570,7 @@ class TestRollbackFlow:
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
         (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -614,13 +614,13 @@ class TestAgentSequencing:
             side_effect=lambda: (call_order.append("secops"), [])[1]
         )
 
-        from agents.remediation_architect import RemediationPlan
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         orch._architect.plan = MagicMock(
             side_effect=lambda: (call_order.append("architect"), [])[1]
         )
 
-        with patch("orchestrator.subprocess.run"):
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run"):
             orch.execute_audit()
 
         assert call_order == ["finops", "secops", "architect"]
@@ -669,7 +669,7 @@ class TestAgentSequencing:
         )
         orch._architect.plan = MagicMock(return_value=[])
 
-        with patch("orchestrator.subprocess.run"):
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run"):
             orch.execute_audit()
 
         orch._finops.scan.assert_called_once()
@@ -723,7 +723,7 @@ class TestEdgeCases:
             tmp_project, findings_store_both_agents
         )
 
-        from agents.remediation_architect import RemediationPlan
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         plans = [
             RemediationPlan(
@@ -737,7 +737,7 @@ class TestEdgeCases:
         ]
         orch._architect.plan = MagicMock(return_value=plans)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -756,7 +756,7 @@ class TestEdgeCases:
         )
         _setup_successful_audit(orch, tmp_project)
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -797,7 +797,7 @@ class TestSavingsTrackerWiring:
         # Mock the savings tracker
         orch._savings_tracker.record_run = MagicMock()
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -820,7 +820,7 @@ class TestSavingsTrackerWiring:
         # Mock the savings tracker
         orch._savings_tracker.record_run = MagicMock()
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -844,7 +844,7 @@ class TestSavingsTrackerWiring:
             side_effect=FileNotFoundError("ledger not found")
         )
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -868,7 +868,7 @@ class TestSavingsTrackerWiring:
             side_effect=OSError("disk full")
         )
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -890,7 +890,7 @@ class TestSavingsTrackerWiring:
         # Mock the savings tracker
         orch._savings_tracker.record_run = MagicMock()
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -927,7 +927,7 @@ class TestSavingsTrackerWiring:
                 args=[], returncode=1, stdout="", stderr="Error: resource not found"
             )
 
-        with patch("orchestrator.subprocess.run", side_effect=side_effect):
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run", side_effect=side_effect):
             orch.execute_audit()
             result = orch.approve("APPROVE vol-abc123")
 

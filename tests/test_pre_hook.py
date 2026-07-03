@@ -16,8 +16,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from agents.remediation_architect import RemediationPlan
-from orchestrator import Orchestrator
+from cloud_janitor.agents.remediation_architect import RemediationPlan
+from cloud_janitor.orchestrator import Orchestrator
 
 
 # --- Helpers ---

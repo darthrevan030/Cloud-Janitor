@@ -17,9 +17,9 @@ from unittest.mock import patch
 from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
 
-from agents.approval_gate import ApprovalGateStore
-from agents.remediation_architect import RemediationPlan
-from orchestrator import Orchestrator
+from cloud_janitor.agents.approval_gate import ApprovalGateStore
+from cloud_janitor.agents.remediation_architect import RemediationPlan
+from cloud_janitor.orchestrator import Orchestrator
 
 
 # --- Strategies ---

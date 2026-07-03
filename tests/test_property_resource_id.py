@@ -14,7 +14,7 @@ import re
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from orchestrator import Orchestrator
+from cloud_janitor.orchestrator import Orchestrator
 
 
 # Independent oracle: re-implement the allowlist check without referencing

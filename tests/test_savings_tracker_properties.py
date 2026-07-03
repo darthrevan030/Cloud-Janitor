@@ -12,7 +12,7 @@ import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from agents.savings_tracker import SavingsTracker
+from cloud_janitor.agents.savings_tracker import SavingsTracker
 
 
 # --- Strategies ---

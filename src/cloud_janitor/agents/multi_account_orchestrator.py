@@ -222,7 +222,7 @@ class MultiAccountOrchestrator:
         Returns:
             Dict with findings, waste, and critical_count for this account.
         """
-        from orchestrator import Orchestrator
+        from cloud_janitor.orchestrator import Orchestrator
 
         account_id = account["account_id"]
 

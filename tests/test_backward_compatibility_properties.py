@@ -15,7 +15,7 @@ import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from mcp_server.backends.fixture_provider import FixtureProvider
+from cloud_janitor.mcp_server.backends.fixture_provider import FixtureProvider
 
 
 # --- Reference Implementation (Oracle) ---

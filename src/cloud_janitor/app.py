@@ -38,32 +38,32 @@ configure_logging()
 from typing import Optional
 
 try:
-    from agents.query_interpreter import QueryInterpreter
+    from cloud_janitor.agents.query_interpreter import QueryInterpreter
 except ImportError:
     QueryInterpreter: Optional[type] = None  # type: ignore[assignment]
 
 try:
-    from agents.explainer import RemediationExplainer
+    from cloud_janitor.agents.explainer import RemediationExplainer
 except ImportError:
     RemediationExplainer: Optional[type] = None  # type: ignore[assignment]
 
 try:
-    from agents.policy_suggester import PolicySuggester
+    from cloud_janitor.agents.policy_suggester import PolicySuggester
 except ImportError:
     PolicySuggester: Optional[type] = None  # type: ignore[assignment]
 
 try:
-    from agents.anomaly_detector import AnomalyDetector
+    from cloud_janitor.agents.anomaly_detector import AnomalyDetector
 except ImportError:
     AnomalyDetector: Optional[type] = None  # type: ignore[assignment]
 
 try:
-    from agents.drift_detector import DriftDetector
+    from cloud_janitor.agents.drift_detector import DriftDetector
 except ImportError:
     DriftDetector: Optional[type] = None  # type: ignore[assignment]
 
 try:
-    from agents.multi_account_orchestrator import MultiAccountOrchestrator
+    from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 except ImportError:
     MultiAccountOrchestrator: Optional[type] = None  # type: ignore[assignment]
 

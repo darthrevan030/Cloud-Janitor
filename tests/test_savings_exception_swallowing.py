@@ -19,8 +19,8 @@ from unittest.mock import patch, MagicMock
 from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
 
-from agents.remediation_architect import RemediationPlan
-from orchestrator import Orchestrator, ApprovalResult
+from cloud_janitor.agents.remediation_architect import RemediationPlan
+from cloud_janitor.orchestrator import Orchestrator, ApprovalResult
 
 
 # --- Strategies ---
@@ -208,7 +208,7 @@ class TestProperty5SavingsExceptionSwallowing:
                      orch._savings_tracker, "record_run",
                      side_effect=exc_instance,
                  ), \
-                 patch("orchestrator.logging.getLogger") as mock_get_logger:
+                 patch("cloud_janitor.orchestrator.orchestrator.logging.getLogger") as mock_get_logger:
                 mock_logger = MagicMock()
                 mock_get_logger.return_value = mock_logger
 

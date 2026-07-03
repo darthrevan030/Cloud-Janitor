@@ -1,7 +1,5 @@
 """Quick validation script for ResourceTagger implementation."""
-import sys
-sys.path.insert(0, '.')
-from agents.tagger import ResourceTagger, SAFE_DEFAULT
+from cloud_janitor.agents.tagger import ResourceTagger, SAFE_DEFAULT
 from unittest.mock import patch, MagicMock
 import json
 
@@ -59,7 +57,7 @@ assert result['env'] == 'unknown'
 print('Test 5 PASS: invalid env defaults to unknown')
 
 # Test 6: all fields present skips LLM
-with patch('agents.tagger.get_client') as mock_client:
+with patch('cloud_janitor.agents.tagger.get_client') as mock_client:
     result = tagger.infer('i-123', 'test-instance', {'env': 'production', 'team': 'backend', 'owner': 'ops'})
     mock_client.assert_not_called()
     assert result['env'] == 'production'
@@ -68,7 +66,7 @@ with patch('agents.tagger.get_client') as mock_client:
 print('Test 6 PASS: all fields present skips LLM call')
 
 # Test 7: exception returns safe default
-with patch('agents.tagger.get_client', side_effect=Exception('API down')):
+with patch('cloud_janitor.agents.tagger.get_client', side_effect=Exception('API down')):
     result = tagger.infer('i-123', 'test-instance', {})
     assert result == SAFE_DEFAULT
 print('Test 7 PASS: exception returns safe default')
@@ -90,7 +88,7 @@ batch_response = [
     {'env': 'development', 'team': 'frontend', 'owner': 'ui-team', 'risk_level': 'low', 'confidence': 0.8},
 ]
 
-with patch('agents.tagger.get_client') as mock_get_client:
+with patch('cloud_janitor.agents.tagger.get_client') as mock_get_client:
     mock_client = MagicMock()
     mock_get_client.return_value = mock_client
     mock_client.chat.completions.create.return_value = _make_mock_response(json.dumps(batch_response))
@@ -108,7 +106,7 @@ with patch('agents.tagger.get_client') as mock_get_client:
 print('Test 9 PASS: batch inference with mocked LLM works')
 
 # Test 10: batch splits into chunks of 10
-with patch('agents.tagger.get_client') as mock_get_client:
+with patch('cloud_janitor.agents.tagger.get_client') as mock_get_client:
     mock_client = MagicMock()
     mock_get_client.return_value = mock_client
 
@@ -132,8 +130,8 @@ print('Test 10 PASS: batch correctly splits into chunks of 10')
 
 # Test 11: verify module does not import openai directly
 import inspect
-import agents.tagger
-source = inspect.getsource(agents.tagger)
+import cloud_janitor.agents.tagger
+source = inspect.getsource(cloud_janitor.agents.tagger)
 assert 'import openai' not in source
 assert 'from openai' not in source
 print('Test 11 PASS: no direct openai import')

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from core.error_telemetry import (
+from cloud_janitor.core.error_telemetry import (
     ERROR_CATEGORIES,
     build_error_record,
     write_error_record,

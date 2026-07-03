@@ -15,7 +15,7 @@ import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from agents.reasoning_logger import ReasoningLogger
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger
 
 
 # --- Strategies ---

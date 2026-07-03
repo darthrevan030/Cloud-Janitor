@@ -97,10 +97,10 @@ class TestNeverRaiseGuarantee:
     @settings(max_examples=200, deadline=None)
     def test_query_interpreter_never_raises(self, query, exc):
         """QueryInterpreter.interpret() never raises for any input."""
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             # Should not raise regardless of input
@@ -117,10 +117,10 @@ class TestNeverRaiseGuarantee:
     @settings(max_examples=200, deadline=None)
     def test_explainer_never_raises(self, resource_id, finding, remediation_hcl, rollback_hcl, exc):
         """RemediationExplainer.explain() never raises for any input."""
-        with patch("agents.explainer.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.explainer.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.explainer import RemediationExplainer
+            from cloud_janitor.agents.explainer import RemediationExplainer
 
             explainer = RemediationExplainer()
             # Coerce None-like values to strings for the method signature
@@ -140,10 +140,10 @@ class TestNeverRaiseGuarantee:
     @settings(max_examples=200, deadline=None)
     def test_policy_suggester_never_raises(self, findings, already_checked, exc):
         """PolicySuggester.suggest() never raises for any input."""
-        with patch("agents.policy_suggester.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.policy_suggester import PolicySuggester
+            from cloud_janitor.agents.policy_suggester import PolicySuggester
 
             ps = PolicySuggester()
             result = ps.suggest(
@@ -161,10 +161,10 @@ class TestNeverRaiseGuarantee:
     @settings(max_examples=200, deadline=None)
     def test_resource_tagger_never_raises(self, resource_id, resource_name, existing_tags, exc):
         """ResourceTagger.infer() never raises for any input."""
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(
@@ -182,10 +182,10 @@ class TestNeverRaiseGuarantee:
     @settings(max_examples=200, deadline=None)
     def test_anomaly_detector_never_raises(self, resources, findings, exc):
         """AnomalyDetector.detect() never raises for any input."""
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.anomaly_detector import AnomalyDetector
+            from cloud_janitor.agents.anomaly_detector import AnomalyDetector
 
             detector = AnomalyDetector()
             result = detector.detect(
@@ -202,10 +202,10 @@ class TestNeverRaiseGuarantee:
     def test_incident_policy_generator_never_raises(self, incident_description, exc):
         """IncidentPolicyGenerator.generate() never raises for any input."""
         with tempfile.TemporaryDirectory() as tmp_dir:
-            with patch("agents.incident_policy_generator.get_client") as mock_get_client:
+            with patch("cloud_janitor.agents.incident_policy_generator.get_client") as mock_get_client:
                 mock_get_client.return_value = _make_failing_mock(exc)
 
-                from agents.incident_policy_generator import IncidentPolicyGenerator
+                from cloud_janitor.agents.incident_policy_generator import IncidentPolicyGenerator
 
                 gen = IncidentPolicyGenerator(policies_dir=Path(tmp_dir))
                 result = gen.generate(
@@ -221,10 +221,10 @@ class TestNeverRaiseGuarantee:
     def test_drift_detector_never_raises(self, findings, exc):
         """DriftDetector.detect() never raises for any input."""
         with tempfile.TemporaryDirectory() as tmp_dir:
-            with patch("agents.drift_detector.get_client") as mock_get_client:
+            with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
                 mock_get_client.return_value = _make_failing_mock(exc)
 
-                from agents.drift_detector import DriftDetector
+                from cloud_janitor.agents.drift_detector import DriftDetector
 
                 detector = DriftDetector(history_path=Path(tmp_dir) / "history.json")
                 result = detector.detect(
@@ -257,10 +257,10 @@ class TestSafeDefaultsOnLLMFailure:
         """QueryInterpreter returns correct safe-default schema on LLM failure."""
         assume(query.strip() != "")  # Non-empty queries attempt LLM call
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret(query)
@@ -286,10 +286,10 @@ class TestSafeDefaultsOnLLMFailure:
         assume(remediation_hcl.strip() != "")
         assume(rollback_hcl.strip() != "")
 
-        with patch("agents.explainer.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.explainer.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.explainer import RemediationExplainer
+            from cloud_janitor.agents.explainer import RemediationExplainer
 
             explainer = RemediationExplainer()
             result = explainer.explain(
@@ -317,10 +317,10 @@ class TestSafeDefaultsOnLLMFailure:
     @settings(max_examples=200, deadline=None)
     def test_policy_suggester_safe_defaults(self, findings, already_checked, exc):
         """PolicySuggester returns empty list on LLM failure."""
-        with patch("agents.policy_suggester.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.policy_suggester import PolicySuggester
+            from cloud_janitor.agents.policy_suggester import PolicySuggester
 
             ps = PolicySuggester()
             result = ps.suggest(findings=findings, already_checked=already_checked)
@@ -339,10 +339,10 @@ class TestSafeDefaultsOnLLMFailure:
     @settings(max_examples=200, deadline=None)
     def test_resource_tagger_safe_defaults(self, resource_id, resource_name, exc):
         """ResourceTagger returns correct safe-default schema on LLM failure."""
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(
@@ -370,10 +370,10 @@ class TestSafeDefaultsOnLLMFailure:
     @settings(max_examples=200, deadline=None)
     def test_anomaly_detector_safe_defaults(self, resources, exc):
         """AnomalyDetector returns empty list on LLM failure."""
-        with patch("agents.anomaly_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get_client:
             mock_get_client.return_value = _make_failing_mock(exc)
 
-            from agents.anomaly_detector import AnomalyDetector
+            from cloud_janitor.agents.anomaly_detector import AnomalyDetector
 
             detector = AnomalyDetector()
             # Pass empty findings so all resources are "unflagged" and LLM is called
@@ -392,10 +392,10 @@ class TestSafeDefaultsOnLLMFailure:
         assume(incident_description.strip() != "")  # Non-empty triggers LLM path
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            with patch("agents.incident_policy_generator.get_client") as mock_get_client:
+            with patch("cloud_janitor.agents.incident_policy_generator.get_client") as mock_get_client:
                 mock_get_client.return_value = _make_failing_mock(exc)
 
-                from agents.incident_policy_generator import IncidentPolicyGenerator
+                from cloud_janitor.agents.incident_policy_generator import IncidentPolicyGenerator
 
                 gen = IncidentPolicyGenerator(policies_dir=Path(tmp_dir))
                 result = gen.generate(incident_description=incident_description)
@@ -414,10 +414,10 @@ class TestSafeDefaultsOnLLMFailure:
     def test_drift_detector_safe_defaults(self, findings, exc):
         """DriftDetector returns safe-default dict on failure or insufficient history."""
         with tempfile.TemporaryDirectory() as tmp_dir:
-            with patch("agents.drift_detector.get_client") as mock_get_client:
+            with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
                 mock_get_client.return_value = _make_failing_mock(exc)
 
-                from agents.drift_detector import DriftDetector
+                from cloud_janitor.agents.drift_detector import DriftDetector
 
                 detector = DriftDetector(history_path=Path(tmp_dir) / "history.json")
                 result = detector.detect(findings=findings)
@@ -436,10 +436,10 @@ class TestSafeDefaultsOnLLMFailure:
             # Write corrupted JSON
             history_path.write_text("not valid json {{{{", encoding="utf-8")
 
-            with patch("agents.drift_detector.get_client") as mock_get_client:
+            with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
                 mock_get_client.return_value = _make_failing_mock(exc)
 
-                from agents.drift_detector import DriftDetector
+                from cloud_janitor.agents.drift_detector import DriftDetector
 
                 detector = DriftDetector(history_path=history_path)
                 result = detector.detect(findings=[])

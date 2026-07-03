@@ -28,8 +28,8 @@ class TestEmptyQuery:
     """Requirement 2.5: Empty/whitespace query returns SAFE_DEFAULT without calling LLM."""
 
     def test_empty_string_returns_safe_default(self):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
-            from agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
 
             qi = QueryInterpreter()
             result = qi.interpret("")
@@ -38,8 +38,8 @@ class TestEmptyQuery:
             mock_get_client.assert_not_called()
 
     def test_whitespace_only_returns_safe_default(self):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
-            from agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
 
             qi = QueryInterpreter()
             result = qi.interpret("   \t\n  ")
@@ -48,8 +48,8 @@ class TestEmptyQuery:
             mock_get_client.assert_not_called()
 
     def test_none_returns_safe_default(self):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
-            from agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
 
             qi = QueryInterpreter()
             result = qi.interpret(None)
@@ -62,12 +62,12 @@ class TestSafeDefaultSchema:
     """Requirement 2.8: SAFE_DEFAULT has exactly 5 correct keys."""
 
     def test_safe_default_has_exactly_five_keys(self):
-        from agents.query_interpreter import SAFE_DEFAULT
+        from cloud_janitor.agents.query_interpreter import SAFE_DEFAULT
 
         assert set(SAFE_DEFAULT.keys()) == EXPECTED_KEYS
 
     def test_safe_default_values(self):
-        from agents.query_interpreter import SAFE_DEFAULT
+        from cloud_janitor.agents.query_interpreter import SAFE_DEFAULT
 
         assert SAFE_DEFAULT["resource_types"] == []
         assert SAFE_DEFAULT["check_types"] == []
@@ -77,14 +77,14 @@ class TestSafeDefaultSchema:
 
     def test_safe_default_returns_copy_not_reference(self):
         """Mutating returned default must not affect the class constant."""
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
-            from agents.query_interpreter import QueryInterpreter
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("")
             result["resource_types"].append("ec2")
 
-            from agents.query_interpreter import SAFE_DEFAULT
+            from cloud_janitor.agents.query_interpreter import SAFE_DEFAULT
             assert SAFE_DEFAULT["resource_types"] == []
 
 
@@ -100,12 +100,12 @@ class TestSuccessfulParsing:
             "confidence": 0.85,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(valid_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("show idle ec2 and unencrypted ebs")
@@ -125,12 +125,12 @@ class TestSuccessfulParsing:
             "confidence": 0.9,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(valid_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("idle redis clusters")
@@ -150,12 +150,12 @@ class TestResourceTypeValidation:
             "confidence": 0.6,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("scan all resources")
@@ -177,12 +177,12 @@ class TestCheckTypeValidation:
             "confidence": 0.7,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("run security checks")
@@ -204,12 +204,12 @@ class TestMinIdleDaysClamping:
             "confidence": 0.5,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("find new resources")
@@ -225,12 +225,12 @@ class TestMinIdleDaysClamping:
             "confidence": 0.5,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("find very old resources")
@@ -246,12 +246,12 @@ class TestMinIdleDaysClamping:
             "confidence": 0.3,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("general scan")
@@ -271,12 +271,12 @@ class TestConfidenceClamping:
             "confidence": 5.0,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("find idle ec2")
@@ -292,12 +292,12 @@ class TestConfidenceClamping:
             "confidence": -0.5,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("???")
@@ -317,12 +317,12 @@ class TestIntentSummaryValidation:
             "confidence": 0.5,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("scan")
@@ -339,12 +339,12 @@ class TestIntentSummaryValidation:
             "confidence": 0.5,
         })
 
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(bad_json)
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             result = qi.interpret("a really long query")
@@ -356,14 +356,14 @@ class TestLLMFailure:
     """Requirement 1.1, 1.8, 2.6: LLM failures return SAFE_DEFAULT."""
 
     def test_invalid_json_returns_safe_default(self):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(
                 "This is not JSON at all"
             )
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
 
             qi = QueryInterpreter()
             result = qi.interpret("find idle ec2")
@@ -371,12 +371,12 @@ class TestLLMFailure:
         assert result == SAFE_DEFAULT
 
     def test_api_exception_returns_safe_default(self):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = RuntimeError("API unavailable")
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
 
             qi = QueryInterpreter()
             result = qi.interpret("find idle ec2")
@@ -384,10 +384,10 @@ class TestLLMFailure:
         assert result == SAFE_DEFAULT
 
     def test_get_client_raises_returns_safe_default(self):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_get_client.side_effect = EnvironmentError("OPENROUTER_API_KEY is not set")
 
-            from agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter, SAFE_DEFAULT
 
             qi = QueryInterpreter()
             result = qi.interpret("find idle ec2")
@@ -399,12 +399,12 @@ class TestErrorLogging:
     """Requirement 1.9: Failures logged to stderr."""
 
     def test_llm_error_logged_to_stderr(self, capsys):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = RuntimeError("timeout")
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             qi.interpret("find idle ec2")
@@ -414,12 +414,12 @@ class TestErrorLogging:
         assert "RuntimeError" in captured.err
 
     def test_invalid_json_logged_to_stderr(self, capsys):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response("not json!!!")
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             qi.interpret("anything")
@@ -432,12 +432,12 @@ class TestNeverRaises:
     """Requirement 1.8: Never raises an exception to callers."""
 
     def test_does_not_raise_on_bizarre_input(self):
-        with patch("agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = Exception("total failure")
             mock_get_client.return_value = mock_client
 
-            from agents.query_interpreter import QueryInterpreter
+            from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()
             # Should not raise
@@ -451,7 +451,7 @@ class TestLLMClientImport:
 
     def test_does_not_import_openai_directly(self):
         import inspect
-        from agents import query_interpreter
+        from cloud_janitor.agents import query_interpreter
 
         source = inspect.getsource(query_interpreter)
         assert "import openai" not in source
@@ -459,7 +459,7 @@ class TestLLMClientImport:
 
     def test_imports_from_llm_client(self):
         import inspect
-        from agents import query_interpreter
+        from cloud_janitor.agents import query_interpreter
 
         source = inspect.getsource(query_interpreter)
-        assert "from core.llm_client import" in source
+        assert "from cloud_janitor.core.llm_client import" in source

@@ -13,7 +13,7 @@ from unittest.mock import patch
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from orchestrator import _validate_tf_cmd, TF_CMD_ALLOWLIST
+from cloud_janitor.orchestrator.orchestrator import _validate_tf_cmd, TF_CMD_ALLOWLIST
 
 
 # --- Strategies ---

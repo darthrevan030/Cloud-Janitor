@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.explainer import RemediationExplainer, SAFE_DEFAULT
+from cloud_janitor.agents.explainer import RemediationExplainer, SAFE_DEFAULT
 
 
 # --- Test fixtures ---
@@ -78,7 +78,7 @@ class TestSafeDefaultConstant:
 class TestEmptyInputHandling:
     """Requirement 3.6: empty/whitespace HCL returns SAFE_DEFAULT without LLM call."""
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_empty_remediation_hcl_returns_safe_default(self, mock_get_client):
         explainer = RemediationExplainer()
         result = explainer.explain("sg-123", SAMPLE_FINDING, "", SAMPLE_ROLLBACK_HCL)
@@ -86,7 +86,7 @@ class TestEmptyInputHandling:
         assert result == SAFE_DEFAULT
         mock_get_client.assert_not_called()
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_whitespace_remediation_hcl_returns_safe_default(self, mock_get_client):
         explainer = RemediationExplainer()
         result = explainer.explain("sg-123", SAMPLE_FINDING, "   \n\t  ", SAMPLE_ROLLBACK_HCL)
@@ -94,7 +94,7 @@ class TestEmptyInputHandling:
         assert result == SAFE_DEFAULT
         mock_get_client.assert_not_called()
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_empty_rollback_hcl_returns_safe_default(self, mock_get_client):
         explainer = RemediationExplainer()
         result = explainer.explain("sg-123", SAMPLE_FINDING, SAMPLE_REMEDIATION_HCL, "")
@@ -102,7 +102,7 @@ class TestEmptyInputHandling:
         assert result == SAFE_DEFAULT
         mock_get_client.assert_not_called()
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_whitespace_rollback_hcl_returns_safe_default(self, mock_get_client):
         explainer = RemediationExplainer()
         result = explainer.explain("sg-123", SAMPLE_FINDING, SAMPLE_REMEDIATION_HCL, "  \t\n ")
@@ -110,7 +110,7 @@ class TestEmptyInputHandling:
         assert result == SAFE_DEFAULT
         mock_get_client.assert_not_called()
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_both_empty_returns_safe_default(self, mock_get_client):
         explainer = RemediationExplainer()
         result = explainer.explain("sg-123", SAMPLE_FINDING, "", "")
@@ -118,7 +118,7 @@ class TestEmptyInputHandling:
         assert result == SAFE_DEFAULT
         mock_get_client.assert_not_called()
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_none_remediation_hcl_returns_safe_default(self, mock_get_client):
         explainer = RemediationExplainer()
         result = explainer.explain("sg-123", SAMPLE_FINDING, None, SAMPLE_ROLLBACK_HCL)
@@ -126,7 +126,7 @@ class TestEmptyInputHandling:
         assert result == SAFE_DEFAULT
         mock_get_client.assert_not_called()
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_none_rollback_hcl_returns_safe_default(self, mock_get_client):
         explainer = RemediationExplainer()
         result = explainer.explain("sg-123", SAMPLE_FINDING, SAMPLE_REMEDIATION_HCL, None)
@@ -138,7 +138,7 @@ class TestEmptyInputHandling:
 class TestSuccessfulExplanation:
     """Test LLM-powered explanation generation with valid inputs."""
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_returns_valid_explanation_from_llm(self, mock_get_client):
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
@@ -151,7 +151,7 @@ class TestSuccessfulExplanation:
 
         assert result == VALID_LLM_RESPONSE
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_result_has_exactly_three_keys(self, mock_get_client):
         """Requirement 3.4: exactly 3 keys."""
         mock_client = MagicMock()
@@ -166,7 +166,7 @@ class TestSuccessfulExplanation:
         assert set(result.keys()) == {"risk_explanation", "what_terraform_does", "what_rollback_restores"}
         assert len(result) == 3
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_all_values_are_non_empty_strings(self, mock_get_client):
         """Requirement 3.4: each value is a non-empty string."""
         mock_client = MagicMock()
@@ -182,7 +182,7 @@ class TestSuccessfulExplanation:
             assert isinstance(value, str), f"{key} is not a string"
             assert len(value) > 0, f"{key} is empty"
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_max_tokens_is_400(self, mock_get_client):
         """Requirement 3.5: max_tokens=400 on LLM call."""
         mock_client = MagicMock()
@@ -197,7 +197,7 @@ class TestSuccessfulExplanation:
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs["max_tokens"] == 400
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_uses_default_model(self, mock_get_client):
         """Requirement 1.11: uses DEFAULT_MODEL from llm_client."""
         mock_client = MagicMock()
@@ -218,7 +218,7 @@ class TestSuccessfulExplanation:
 class TestErrorHandling:
     """Requirements 1.2, 1.8, 1.9: graceful failure with SAFE_DEFAULT."""
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_api_error_returns_safe_default(self, mock_get_client):
         """Requirement 1.2: API unavailable → SAFE_DEFAULT."""
         mock_get_client.side_effect = Exception("Connection refused")
@@ -228,7 +228,7 @@ class TestErrorHandling:
 
         assert result == SAFE_DEFAULT
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_invalid_json_returns_safe_default(self, mock_get_client):
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
@@ -241,7 +241,7 @@ class TestErrorHandling:
 
         assert result == SAFE_DEFAULT
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_environment_error_returns_safe_default(self, mock_get_client):
         """Requirement 1.8: EnvironmentError (no API key) → SAFE_DEFAULT."""
         mock_get_client.side_effect = EnvironmentError("OPENROUTER_API_KEY is not set")
@@ -251,7 +251,7 @@ class TestErrorHandling:
 
         assert result == SAFE_DEFAULT
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_never_raises_exception(self, mock_get_client):
         """Requirement 1.8: never raise to callers."""
         mock_get_client.side_effect = RuntimeError("Unexpected failure")
@@ -261,7 +261,7 @@ class TestErrorHandling:
         result = explainer.explain("sg-123", SAMPLE_FINDING, SAMPLE_REMEDIATION_HCL, SAMPLE_ROLLBACK_HCL)
         assert isinstance(result, dict)
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_logs_error_to_stderr(self, mock_get_client, capsys):
         """Requirement 1.9: log failures to stderr."""
         mock_get_client.side_effect = ConnectionError("Network down")
@@ -277,7 +277,7 @@ class TestErrorHandling:
 class TestValidation:
     """Tests for _validate behavior with malformed LLM output."""
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_missing_key_gets_safe_default_value(self, mock_get_client):
         """If LLM omits a key, that key gets the safe default value."""
         incomplete = {
@@ -297,7 +297,7 @@ class TestValidation:
         assert result["what_terraform_does"] == "Explanation unavailable."
         assert result["what_rollback_restores"] == "Explanation unavailable."
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_empty_string_value_gets_safe_default(self, mock_get_client):
         """If LLM returns an empty string for a key, it gets the safe default."""
         data = {
@@ -317,7 +317,7 @@ class TestValidation:
         assert result["risk_explanation"] == "Explanation unavailable."
         assert result["what_terraform_does"] == "Valid explanation here for the test to pass."
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_whitespace_only_value_gets_safe_default(self, mock_get_client):
         """If LLM returns whitespace-only for a key, it gets the safe default."""
         data = {
@@ -336,7 +336,7 @@ class TestValidation:
 
         assert result["risk_explanation"] == "Explanation unavailable."
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_non_string_value_gets_safe_default(self, mock_get_client):
         """If LLM returns a non-string value, it gets the safe default."""
         data = {
@@ -363,8 +363,8 @@ class TestNoDirectOpenAIImport:
 
     def test_module_does_not_import_openai_directly(self):
         import inspect
-        import agents.explainer
+        import cloud_janitor.agents.explainer
 
-        source = inspect.getsource(agents.explainer)
+        source = inspect.getsource(cloud_janitor.agents.explainer)
         assert "import openai" not in source
         assert "from openai" not in source

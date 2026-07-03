@@ -12,7 +12,7 @@ class FixtureProvider(CloudProvider):
 
     def __init__(self, fixtures_dir: Optional[Path] = None):
         if fixtures_dir is None:
-            fixtures_dir = Path(__file__).parent.parent.parent / "fixtures"
+            fixtures_dir = Path(__file__).parent.parent.parent.parent.parent / "fixtures"
         self.fixtures_dir = fixtures_dir
 
     def get_cost_data(self, resource_type: Optional[str] = None, min_idle_days: int = 7) -> dict:

@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from orchestrator import AuditResult, Orchestrator
+from cloud_janitor.orchestrator import AuditResult, Orchestrator
 
 
 @pytest.fixture
@@ -37,8 +37,8 @@ def tmp_orchestrator(tmp_path: Path) -> Orchestrator:
         '{"schema_version": "1.0.0", "findings": [{"agent":"finops","resource_id":"vol-1"},{"agent":"secops","resource_id":"sg-1"}]}'
     )
 
-    with patch("orchestrator.get_cost_data") as mock_cost, \
-         patch("orchestrator.get_security_data") as mock_sec:
+    with patch("cloud_janitor.orchestrator.orchestrator.get_cost_data") as mock_cost, \
+         patch("cloud_janitor.orchestrator.orchestrator.get_security_data") as mock_sec:
         mock_cost.return_value = {
             "resources": [
                 {"id": "vol-abc", "type": "ebs", "cost_estimate_monthly": 10.0},
@@ -82,8 +82,8 @@ class TestAuditResultDataclass:
 class TestExecuteAuditWithAIAgents:
     """Test that execute_audit integrates anomaly detection and drift detection."""
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_execute_audit_returns_anomalies(self, mock_sec, mock_cost, tmp_orchestrator):
         mock_cost.return_value = {
             "resources": [{"id": "vol-1", "type": "ebs", "cost_estimate_monthly": 5.0}],
@@ -106,8 +106,8 @@ class TestExecuteAuditWithAIAgents:
         assert result.success is True
         assert result.anomalies == anomalies
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_execute_audit_returns_drift_report(self, mock_sec, mock_cost, tmp_orchestrator):
         mock_cost.return_value = {"resources": [], "total_monthly_waste": 0.0}
         mock_sec.return_value = {"findings": [], "critical_count": 0}
@@ -125,8 +125,8 @@ class TestExecuteAuditWithAIAgents:
         assert result.success is True
         assert result.drift_report == drift_report
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_anomaly_detector_failure_returns_empty_list(self, mock_sec, mock_cost, tmp_orchestrator):
         """Req 1.10: If AnomalyDetector fails, pipeline continues with safe default."""
         mock_cost.return_value = {"resources": [], "total_monthly_waste": 0.0}
@@ -143,8 +143,8 @@ class TestExecuteAuditWithAIAgents:
         assert result.success is True
         assert result.anomalies == []
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_drift_save_snapshot_called_with_correct_args(self, mock_sec, mock_cost, tmp_orchestrator):
         mock_cost.return_value = {"resources": [], "total_monthly_waste": 0.0}
         mock_sec.return_value = {"findings": [], "critical_count": 0}
@@ -175,8 +175,8 @@ class TestExecuteAuditWithAIAgents:
 class TestExecuteNaturalLanguageAudit:
     """Test the execute_natural_language_audit() method."""
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_successful_interpretation_uses_params(self, mock_sec, mock_cost, tmp_orchestrator):
         """Interpreted query parameters are used to filter scans."""
         mock_cost.return_value = {
@@ -204,8 +204,8 @@ class TestExecuteNaturalLanguageAudit:
         # get_cost_data called with resource_type="ebs" and min_idle_days=14
         mock_cost.assert_called_with(resource_type="ebs", min_idle_days=14)
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_low_confidence_falls_back_to_full_scan(self, mock_sec, mock_cost, tmp_orchestrator):
         """Req 1.10: confidence=0.0 triggers fallback to execute_audit()."""
         mock_cost.return_value = {"resources": [], "total_monthly_waste": 0.0}
@@ -227,8 +227,8 @@ class TestExecuteNaturalLanguageAudit:
         mock_audit.assert_called_once()
         assert result.success is True
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_interpreter_exception_falls_back_to_full_scan(self, mock_sec, mock_cost, tmp_orchestrator):
         """Req 1.10: Exception in QueryInterpreter triggers fallback."""
         mock_cost.return_value = {"resources": [], "total_monthly_waste": 0.0}
@@ -241,8 +241,8 @@ class TestExecuteNaturalLanguageAudit:
 
         mock_audit.assert_called_once()
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_nl_audit_includes_anomalies_and_drift(self, mock_sec, mock_cost, tmp_orchestrator):
         """NL audit returns anomalies and drift_report in result."""
         mock_cost.return_value = {
@@ -272,8 +272,8 @@ class TestExecuteNaturalLanguageAudit:
         assert result.anomalies == anomalies
         assert result.drift_report == drift
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_nl_audit_cost_data_failure_uses_safe_default(self, mock_sec, mock_cost, tmp_orchestrator):
         """Req 1.10: get_cost_data failure → empty resources, pipeline continues."""
         mock_cost.side_effect = RuntimeError("AWS down")
@@ -301,8 +301,8 @@ class TestExecuteNaturalLanguageAudit:
         # Still has security findings even though cost data failed
         assert len(result.findings) == 1
 
-    @patch("orchestrator.get_cost_data")
-    @patch("orchestrator.get_security_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_cost_data")
+    @patch("cloud_janitor.orchestrator.orchestrator.get_security_data")
     def test_nl_audit_multiple_resource_types(self, mock_sec, mock_cost, tmp_orchestrator):
         """Multiple resource types result in multiple get_cost_data calls."""
         mock_cost.return_value = {
@@ -335,15 +335,15 @@ class TestOrchestratorInitialization:
 
     def test_has_query_interpreter(self, tmp_orchestrator):
         assert hasattr(tmp_orchestrator, "_query_interpreter")
-        from agents.query_interpreter import QueryInterpreter
+        from cloud_janitor.agents.query_interpreter import QueryInterpreter
         assert isinstance(tmp_orchestrator._query_interpreter, QueryInterpreter)
 
     def test_has_anomaly_detector(self, tmp_orchestrator):
         assert hasattr(tmp_orchestrator, "_anomaly_detector")
-        from agents.anomaly_detector import AnomalyDetector
+        from cloud_janitor.agents.anomaly_detector import AnomalyDetector
         assert isinstance(tmp_orchestrator._anomaly_detector, AnomalyDetector)
 
     def test_has_drift_detector(self, tmp_orchestrator):
         assert hasattr(tmp_orchestrator, "_drift_detector")
-        from agents.drift_detector import DriftDetector
+        from cloud_janitor.agents.drift_detector import DriftDetector
         assert isinstance(tmp_orchestrator._drift_detector, DriftDetector)

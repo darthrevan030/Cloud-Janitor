@@ -34,7 +34,7 @@ from hypothesis import strategies as st
 
 os.environ.setdefault("OPENROUTER_API_KEY", "test-key-for-testing")
 
-from agents.incident_policy_generator import (
+from cloud_janitor.agents.incident_policy_generator import (
     IncidentPolicyGenerator,
     VALID_CHECK_TYPES,
     VALID_RESOURCE_TYPES,
@@ -148,7 +148,7 @@ class TestIncidentPolicyGeneratorIdempotency:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result1 = gen.generate(description)
@@ -186,7 +186,7 @@ class TestIncidentPolicyGeneratorIdempotency:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result1 = gen.generate(description)
@@ -230,7 +230,7 @@ class TestIncidentPolicyGeneratorFileConsistency:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -261,7 +261,7 @@ class TestIncidentPolicyGeneratorFileConsistency:
             mock_client.chat.completions.create.side_effect = RuntimeError("LLM unavailable")
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -289,7 +289,7 @@ class TestIncidentPolicyGeneratorFileConsistency:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -348,7 +348,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -376,7 +376,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -402,7 +402,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -429,7 +429,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -459,7 +459,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -484,7 +484,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -513,7 +513,7 @@ class TestIncidentPolicyGeneratorSchemaAndBounds:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -556,7 +556,7 @@ class TestIncidentPolicyGeneratorInputValidation:
             policies_dir = Path(tmpdir) / "policies"
             gen = IncidentPolicyGenerator(policies_dir=policies_dir)
 
-            with patch("agents.incident_policy_generator.get_client") as mock_get_client:
+            with patch("cloud_janitor.agents.incident_policy_generator.get_client") as mock_get_client:
                 result = gen.generate(whitespace)
 
             assert result == [], (
@@ -587,7 +587,7 @@ class TestIncidentPolicyGeneratorInputValidation:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(long_desc)
@@ -651,7 +651,7 @@ class TestIncidentPolicyGeneratorNegativeCases:
             mock_client.chat.completions.create.return_value = mock_response
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 return_value=mock_client,
             ):
                 result = gen.generate(description)
@@ -669,7 +669,7 @@ class TestIncidentPolicyGeneratorNegativeCases:
             gen = IncidentPolicyGenerator(policies_dir=policies_dir)
 
             with patch(
-                "agents.incident_policy_generator.get_client",
+                "cloud_janitor.agents.incident_policy_generator.get_client",
                 side_effect=EnvironmentError("OPENROUTER_API_KEY is not set"),
             ):
                 result = gen.generate(description)

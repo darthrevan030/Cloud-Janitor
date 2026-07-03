@@ -138,12 +138,12 @@ class TestResourceTaggerEnumAndConfidence:
     @settings(max_examples=200, deadline=None)
     def test_valid_json_responses_satisfy_enum_constraints(self, resource_id, resource_name, llm_response):
         """For any resource + valid JSON LLM response, output satisfies all enum/range constraints."""
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name)
@@ -158,12 +158,12 @@ class TestResourceTaggerEnumAndConfidence:
     @settings(max_examples=200, deadline=None)
     def test_confidence_below_threshold_nullifies_team_owner(self, resource_id, resource_name, llm_response):
         """When confidence < threshold, team and owner MUST be None (Req 5.4)."""
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name)
@@ -194,12 +194,12 @@ class TestResourceTaggerEnumAndConfidence:
             "confidence": 0.7,
         })
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_payload)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name)
@@ -221,12 +221,12 @@ class TestResourceTaggerEnumAndConfidence:
     @settings(max_examples=200, deadline=None)
     def test_llm_exception_produces_valid_output(self, resource_id, resource_name):
         """When LLM raises any exception, output still satisfies all invariants."""
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = RuntimeError("API failure")
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name)
@@ -244,10 +244,10 @@ class TestResourceTaggerEnumAndConfidence:
     @settings(max_examples=200, deadline=None)
     def test_get_client_exception_produces_valid_output(self, resource_id, resource_name):
         """When get_client() raises EnvironmentError, output still satisfies all invariants."""
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_get_client.side_effect = EnvironmentError("OPENROUTER_API_KEY is not set")
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name)
@@ -270,12 +270,12 @@ class TestResourceTaggerEnumAndConfidence:
         except (json.JSONDecodeError, ValueError):
             pass
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(garbage)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name)
@@ -311,12 +311,12 @@ class TestResourceTaggerExistingTagsPassthrough:
             "owner": existing_owner,
         }
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name, existing_tags=existing_tags)
@@ -350,12 +350,12 @@ class TestResourceTaggerExistingTagsPassthrough:
             "owner": existing_owner,
         }
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name, existing_tags=existing_tags)
@@ -384,12 +384,12 @@ class TestResourceTaggerExistingTagsPassthrough:
             "owner": "",
         }
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name, existing_tags=existing_tags)
@@ -415,12 +415,12 @@ class TestResourceTaggerExistingTagsPassthrough:
             "owner": None,
         }
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name, existing_tags=existing_tags)
@@ -463,7 +463,7 @@ class TestResourceTaggerBatchOrder:
                 })
             return json.dumps(results)
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
 
             # Each chunk call returns a corresponding batch response
@@ -500,7 +500,7 @@ class TestResourceTaggerBatchOrder:
             mock_client.chat.completions.create.side_effect = side_effect_fn
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             results = tagger.infer_batch(resources)
@@ -539,7 +539,7 @@ class TestResourceTaggerBatchOrder:
 
         expected_chunks = math.ceil(num_resources / 10)
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
 
             call_count = [0]
@@ -562,7 +562,7 @@ class TestResourceTaggerBatchOrder:
             mock_client.chat.completions.create.side_effect = side_effect_fn
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             results = tagger.infer_batch(resources)
@@ -601,12 +601,12 @@ class TestResourceTaggerNegativeCases:
             "confidence": low_confidence,
         })
 
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _make_mock_response(response_payload)
             mock_get_client.return_value = mock_client
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name)
@@ -628,10 +628,10 @@ class TestResourceTaggerNegativeCases:
     @settings(max_examples=100, deadline=None)
     def test_safe_defaults_on_exception(self, resource_id, resource_name):
         """On any exception, returns safe defaults with specific known values."""
-        with patch("agents.tagger.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.tagger.get_client") as mock_get_client:
             mock_get_client.side_effect = EnvironmentError("OPENROUTER_API_KEY is not set")
 
-            from agents.tagger import ResourceTagger
+            from cloud_janitor.agents.tagger import ResourceTagger
 
             tagger = ResourceTagger()
             result = tagger.infer(resource_id, resource_name)

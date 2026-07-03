@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from core.paths import (
+from cloud_janitor.core.paths import (
     APPROVAL_GATES_PATH,
     AUDIT_LOG_PATH,
     FINDINGS_STORE_PATH,
@@ -115,7 +115,7 @@ class TestEnsureOutputDirs:
             tmp_path / "output" / "logs",
             tmp_path / "output" / "policies",
         ]
-        with patch("core.paths.REQUIRED_DIRS", fake_dirs):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", fake_dirs):
             ensure_output_dirs()
 
         for d in fake_dirs:
@@ -126,7 +126,7 @@ class TestEnsureOutputDirs:
         fake_dirs = [tmp_path / "output"]
         fake_dirs[0].mkdir()
 
-        with patch("core.paths.REQUIRED_DIRS", fake_dirs):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", fake_dirs):
             # Should not raise
             ensure_output_dirs()
 
@@ -136,7 +136,7 @@ class TestEnsureOutputDirs:
         """ensure_output_dirs() raises RuntimeError identifying the failed directory."""
         bad_dir = tmp_path / "nonexistent" / "deep" / "path"
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=OSError("Permission denied")):
                 with pytest.raises(RuntimeError, match="Permission denied"):
                     ensure_output_dirs()
@@ -145,7 +145,7 @@ class TestEnsureOutputDirs:
         """RuntimeError message must contain the path that failed."""
         bad_dir = tmp_path / "cannot_create"
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=OSError("disk full")):
                 with pytest.raises(RuntimeError) as exc_info:
                     ensure_output_dirs()
@@ -157,7 +157,7 @@ class TestEnsureOutputDirs:
         bad_dir = tmp_path / "fail"
         original_error = OSError("read-only filesystem")
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=original_error):
                 with pytest.raises(RuntimeError) as exc_info:
                     ensure_output_dirs()

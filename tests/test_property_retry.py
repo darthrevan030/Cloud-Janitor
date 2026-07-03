@@ -24,7 +24,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from core.llm_client import LLMRetryExhausted, call_llm
+from cloud_janitor.core.llm_client import LLMRetryExhausted, call_llm
 
 
 # ─── Error construction helpers ──────────────────────────────────────────────
@@ -163,7 +163,7 @@ class TestPropertyRetryOnRetriableErrors:
         final_succeeds=final_succeeds_strategy,
     )
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_total_attempts_matches_oracle(
         self, mock_sleep, error_type: str, failure_count: int, final_succeeds: bool
     ):
@@ -204,7 +204,7 @@ class TestPropertyRetryOnRetriableErrors:
         final_succeeds=final_succeeds_strategy,
     )
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_warning_count_matches_oracle(
         self, mock_sleep, error_type: str, failure_count: int, final_succeeds: bool
     ):
@@ -224,8 +224,8 @@ class TestPropertyRetryOnRetriableErrors:
         client = MagicMock()
         client.chat.completions.create.side_effect = side_effects
 
-        # Capture logs from core.llm_client logger
-        llm_logger = logging.getLogger("core.llm_client")
+        # Capture logs from cloud_janitor.core.llm_client logger
+        llm_logger = logging.getLogger("cloud_janitor.core.llm_client")
         capture = _CaptureHandler()
         capture.setLevel(logging.DEBUG)
         llm_logger.addHandler(capture)
@@ -254,7 +254,7 @@ class TestPropertyRetryOnRetriableErrors:
         final_succeeds=final_succeeds_strategy,
     )
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_warning_records_contain_attempt_number(
         self, mock_sleep, error_type: str, failure_count: int, final_succeeds: bool
     ):
@@ -271,7 +271,7 @@ class TestPropertyRetryOnRetriableErrors:
         client = MagicMock()
         client.chat.completions.create.side_effect = side_effects
 
-        llm_logger = logging.getLogger("core.llm_client")
+        llm_logger = logging.getLogger("cloud_janitor.core.llm_client")
         capture = _CaptureHandler()
         capture.setLevel(logging.DEBUG)
         llm_logger.addHandler(capture)
@@ -302,7 +302,7 @@ class TestPropertyRetryOnRetriableErrors:
         final_succeeds=final_succeeds_strategy,
     )
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_warning_records_contain_wait_duration(
         self, mock_sleep, error_type: str, failure_count: int, final_succeeds: bool
     ):
@@ -319,7 +319,7 @@ class TestPropertyRetryOnRetriableErrors:
         client = MagicMock()
         client.chat.completions.create.side_effect = side_effects
 
-        llm_logger = logging.getLogger("core.llm_client")
+        llm_logger = logging.getLogger("cloud_janitor.core.llm_client")
         capture = _CaptureHandler()
         capture.setLevel(logging.DEBUG)
         llm_logger.addHandler(capture)
@@ -354,7 +354,7 @@ class TestPropertyRetryOnRetriableErrors:
         final_succeeds=final_succeeds_strategy,
     )
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_warning_records_contain_error_reason(
         self, mock_sleep, error_type: str, failure_count: int, final_succeeds: bool
     ):
@@ -371,7 +371,7 @@ class TestPropertyRetryOnRetriableErrors:
         client = MagicMock()
         client.chat.completions.create.side_effect = side_effects
 
-        llm_logger = logging.getLogger("core.llm_client")
+        llm_logger = logging.getLogger("cloud_janitor.core.llm_client")
         capture = _CaptureHandler()
         capture.setLevel(logging.DEBUG)
         llm_logger.addHandler(capture)

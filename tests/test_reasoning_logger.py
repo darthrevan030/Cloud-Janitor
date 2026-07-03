@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from agents.reasoning_logger import ReasoningLogger
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger
 
 
 class TestReasoningLoggerInit:

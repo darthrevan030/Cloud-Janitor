@@ -24,7 +24,7 @@ import pytest
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
-from core.llm_client import LLMRateLimitExceeded, LLMRetryExhausted, call_llm
+from cloud_janitor.core.llm_client import LLMRateLimitExceeded, LLMRetryExhausted, call_llm
 
 
 # ─── Error construction helpers ──────────────────────────────────────────────
@@ -134,7 +134,7 @@ class TestPropertyBackoffDelayCalculation:
 
     @given(attempt=attempt_numbers, status_code=non_429_retriable_codes)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_non_429_uses_exponential_backoff(
         self, mock_sleep, attempt: int, status_code: int
     ):
@@ -169,7 +169,7 @@ class TestPropertyBackoffDelayCalculation:
 
     @given(attempt=attempt_numbers)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_timeout_uses_exponential_backoff(
         self, mock_sleep, attempt: int
     ):
@@ -196,7 +196,7 @@ class TestPropertyBackoffDelayCalculation:
 
     @given(attempt=attempt_numbers)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_429_without_retry_after_uses_exponential_backoff(
         self, mock_sleep, attempt: int
     ):
@@ -223,7 +223,7 @@ class TestPropertyBackoffDelayCalculation:
 
     @given(attempt=attempt_numbers, retry_after=valid_retry_after)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_429_with_valid_retry_after_uses_header_value(
         self, mock_sleep, attempt: int, retry_after: float
     ):
@@ -258,7 +258,7 @@ class TestPropertyBackoffDelayCalculation:
 
     @given(retry_after=excessive_retry_after)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_429_with_excessive_retry_after_raises_immediately(
         self, mock_sleep, retry_after: float
     ):
@@ -284,7 +284,7 @@ class TestPropertyBackoffDelayCalculation:
 
     @given(attempt=attempt_numbers, retry_after=excessive_retry_after)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_429_excessive_retry_after_raises_regardless_of_attempt(
         self, mock_sleep, attempt: int, retry_after: float
     ):
@@ -316,7 +316,7 @@ class TestPropertyBackoffDelayCalculation:
 
     @given(attempt=attempt_numbers)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_all_delays_up_to_attempt_follow_formula(
         self, mock_sleep, attempt: int
     ):
@@ -344,7 +344,7 @@ class TestPropertyBackoffDelayCalculation:
 
     @given(retry_after=any_retry_after)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_retry_after_boundary_at_60(
         self, mock_sleep, retry_after: float
     ):

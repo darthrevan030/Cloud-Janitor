@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from agents.explainer import RemediationExplainer
+from cloud_janitor.agents.explainer import RemediationExplainer
 
 
 REQUIRED_KEYS = {"risk_explanation", "what_terraform_does", "what_rollback_restores"}
@@ -60,7 +60,7 @@ def test_schema_completeness_with_valid_llm_response(
         "what_rollback_restores": rollback_val,
     })
 
-    with patch("agents.explainer.get_client") as mock_get_client:
+    with patch("cloud_janitor.agents.explainer.get_client") as mock_get_client:
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
         mock_client.chat.completions.create.return_value = _make_mock_response(llm_response)
@@ -109,7 +109,7 @@ def test_schema_completeness_on_llm_exception(
     assume(remediation_hcl.strip() != "")
     assume(rollback_hcl.strip() != "")
 
-    with patch("agents.explainer.get_client") as mock_get_client:
+    with patch("cloud_janitor.agents.explainer.get_client") as mock_get_client:
         mock_get_client.side_effect = exc_type("Simulated failure")
 
         explainer = RemediationExplainer()
@@ -160,7 +160,7 @@ def test_schema_completeness_on_invalid_json(
     except (json.JSONDecodeError, TypeError):
         pass  # good — it's actually invalid
 
-    with patch("agents.explainer.get_client") as mock_get_client:
+    with patch("cloud_janitor.agents.explainer.get_client") as mock_get_client:
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
         mock_client.chat.completions.create.return_value = _make_mock_response(garbage)
@@ -201,7 +201,7 @@ def test_schema_completeness_with_empty_remediation_hcl(
 
     **Validates: Requirements 3.4, 1.2**
     """
-    with patch("agents.explainer.get_client") as mock_get_client:
+    with patch("cloud_janitor.agents.explainer.get_client") as mock_get_client:
         explainer = RemediationExplainer()
         result = explainer.explain(resource_id, finding, remediation_hcl, rollback_hcl)
 
@@ -239,7 +239,7 @@ def test_schema_completeness_with_empty_rollback_hcl(
 
     **Validates: Requirements 3.4, 1.2**
     """
-    with patch("agents.explainer.get_client") as mock_get_client:
+    with patch("cloud_janitor.agents.explainer.get_client") as mock_get_client:
         explainer = RemediationExplainer()
         result = explainer.explain(resource_id, finding, remediation_hcl, rollback_hcl)
 

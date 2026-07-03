@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import pytest
 
-from orchestrator import Orchestrator
+from cloud_janitor.orchestrator import Orchestrator
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def tmp_project(tmp_path):
 @pytest.fixture
 def orchestrator(tmp_project):
     """Create an Orchestrator instance with mocked TF_CMD."""
-    with patch("orchestrator._validate_tf_cmd", return_value="/usr/bin/tflocal"):
+    with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="/usr/bin/tflocal"):
         return Orchestrator(project_root=tmp_project)
 
 

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from orchestrator import AuditResult
+from cloud_janitor.orchestrator import AuditResult
 
 
 # ---------------------------------------------------------------------------

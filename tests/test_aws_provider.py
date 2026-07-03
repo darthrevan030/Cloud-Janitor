@@ -50,7 +50,7 @@ REGION = "us-east-1"
 
 def _provider(region: Optional[str] = REGION):
     """Return a fresh AWSProvider pointed at moto's mocked endpoints."""
-    from mcp_server.backends.aws_provider import AWSProvider
+    from cloud_janitor.mcp_server.backends.aws_provider import AWSProvider
     return AWSProvider(region=region)
 
 
@@ -74,13 +74,13 @@ class TestAWSProviderInit:
 
     def test_instantiates_with_no_region(self, aws_env):
         """AWSProvider() with no region argument does not raise."""
-        from mcp_server.backends.aws_provider import AWSProvider
+        from cloud_janitor.mcp_server.backends.aws_provider import AWSProvider
         p = AWSProvider()
         assert p is not None
 
     def test_instantiates_with_explicit_region(self, aws_env):
         """AWSProvider(region='us-west-2') stores the region."""
-        from mcp_server.backends.aws_provider import AWSProvider
+        from cloud_janitor.mcp_server.backends.aws_provider import AWSProvider
         p = AWSProvider(region="us-west-2")
         assert p._region == "us-west-2"
 
@@ -95,14 +95,14 @@ class TestAWSProviderInit:
             return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=_block_boto3):
-            from mcp_server.backends.aws_provider import AWSProvider as _AWSProvider
+            from cloud_janitor.mcp_server.backends.aws_provider import AWSProvider as _AWSProvider
             with pytest.raises(ImportError, match="pip install boto3"):
                 _AWSProvider.__new__(_AWSProvider).__init__()
 
     def test_is_cloud_provider_subclass(self, aws_env):
         """AWSProvider is a CloudProvider subclass (ABC contract satisfied)."""
-        from mcp_server.backends import CloudProvider
-        from mcp_server.backends.aws_provider import AWSProvider
+        from cloud_janitor.mcp_server.backends import CloudProvider
+        from cloud_janitor.mcp_server.backends.aws_provider import AWSProvider
         assert issubclass(AWSProvider, CloudProvider)
 
 

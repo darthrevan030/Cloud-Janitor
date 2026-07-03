@@ -179,7 +179,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Update MCP server imports to reference `cloud_janitor.mcp_server.backends`
     - _Requirements: 3.1, 3.2_
 
-  - [ ] 7.3 Update all test imports to `cloud_janitor.*` paths
+  - [-] 7.3 Update all test imports to `cloud_janitor.*` paths
     - Rewrite every test file in `tests/` to use `from cloud_janitor.` import paths
     - Verify all tests still pass after import rewrite
     - _Requirements: 3.1, 3.2_

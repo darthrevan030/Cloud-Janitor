@@ -18,8 +18,8 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from mcp_server.backends.gcp_provider import GCPProvider
-from mcp_server.backends.azure_provider import AzureProvider
+from cloud_janitor.mcp_server.backends.gcp_provider import GCPProvider
+from cloud_janitor.mcp_server.backends.azure_provider import AzureProvider
 
 
 # ─── Provider registry ───────────────────────────────────────────────────────

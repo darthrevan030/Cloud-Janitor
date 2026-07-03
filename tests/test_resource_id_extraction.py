@@ -7,7 +7,8 @@ import logging
 
 import pytest
 
-from orchestrator import Orchestrator, _RESOURCE_ID_PATTERN
+from cloud_janitor.orchestrator import Orchestrator
+from cloud_janitor.orchestrator.orchestrator import _RESOURCE_ID_PATTERN
 
 
 @pytest.fixture

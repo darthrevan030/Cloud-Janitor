@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.anomaly_detector import (
+from cloud_janitor.agents.anomaly_detector import (
     AnomalyDetector,
     MAX_ANOMALIES,
     REQUIRED_ANOMALY_KEYS,
@@ -85,7 +85,7 @@ class TestDeduplication:
         """Resources with resource_id in findings are excluded before LLM call."""
         mock_response = _mock_llm_response(VALID_ANOMALIES)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -111,7 +111,7 @@ class TestDeduplication:
         ]
         mock_response = _mock_llm_response(bad_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -126,7 +126,7 @@ class TestDeduplication:
         resources = [{"id": "r-1"}, {"id": "r-2"}]
         findings = [{"resource_id": "r-1"}, {"resource_id": "r-2"}]
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             result = detector.detect(resources, findings)
 
         # LLM should never be called
@@ -146,7 +146,7 @@ class TestSchemaValidation:
         """Each returned anomaly has anomaly_id, resource_id, anomaly_type, description, severity, evidence."""
         mock_response = _mock_llm_response(VALID_ANOMALIES)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -160,7 +160,7 @@ class TestSchemaValidation:
         """Severity must be one of high, medium, low."""
         mock_response = _mock_llm_response(VALID_ANOMALIES)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -184,7 +184,7 @@ class TestSchemaValidation:
         ]
         mock_response = _mock_llm_response(anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -204,7 +204,7 @@ class TestSchemaValidation:
         ]
         mock_response = _mock_llm_response(anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -227,7 +227,7 @@ class TestSchemaValidation:
         ]
         mock_response = _mock_llm_response(anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -251,7 +251,7 @@ class TestSchemaValidation:
         ]
         mock_response = _mock_llm_response(many_anomalies)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -271,7 +271,7 @@ class TestEmptyResources:
 
     def test_empty_resources_returns_empty(self, detector):
         """Empty resources list returns [] immediately."""
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             result = detector.detect([], [])
 
         mock_get.assert_not_called()
@@ -281,7 +281,7 @@ class TestEmptyResources:
         """Non-empty unflagged resources always triggers LLM call."""
         mock_response = _mock_llm_response([])
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -295,7 +295,7 @@ class TestEmptyResources:
         """When LLM finds no anomalies, returns empty list."""
         mock_response = _mock_llm_response([])
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -315,7 +315,7 @@ class TestErrorHandling:
 
     def test_returns_empty_on_llm_exception(self, detector, sample_resources):
         """LLM errors result in []."""
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_get.side_effect = Exception("API down")
 
             result = detector.detect(sample_resources, [])
@@ -328,7 +328,7 @@ class TestErrorHandling:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "not valid json {{{"
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -343,7 +343,7 @@ class TestErrorHandling:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = json.dumps({"not": "a list"})
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -354,7 +354,7 @@ class TestErrorHandling:
 
     def test_logs_to_stderr_on_error(self, detector, sample_resources, capsys):
         """Failures are logged to stderr (Req 1.9)."""
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_get.side_effect = RuntimeError("Simulated failure")
 
             detector.detect(sample_resources, [])
@@ -365,14 +365,14 @@ class TestErrorHandling:
 
     def test_never_raises_to_caller(self, detector):
         """No matter what input, detect() never raises (Req 1.8)."""
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_get.side_effect = Exception("Simulated")
             result = detector.detect(None, None)  # type: ignore
         assert isinstance(result, list)
 
     def test_environment_error_returns_empty(self, detector, sample_resources):
         """EnvironmentError (missing API key) returns []."""
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_get.side_effect = EnvironmentError("OPENROUTER_API_KEY is not set")
 
             result = detector.detect(sample_resources, [])
@@ -386,7 +386,7 @@ class TestErrorHandling:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = content
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -409,7 +409,7 @@ class TestLLMClientUsage:
         """Verifies get_client is called from llm_client module."""
         mock_response = _mock_llm_response(VALID_ANOMALIES)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -422,7 +422,7 @@ class TestLLMClientUsage:
         """The model parameter is passed to the LLM call."""
         mock_response = _mock_llm_response(VALID_ANOMALIES)
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -447,7 +447,7 @@ class TestResourceIdFieldHandling:
         resources = [{"resource_id": "r-1", "name": "test"}]
         findings = [{"resource_id": "r-1"}]
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             result = detector.detect(resources, findings)
 
         mock_get.assert_not_called()
@@ -458,7 +458,7 @@ class TestResourceIdFieldHandling:
         resources = [{"id": "r-1", "name": "test"}]
         findings = [{"resource_id": "r-1"}]
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             result = detector.detect(resources, findings)
 
         mock_get.assert_not_called()
@@ -469,7 +469,7 @@ class TestResourceIdFieldHandling:
         resources = [{"id": "r-1", "resource_id": "r-2", "name": "test"}]
         findings = [{"resource_id": "r-1"}]
 
-        with patch("agents.anomaly_detector.get_client") as mock_get:
+        with patch("cloud_janitor.agents.anomaly_detector.get_client") as mock_get:
             result = detector.detect(resources, findings)
 
         # r-1 matches findings, so resource is filtered out → no LLM call

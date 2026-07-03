@@ -9,7 +9,7 @@ Validates:
 
 from unittest.mock import patch, MagicMock
 
-from mcp_server.aws_janitor_mcp import interpret_query
+from cloud_janitor.mcp_server.aws_janitor_mcp import interpret_query
 
 # Required keys for a valid ScanParameters dict
 SCAN_PARAM_KEYS = {"resource_types", "check_types", "min_idle_days", "intent_summary", "confidence"}
@@ -48,7 +48,7 @@ class TestInterpretQuerySchema:
 class TestInterpretQuerySuccessPath:
     """Test successful interpretation via mocked LLM response."""
 
-    @patch("agents.query_interpreter.get_client")
+    @patch("cloud_janitor.agents.query_interpreter.get_client")
     def test_valid_query_returns_scan_parameters(self, mock_get_client):
         """A valid query interpreted by the LLM returns proper ScanParameters."""
         mock_client = MagicMock()
@@ -71,7 +71,7 @@ class TestInterpretQuerySuccessPath:
 class TestInterpretQueryErrorHandling:
     """Test error handling — server must never crash."""
 
-    @patch("agents.query_interpreter.get_client")
+    @patch("cloud_janitor.agents.query_interpreter.get_client")
     def test_llm_exception_returns_error_dict(self, mock_get_client):
         """If the LLM client raises, interpret_query returns safe default (not crash)."""
         mock_get_client.side_effect = RuntimeError("API key invalid")
@@ -84,7 +84,7 @@ class TestInterpretQueryErrorHandling:
         assert result["confidence"] == 0.0
         assert result["min_idle_days"] == 7
 
-    @patch("agents.query_interpreter.QueryInterpreter.interpret")
+    @patch("cloud_janitor.agents.query_interpreter.QueryInterpreter.interpret")
     def test_interpret_method_exception_returns_error_dict(self, mock_interpret):
         """If QueryInterpreter.interpret raises unexpectedly, tool catches it."""
         mock_interpret.side_effect = ValueError("unexpected parsing failure")
@@ -97,7 +97,7 @@ class TestInterpretQueryErrorHandling:
         # Still has all required keys for safe fallback
         assert SCAN_PARAM_KEYS.issubset(result.keys())
 
-    @patch("agents.query_interpreter.QueryInterpreter.__init__")
+    @patch("cloud_janitor.agents.query_interpreter.QueryInterpreter.__init__")
     def test_constructor_exception_returns_error_dict(self, mock_init):
         """If QueryInterpreter constructor raises, tool catches it."""
         mock_init.side_effect = TypeError("bad init")
@@ -133,7 +133,7 @@ class TestInterpretQueryNegativeCases:
         except TypeError:
             pass
 
-    @patch("agents.query_interpreter.QueryInterpreter.interpret")
+    @patch("cloud_janitor.agents.query_interpreter.QueryInterpreter.interpret")
     def test_does_not_expose_raw_traceback(self, mock_interpret):
         """Error response should be a clean dict, not a raw traceback string."""
         mock_interpret.side_effect = Exception("secret internal error")
@@ -150,7 +150,7 @@ class TestDirectImport:
 
     def test_interpret_query_uses_direct_import(self):
         """The function must use direct import — verify QueryInterpreter is imported."""
-        import mcp_server.aws_janitor_mcp as module
+        import cloud_janitor.mcp_server.aws_janitor_mcp as module
         # QueryInterpreter should be importable from the module's namespace
         assert hasattr(module, "QueryInterpreter") or "QueryInterpreter" in dir(module)
         # The function itself should be defined (not a proxy or stub)

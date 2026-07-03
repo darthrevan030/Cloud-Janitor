@@ -22,7 +22,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from core.llm_client import LLMRetryExhausted, call_llm
+from cloud_janitor.core.llm_client import LLMRetryExhausted, call_llm
 
 
 # ─── Error construction helpers ──────────────────────────────────────────────
@@ -130,7 +130,7 @@ class TestPropertyRetryExhaustionExceptionContent:
 
     @given(error_type=retriable_error_types)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_status_or_error_matches_error_type(
         self, mock_sleep, error_type: str
     ):
@@ -151,7 +151,7 @@ class TestPropertyRetryExhaustionExceptionContent:
 
     @given(error_type=retriable_error_types)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_attempts_always_equals_4(
         self, mock_sleep, error_type: str
     ):
@@ -171,7 +171,7 @@ class TestPropertyRetryExhaustionExceptionContent:
 
     @given(error_type=retriable_error_types)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_elapsed_is_non_negative_float(
         self, mock_sleep, error_type: str
     ):
@@ -197,7 +197,7 @@ class TestPropertyRetryExhaustionExceptionContent:
 
     @given(error_type=retriable_error_types)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_sleep_calls_sum_to_7_seconds(
         self, mock_sleep, error_type: str
     ):
@@ -221,7 +221,7 @@ class TestPropertyRetryExhaustionExceptionContent:
 
     @given(error_type=retriable_error_types)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_sleep_sequence_matches_backoff_formula(
         self, mock_sleep, error_type: str
     ):
@@ -244,7 +244,7 @@ class TestPropertyRetryExhaustionExceptionContent:
 
     @given(error_type=retriable_error_types)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_exactly_3_sleep_calls_before_exhaustion(
         self, mock_sleep, error_type: str
     ):
@@ -264,7 +264,7 @@ class TestPropertyRetryExhaustionExceptionContent:
 
     @given(error_type=retriable_error_types)
     @settings(max_examples=200)
-    @patch("core.llm_client.time.sleep")
+    @patch("cloud_janitor.core.llm_client.time.sleep")
     def test_exception_message_contains_diagnostic_info(
         self, mock_sleep, error_type: str
     ):

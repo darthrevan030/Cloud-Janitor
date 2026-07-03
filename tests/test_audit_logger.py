@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from agents.audit_logger import AuditLogger
+from cloud_janitor.agents.audit_logger import AuditLogger
 
 
 @pytest.fixture

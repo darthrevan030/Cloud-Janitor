@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
-from core.paths import (
+from cloud_janitor.core.paths import (
     LOGS_DIR,
     OUTPUT_DIR,
     POLICIES_DIR,
@@ -69,7 +69,7 @@ class TestEnsureOutputDirsCreation:
         for d in fake_dirs:
             assert not d.exists()
 
-        with patch("core.paths.REQUIRED_DIRS", fake_dirs):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", fake_dirs):
             ensure_output_dirs()
 
         # All should now exist
@@ -81,7 +81,7 @@ class TestEnsureOutputDirsCreation:
         fake_output = tmp_path / "deep" / "nested" / "output"
         fake_dirs = [fake_output]
 
-        with patch("core.paths.REQUIRED_DIRS", fake_dirs):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", fake_dirs):
             ensure_output_dirs()
 
         assert fake_output.is_dir()
@@ -92,7 +92,7 @@ class TestEnsureOutputDirsCreation:
         existing.mkdir()
         assert existing.is_dir()
 
-        with patch("core.paths.REQUIRED_DIRS", [existing]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [existing]):
             ensure_output_dirs()  # Should not raise
 
         assert existing.is_dir()
@@ -105,7 +105,7 @@ class TestEnsureOutputDirsFailure:
         """RuntimeError is raised when os.makedirs fails with OSError."""
         bad_dir = tmp_path / "impossible_dir"
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=OSError("Permission denied")):
                 with pytest.raises(RuntimeError):
                     ensure_output_dirs()
@@ -114,7 +114,7 @@ class TestEnsureOutputDirsFailure:
         """RuntimeError message identifies which directory could not be created."""
         bad_dir = tmp_path / "cannot_create_this"
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=OSError("No space left on device")):
                 with pytest.raises(RuntimeError) as exc_info:
                     ensure_output_dirs()
@@ -127,7 +127,7 @@ class TestEnsureOutputDirsFailure:
         bad_dir = tmp_path / "fail"
         os_error_msg = "Read-only file system"
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=OSError(os_error_msg)):
                 with pytest.raises(RuntimeError) as exc_info:
                     ensure_output_dirs()
@@ -140,7 +140,7 @@ class TestEnsureOutputDirsFailure:
         bad_dir = tmp_path / "fail"
         original = OSError("disk quota exceeded")
 
-        with patch("core.paths.REQUIRED_DIRS", [bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [bad_dir]):
             with patch("os.makedirs", side_effect=original):
                 with pytest.raises(RuntimeError) as exc_info:
                     ensure_output_dirs()
@@ -162,7 +162,7 @@ class TestEnsureOutputDirsFailure:
                 raise OSError("failed on second dir")
             original_makedirs(path, **kwargs)
 
-        with patch("core.paths.REQUIRED_DIRS", [good_dir, bad_dir]):
+        with patch("cloud_janitor.core.paths.REQUIRED_DIRS", [good_dir, bad_dir]):
             with patch("os.makedirs", side_effect=selective_fail):
                 with pytest.raises(RuntimeError, match="failed on second dir"):
                     ensure_output_dirs()
