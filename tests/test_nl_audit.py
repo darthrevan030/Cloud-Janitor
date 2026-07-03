@@ -11,9 +11,9 @@ Validates Requirements 10.1, 10.2, 10.3:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from orchestrator import AuditResult
+from cloud_janitor.orchestrator import AuditResult
 
 
 # ---------------------------------------------------------------------------

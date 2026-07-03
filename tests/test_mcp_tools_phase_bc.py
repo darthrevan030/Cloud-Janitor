@@ -15,7 +15,7 @@ Validates:
 import json
 from unittest.mock import patch, MagicMock
 
-from mcp_server.aws_janitor_mcp import (
+from cloud_janitor.mcp_server.aws_janitor_mcp import (
     explain_remediation,
     suggest_policies,
     infer_resource_context,
@@ -61,7 +61,7 @@ class TestExplainRemediationSchema:
 class TestExplainRemediationSuccessPath:
     """Test successful explanation via mocked LLM response."""
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_valid_inputs_returns_explanation(self, mock_get_client):
         """With valid inputs and mocked LLM, returns proper explanation dict."""
         mock_client = MagicMock()
@@ -90,7 +90,7 @@ class TestExplainRemediationSuccessPath:
 class TestExplainRemediationErrorHandling:
     """Test error handling — server must never crash (Req 11.9)."""
 
-    @patch("agents.explainer.get_client")
+    @patch("cloud_janitor.agents.explainer.get_client")
     def test_llm_exception_returns_safe_default(self, mock_get_client):
         """If the LLM client raises, returns safe default (not crash)."""
         mock_get_client.side_effect = RuntimeError("API unreachable")
@@ -105,7 +105,7 @@ class TestExplainRemediationErrorHandling:
         assert isinstance(result, dict)
         assert result == EXPLAIN_SAFE_DEFAULT
 
-    @patch("agents.explainer.RemediationExplainer.explain")
+    @patch("cloud_janitor.agents.explainer.RemediationExplainer.explain")
     def test_explain_method_exception_returns_safe_default(self, mock_explain):
         """If RemediationExplainer.explain raises, tool catches it."""
         mock_explain.side_effect = ValueError("JSON decode failed")
@@ -144,7 +144,7 @@ SUGGEST_REQUIRED_KEYS = {"suggestion_id", "title", "rationale", "query", "priori
 class TestSuggestPoliciesSchema:
     """Schema validation for suggest_policies output (Req 12.2)."""
 
-    @patch("agents.policy_suggester.get_client")
+    @patch("cloud_janitor.agents.policy_suggester.get_client")
     def test_returns_list(self, mock_get_client):
         """suggest_policies must always return a list."""
         mock_client = MagicMock()
@@ -169,7 +169,7 @@ class TestSuggestPoliciesSchema:
         )
         assert isinstance(result, list)
 
-    @patch("agents.policy_suggester.get_client")
+    @patch("cloud_janitor.agents.policy_suggester.get_client")
     def test_each_item_has_required_keys(self, mock_get_client):
         """Each suggestion dict must have required keys with correct types."""
         mock_client = MagicMock()
@@ -199,7 +199,7 @@ class TestSuggestPoliciesSchema:
 class TestSuggestPoliciesSuccessPath:
     """Test successful suggestion via mocked LLM."""
 
-    @patch("agents.policy_suggester.get_client")
+    @patch("cloud_janitor.agents.policy_suggester.get_client")
     def test_returns_concrete_suggestion(self, mock_get_client):
         """With valid findings and mocked LLM, returns expected suggestion."""
         mock_client = MagicMock()
@@ -232,7 +232,7 @@ class TestSuggestPoliciesSuccessPath:
 class TestSuggestPoliciesErrorHandling:
     """Error handling tests (Req 11.9)."""
 
-    @patch("agents.policy_suggester.get_client")
+    @patch("cloud_janitor.agents.policy_suggester.get_client")
     def test_llm_exception_returns_empty_list(self, mock_get_client):
         """If LLM client raises, returns [] (safe default)."""
         mock_get_client.side_effect = RuntimeError("Connection refused")
@@ -244,7 +244,7 @@ class TestSuggestPoliciesErrorHandling:
 
         assert result == []
 
-    @patch("agents.policy_suggester.PolicySuggester.suggest")
+    @patch("cloud_janitor.agents.policy_suggester.PolicySuggester.suggest")
     def test_suggest_method_exception_returns_empty_list(self, mock_suggest):
         """If PolicySuggester.suggest raises, tool catches it."""
         mock_suggest.side_effect = Exception("Internal failure")
@@ -265,7 +265,7 @@ class TestSuggestPoliciesNegativeCases:
         except TypeError:
             pass
 
-    @patch("agents.policy_suggester.get_client")
+    @patch("cloud_janitor.agents.policy_suggester.get_client")
     def test_priority_must_be_valid_enum(self, mock_get_client):
         """Suggestions with invalid priority are filtered out."""
         mock_client = MagicMock()
@@ -307,7 +307,7 @@ INFER_REQUIRED_KEYS = {"env", "team", "owner", "risk_level", "confidence"}
 class TestInferResourceContextSchema:
     """Schema validation for infer_resource_context output (Req 12.2)."""
 
-    @patch("agents.tagger.get_client")
+    @patch("cloud_janitor.agents.tagger.get_client")
     def test_returns_dict_with_required_keys(self, mock_get_client):
         """Output must have all required keys."""
         mock_client = MagicMock()
@@ -326,7 +326,7 @@ class TestInferResourceContextSchema:
         assert isinstance(result, dict)
         assert INFER_REQUIRED_KEYS == set(result.keys())
 
-    @patch("agents.tagger.get_client")
+    @patch("cloud_janitor.agents.tagger.get_client")
     def test_env_is_string(self, mock_get_client):
         """env must be a string."""
         mock_client = MagicMock()
@@ -338,7 +338,7 @@ class TestInferResourceContextSchema:
         result = infer_resource_context("i-abc123", "test")
         assert isinstance(result["env"], str)
 
-    @patch("agents.tagger.get_client")
+    @patch("cloud_janitor.agents.tagger.get_client")
     def test_confidence_is_float(self, mock_get_client):
         """confidence must be a float."""
         mock_client = MagicMock()
@@ -354,7 +354,7 @@ class TestInferResourceContextSchema:
 class TestInferResourceContextSuccessPath:
     """Test successful inference via mocked LLM."""
 
-    @patch("agents.tagger.get_client")
+    @patch("cloud_janitor.agents.tagger.get_client")
     def test_returns_inferred_values(self, mock_get_client):
         """With valid input and mocked LLM, returns expected inference."""
         mock_client = MagicMock()
@@ -382,7 +382,7 @@ class TestInferResourceContextSuccessPath:
 class TestInferResourceContextErrorHandling:
     """Error handling tests (Req 11.9)."""
 
-    @patch("agents.tagger.get_client")
+    @patch("cloud_janitor.agents.tagger.get_client")
     def test_llm_exception_returns_safe_default(self, mock_get_client):
         """If LLM client raises, returns safe default."""
         mock_get_client.side_effect = RuntimeError("No API key")
@@ -391,7 +391,7 @@ class TestInferResourceContextErrorHandling:
 
         assert result == INFER_SAFE_DEFAULT
 
-    @patch("agents.tagger.ResourceTagger.infer")
+    @patch("cloud_janitor.agents.tagger.ResourceTagger.infer")
     def test_infer_method_exception_returns_safe_default(self, mock_infer):
         """If ResourceTagger.infer raises, tool catches it."""
         mock_infer.side_effect = Exception("Unexpected error")
@@ -405,7 +405,7 @@ class TestInferResourceContextErrorHandling:
 class TestInferResourceContextNegativeCases:
     """Negative tests (Req 11.8)."""
 
-    @patch("agents.tagger.get_client")
+    @patch("cloud_janitor.agents.tagger.get_client")
     def test_existing_tags_skips_llm_call(self, mock_get_client):
         """If all tags are already present, LLM should NOT be called."""
         result = infer_resource_context(
@@ -442,7 +442,7 @@ ANOMALY_REQUIRED_KEYS = {
 class TestDetectAnomaliesSchema:
     """Schema validation for detect_anomalies output (Req 12.2)."""
 
-    @patch("agents.anomaly_detector.get_client")
+    @patch("cloud_janitor.agents.anomaly_detector.get_client")
     def test_returns_list(self, mock_get_client):
         """detect_anomalies must always return a list."""
         mock_client = MagicMock()
@@ -467,7 +467,7 @@ class TestDetectAnomaliesSchema:
         )
         assert isinstance(result, list)
 
-    @patch("agents.anomaly_detector.get_client")
+    @patch("cloud_janitor.agents.anomaly_detector.get_client")
     def test_each_anomaly_has_required_keys(self, mock_get_client):
         """Each anomaly must have all required keys with string values."""
         mock_client = MagicMock()
@@ -500,7 +500,7 @@ class TestDetectAnomaliesSchema:
 class TestDetectAnomaliesSuccessPath:
     """Test successful anomaly detection via mocked LLM."""
 
-    @patch("agents.anomaly_detector.get_client")
+    @patch("cloud_janitor.agents.anomaly_detector.get_client")
     def test_returns_concrete_anomaly(self, mock_get_client):
         """With valid resources and mocked LLM, returns expected anomaly."""
         mock_client = MagicMock()
@@ -545,7 +545,7 @@ class TestDetectAnomaliesSuccessPath:
 class TestDetectAnomaliesErrorHandling:
     """Error handling tests (Req 11.9)."""
 
-    @patch("agents.anomaly_detector.get_client")
+    @patch("cloud_janitor.agents.anomaly_detector.get_client")
     def test_llm_exception_returns_empty_list(self, mock_get_client):
         """If LLM client raises, returns [] (safe default)."""
         mock_get_client.side_effect = RuntimeError("Timeout")
@@ -557,7 +557,7 @@ class TestDetectAnomaliesErrorHandling:
 
         assert result == []
 
-    @patch("agents.anomaly_detector.AnomalyDetector.detect")
+    @patch("cloud_janitor.agents.anomaly_detector.AnomalyDetector.detect")
     def test_detect_method_exception_returns_empty_list(self, mock_detect):
         """If AnomalyDetector.detect raises, tool catches it."""
         mock_detect.side_effect = Exception("Memory error")
@@ -578,7 +578,7 @@ class TestDetectAnomaliesNegativeCases:
         except TypeError:
             pass
 
-    @patch("agents.anomaly_detector.get_client")
+    @patch("cloud_janitor.agents.anomaly_detector.get_client")
     def test_invalid_severity_filtered_out(self, mock_get_client):
         """Anomalies with invalid severity are filtered out."""
         mock_client = MagicMock()
@@ -615,7 +615,7 @@ POLICY_REQUIRED_KEYS = {
 class TestPolicyFromIncidentSchema:
     """Schema validation for policy_from_incident output (Req 12.2)."""
 
-    @patch("agents.incident_policy_generator.get_client")
+    @patch("cloud_janitor.agents.incident_policy_generator.get_client")
     def test_returns_list(self, mock_get_client):
         """policy_from_incident must always return a list."""
         mock_client = MagicMock()
@@ -656,7 +656,7 @@ class TestPolicyFromIncidentSchema:
         result = policy_from_incident("Redis was accessed by unauthorized users via open SG.")
         assert isinstance(result, list)
 
-    @patch("agents.incident_policy_generator.get_client")
+    @patch("cloud_janitor.agents.incident_policy_generator.get_client")
     def test_each_policy_has_required_keys(self, mock_get_client):
         """Each policy dict must have all required keys."""
         mock_client = MagicMock()
@@ -708,7 +708,7 @@ class TestPolicyFromIncidentSchema:
 class TestPolicyFromIncidentSuccessPath:
     """Test successful policy generation via mocked LLM."""
 
-    @patch("agents.incident_policy_generator.get_client")
+    @patch("cloud_janitor.agents.incident_policy_generator.get_client")
     def test_returns_policies_with_metadata(self, mock_get_client):
         """Generated policies include generated_at, incident_hash, version."""
         mock_client = MagicMock()
@@ -770,7 +770,7 @@ class TestPolicyFromIncidentSuccessPath:
 class TestPolicyFromIncidentErrorHandling:
     """Error handling tests (Req 11.9)."""
 
-    @patch("agents.incident_policy_generator.get_client")
+    @patch("cloud_janitor.agents.incident_policy_generator.get_client")
     def test_llm_exception_returns_empty_list(self, mock_get_client):
         """If LLM client raises, returns [] (safe default)."""
         mock_get_client.side_effect = RuntimeError("Rate limited")
@@ -779,7 +779,7 @@ class TestPolicyFromIncidentErrorHandling:
 
         assert result == []
 
-    @patch("agents.incident_policy_generator.IncidentPolicyGenerator.generate")
+    @patch("cloud_janitor.agents.incident_policy_generator.IncidentPolicyGenerator.generate")
     def test_generate_method_exception_returns_empty_list(self, mock_generate):
         """If IncidentPolicyGenerator.generate raises, tool catches it."""
         mock_generate.side_effect = Exception("Disk full")
@@ -800,7 +800,7 @@ class TestPolicyFromIncidentNegativeCases:
         except TypeError:
             pass
 
-    @patch("agents.incident_policy_generator.get_client")
+    @patch("cloud_janitor.agents.incident_policy_generator.get_client")
     def test_invalid_check_type_filtered_out(self, mock_get_client):
         """Policies with invalid check_type are filtered out."""
         mock_client = MagicMock()
@@ -854,7 +854,7 @@ class TestDirectImportAllTools:
 
     def test_module_has_agent_classes(self):
         """The MCP module imports agent classes directly (no proxy/stub)."""
-        import mcp_server.aws_janitor_mcp as module
+        import cloud_janitor.mcp_server.aws_janitor_mcp as module
         assert hasattr(module, "RemediationExplainer")
         assert hasattr(module, "PolicySuggester")
         assert hasattr(module, "ResourceTagger")

@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from orchestrator import AuditResult, Orchestrator
-from agents.remediation_architect import RemediationPlan
+from cloud_janitor.orchestrator import AuditResult, Orchestrator
+from cloud_janitor.agents.remediation_architect import RemediationPlan
 
 
 # ---------------------------------------------------------------------------

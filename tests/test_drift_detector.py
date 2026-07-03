@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.drift_detector import DriftDetector
+from cloud_janitor.agents.drift_detector import DriftDetector
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def _mock_llm_response(text: str) -> MagicMock:
 class TestSaveSnapshot:
     """Tests for save_snapshot — atomic writes, rotation, error handling."""
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_creates_history_file(self, mock_client, detector, tmp_history):
         """save_snapshot creates scan_history.json if it doesn't exist."""
         detector.save_snapshot("scan-001", [], [], 0.0)
@@ -61,7 +61,7 @@ class TestSaveSnapshot:
         assert len(data) == 1
         assert data[0]["scan_id"] == "scan-001"
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_appends_multiple_snapshots(self, mock_client, detector, tmp_history):
         """save_snapshot appends to existing history."""
         detector.save_snapshot("scan-001", [], [], 10.0)
@@ -71,7 +71,7 @@ class TestSaveSnapshot:
         assert data[0]["scan_id"] == "scan-001"
         assert data[1]["scan_id"] == "scan-002"
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_rotates_at_max_snapshots(self, mock_client, detector, tmp_history):
         """save_snapshot keeps only last max_snapshots entries."""
         small_detector = DriftDetector(history_path=tmp_history, max_snapshots=3)
@@ -82,7 +82,7 @@ class TestSaveSnapshot:
         assert data[0]["scan_id"] == "scan-002"
         assert data[2]["scan_id"] == "scan-004"
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_snapshot_has_required_fields(self, mock_client, detector, tmp_history):
         """Each snapshot contains scan_id, timestamp, findings, anomalies, total_waste."""
         findings = [{"resource_id": "vol-001", "check_type": "encryption"}]
@@ -96,7 +96,7 @@ class TestSaveSnapshot:
         assert snap["anomalies"] == anomalies
         assert snap["total_waste"] == 42.5
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_never_raises_on_error(self, mock_client, detector, tmp_history):
         """save_snapshot logs errors to stderr but never raises (Req 8.5)."""
         # Make history_path a directory so write fails
@@ -104,7 +104,7 @@ class TestSaveSnapshot:
         # Should not raise
         detector.save_snapshot("scan-fail", [], [], 0.0)
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_logs_to_stderr_on_error(self, mock_client, detector, tmp_history, capsys):
         """save_snapshot logs errors to stderr (Req 1.9)."""
         tmp_history.mkdir(parents=True, exist_ok=True)
@@ -112,7 +112,7 @@ class TestSaveSnapshot:
         captured = capsys.readouterr()
         assert "[DriftDetector]" in captured.err
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_atomic_write_no_partial_on_interrupt(self, mock_client, detector, tmp_history):
         """If .tmp write succeeds, it replaces the main file atomically."""
         detector.save_snapshot("scan-001", [], [], 5.0)
@@ -120,7 +120,7 @@ class TestSaveSnapshot:
         tmp_file = Path(str(tmp_history) + ".tmp")
         assert not tmp_file.exists()
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_cleans_stale_tmp_files(self, mock_client, detector, tmp_history):
         """Stale .tmp files older than 60s are cleaned up (Req 14.6)."""
         tmp_file = Path(str(tmp_history) + ".tmp")
@@ -131,7 +131,7 @@ class TestSaveSnapshot:
         detector.save_snapshot("scan-001", [], [], 0.0)
         assert not tmp_file.exists()
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_does_not_clean_recent_tmp_files(self, mock_client, detector, tmp_history):
         """Recent .tmp files (< 60s old) are not deleted."""
         tmp_file = Path(str(tmp_history) + ".tmp")
@@ -147,20 +147,20 @@ class TestSaveSnapshot:
 class TestDetect:
     """Tests for detect() — drift calculation, matching, narrative."""
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_insufficient_history_zero_snapshots(self, mock_client, detector):
         """Returns drift=None when no history exists (Req 8.1)."""
         result = detector.detect([])
         assert result == {"drift": None, "reason": "insufficient history"}
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_insufficient_history_one_snapshot(self, mock_client, detector):
         """Returns drift=None with only one snapshot (Req 8.1)."""
         detector.save_snapshot("scan-001", [], [], 0.0)
         result = detector.detect([])
         assert result == {"drift": None, "reason": "insufficient history"}
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_waste_delta_calculation(self, mock_client, detector, sample_findings_a, sample_findings_b):
         """waste_delta = current total_waste - previous total_waste (Req 8.6)."""
         mock_client.return_value.chat.completions.create.return_value = _mock_llm_response(
@@ -171,7 +171,7 @@ class TestDetect:
         result = detector.detect(sample_findings_b)
         assert result["waste_delta"] == 25.0
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_new_and_resolved_findings(self, mock_client, detector, sample_findings_a, sample_findings_b):
         """new_findings / resolved_findings based on (resource_id, check_type) (Req 8.7)."""
         mock_client.return_value.chat.completions.create.return_value = _mock_llm_response(
@@ -193,7 +193,7 @@ class TestDetect:
         assert ("vol-001", "encryption") not in new_ids
         assert ("vol-001", "encryption") not in resolved_ids
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_critical_delta(self, mock_client, detector, sample_findings_a, sample_findings_b):
         """critical_delta = count(CRITICAL in current) - count(CRITICAL in previous) (Req 8.8)."""
         mock_client.return_value.chat.completions.create.return_value = _mock_llm_response(
@@ -205,7 +205,7 @@ class TestDetect:
         # A has 1 CRITICAL (sg-001), B has 0 CRITICAL → delta = -1
         assert result["critical_delta"] == -1
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_compared_scans_order(self, mock_client, detector, sample_findings_a, sample_findings_b):
         """compared_scans = [previous_scan_id, current_scan_id] (Req 8.10)."""
         mock_client.return_value.chat.completions.create.return_value = _mock_llm_response(
@@ -216,7 +216,7 @@ class TestDetect:
         result = detector.detect(sample_findings_b)
         assert result["compared_scans"] == ["scan-001", "scan-002"]
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_narrative_is_non_empty_string(self, mock_client, detector, sample_findings_a, sample_findings_b):
         """narrative is a non-empty string (Req 8.9)."""
         mock_client.return_value.chat.completions.create.return_value = _mock_llm_response(
@@ -228,7 +228,7 @@ class TestDetect:
         assert isinstance(result["narrative"], str)
         assert len(result["narrative"]) > 0
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_result_has_all_required_keys(self, mock_client, detector, sample_findings_a, sample_findings_b):
         """Result dict has exactly the required keys (Req 8.10)."""
         mock_client.return_value.chat.completions.create.return_value = _mock_llm_response(
@@ -240,7 +240,7 @@ class TestDetect:
         required_keys = {"new_findings", "resolved_findings", "waste_delta", "critical_delta", "narrative", "compared_scans"}
         assert set(result.keys()) == required_keys
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_returns_error_on_exception(self, mock_client, detector, tmp_history):
         """detect returns {"drift": None, "reason": "error"} on failure (Req 1.7)."""
         # Write invalid JSON to the history file
@@ -250,7 +250,7 @@ class TestDetect:
         # With invalid JSON, load returns [], which gives insufficient history
         assert result == {"drift": None, "reason": "insufficient history"}
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_returns_error_on_unexpected_exception(self, mock_client, detector, tmp_history):
         """detect returns {"drift": None, "reason": "error"} on unexpected failure."""
         # Pre-load 2 snapshots so we get past the insufficient history check
@@ -265,7 +265,7 @@ class TestDetect:
 class TestLLMNarrative:
     """Tests for LLM narrative generation and fallback."""
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_fallback_narrative_on_llm_failure(self, mock_client, detector, sample_findings_a, sample_findings_b):
         """When LLM fails, fallback narrative is generated (Req 1.7)."""
         mock_client.side_effect = EnvironmentError("OPENROUTER_API_KEY is not set")
@@ -279,7 +279,7 @@ class TestLLMNarrative:
         assert isinstance(result.get("narrative"), str)
         assert len(result["narrative"]) > 0
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_uses_llm_client_module(self, mock_client, detector, sample_findings_a, sample_findings_b):
         """DriftDetector uses get_client from llm_client (Req 1.11)."""
         mock_client.return_value.chat.completions.create.return_value = _mock_llm_response(
@@ -294,17 +294,17 @@ class TestLLMNarrative:
 class TestFileLocking:
     """Tests for filelock behavior."""
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_lock_acquired_and_released(self, mock_client, detector, tmp_history):
         """save_snapshot acquires and releases filelock (Req 8.4)."""
-        with patch("agents.drift_detector.FileLock") as mock_lock_cls:
+        with patch("cloud_janitor.agents.drift_detector.FileLock") as mock_lock_cls:
             mock_lock = MagicMock()
             mock_lock_cls.return_value = mock_lock
             detector.save_snapshot("scan-001", [], [], 0.0)
             mock_lock.acquire.assert_called_once()
             mock_lock.release.assert_called_once()
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_lock_released_after_write(self, mock_client, detector, tmp_history):
         """Lock is released after save_snapshot completes (Req 8.4)."""
         detector.save_snapshot("scan-001", [], [], 0.0)
@@ -313,10 +313,10 @@ class TestFileLocking:
         data = json.loads(tmp_history.read_text())
         assert len(data) == 2
 
-    @patch("agents.drift_detector.get_client")
+    @patch("cloud_janitor.agents.drift_detector.get_client")
     def test_lock_released_on_error(self, mock_client, detector, tmp_history):
         """Lock is released even when an error occurs during write (Req 8.4)."""
-        with patch("agents.drift_detector.FileLock") as mock_lock_cls:
+        with patch("cloud_janitor.agents.drift_detector.FileLock") as mock_lock_cls:
             mock_lock = MagicMock()
             mock_lock_cls.return_value = mock_lock
             # Make _load_history raise inside the lock

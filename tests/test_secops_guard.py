@@ -4,12 +4,9 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agents.secops_guard import SecOpsGuard, SENSITIVE_PORTS
+from cloud_janitor.agents.secops_guard import SecOpsGuard, SENSITIVE_PORTS
 
 
 class TestSecOpsGuard:
@@ -81,7 +78,7 @@ class TestSecOpsGuard:
             store_path.write_text(json.dumps(existing_store))
 
             guard = SecOpsGuard(findings_store_path=store_path)
-            findings = guard.scan()
+            guard.scan()
 
             store = json.loads(store_path.read_text())
             # Should have existing finops finding + 4 secops findings
@@ -214,7 +211,7 @@ class TestFinOpsNegativeCases:
 
     def test_finops_does_not_flag_recently_idle_resource(self):
         """Resources idle < 30 days must NOT be flagged."""
-        from agents.finops_auditor import FinOpsAuditor
+        from cloud_janitor.agents.finops_auditor import FinOpsAuditor
 
         with tempfile.TemporaryDirectory() as tmpdir:
             store_path = Path(tmpdir) / "findings_store.json"
@@ -229,7 +226,7 @@ class TestFinOpsNegativeCases:
 
     def test_finops_only_flags_resources_above_threshold(self):
         """Only resources at or above 30-day threshold should be flagged."""
-        from agents.finops_auditor import FinOpsAuditor
+        from cloud_janitor.agents.finops_auditor import FinOpsAuditor
 
         with tempfile.TemporaryDirectory() as tmpdir:
             store_path = Path(tmpdir) / "findings_store.json"
@@ -244,7 +241,7 @@ class TestFinOpsNegativeCases:
 
     def test_finops_flags_expected_resources(self):
         """The 2 resources above threshold must be flagged with correct IDs."""
-        from agents.finops_auditor import FinOpsAuditor
+        from cloud_janitor.agents.finops_auditor import FinOpsAuditor
 
         with tempfile.TemporaryDirectory() as tmpdir:
             store_path = Path(tmpdir) / "findings_store.json"

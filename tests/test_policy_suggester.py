@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.policy_suggester import PolicySuggester, DEFAULT_SUGGESTIONS, VALID_PRIORITIES
+from cloud_janitor.agents.policy_suggester import PolicySuggester, VALID_PRIORITIES
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ class TestSuggestionCount:
         six_suggestions = VALID_LLM_SUGGESTIONS * 2  # 6 items
         mock_response = _mock_llm_response(six_suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -109,7 +109,7 @@ class TestSuggestionCount:
 
     def test_returns_empty_on_exception(self, suggester, sample_findings):
         """On any exception, returns []."""
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_get.side_effect = Exception("API down")
 
             result = suggester.suggest(sample_findings, [])
@@ -120,7 +120,7 @@ class TestSuggestionCount:
         """Return value is always a list."""
         mock_response = _mock_llm_response(VALID_LLM_SUGGESTIONS)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -160,7 +160,7 @@ class TestAlreadyCheckedFilter:
         ]
         mock_response = _mock_llm_response(suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -176,7 +176,7 @@ class TestAlreadyCheckedFilter:
         """When already_checked is empty, no filtering is applied (requirement 4.6)."""
         mock_response = _mock_llm_response(VALID_LLM_SUGGESTIONS)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -205,7 +205,7 @@ class TestAlreadyCheckedFilter:
         ]
         mock_response = _mock_llm_response(suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -231,7 +231,7 @@ class TestSuggestionSchema:
         """Each returned suggestion has suggestion_id, title, rationale, query, priority."""
         mock_response = _mock_llm_response(VALID_LLM_SUGGESTIONS)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -246,7 +246,7 @@ class TestSuggestionSchema:
         """Priority must be one of high, medium, low."""
         mock_response = _mock_llm_response(VALID_LLM_SUGGESTIONS)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -278,7 +278,7 @@ class TestSuggestionSchema:
         ]
         mock_response = _mock_llm_response(suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -302,7 +302,7 @@ class TestSuggestionSchema:
         ]
         mock_response = _mock_llm_response(suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -326,7 +326,7 @@ class TestSuggestionSchema:
         ]
         mock_response = _mock_llm_response(suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -350,7 +350,7 @@ class TestSuggestionSchema:
         ]
         mock_response = _mock_llm_response(suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -373,7 +373,7 @@ class TestSuggestionSchema:
         ]
         mock_response = _mock_llm_response(suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -393,7 +393,7 @@ class TestEmptyFindings:
 
     def test_empty_findings_returns_defaults_on_llm_failure(self, suggester):
         """When findings is empty and LLM fails, returns hardcoded defaults."""
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_get.side_effect = Exception("API unavailable")
 
             result = suggester.suggest([], [])
@@ -418,7 +418,7 @@ class TestEmptyFindings:
         ]
         mock_response = _mock_llm_response(llm_suggestions)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -429,7 +429,7 @@ class TestEmptyFindings:
 
     def test_empty_findings_with_already_checked_filters(self, suggester):
         """Empty findings + already_checked still filters results."""
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_get.side_effect = Exception("API unavailable")
 
             result = suggester.suggest([], ["encryption", "security_group", "public_access", "idle_resource"])
@@ -448,7 +448,7 @@ class TestErrorHandling:
 
     def test_returns_empty_on_connection_error(self, suggester, sample_findings):
         """Connection errors result in []."""
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_get.side_effect = ConnectionError("Network unreachable")
 
             result = suggester.suggest(sample_findings, [])
@@ -461,7 +461,7 @@ class TestErrorHandling:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "not valid json at all"
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -472,7 +472,7 @@ class TestErrorHandling:
 
     def test_logs_to_stderr_on_error(self, suggester, sample_findings, capsys):
         """Failures are logged to stderr (requirement 1.9)."""
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_get.side_effect = RuntimeError("Simulated failure")
 
             suggester.suggest(sample_findings, [])
@@ -485,7 +485,7 @@ class TestErrorHandling:
         """No matter what, suggest() never raises (requirement 1.8)."""
         # Pass garbage inputs — None is treated as falsy (empty findings),
         # so it may return default suggestions. The key requirement is no exception.
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_get.side_effect = Exception("Simulated")
             result = suggester.suggest(None, None)  # type: ignore
         # Should not raise, should return [] (LLM fails, None can't iterate for defaults)
@@ -497,7 +497,7 @@ class TestErrorHandling:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = json.dumps({"not": "a list"})
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -519,7 +519,7 @@ class TestLLMClientUsage:
         """Verifies get_client is called from llm_client module."""
         mock_response = _mock_llm_response(VALID_LLM_SUGGESTIONS)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client
@@ -532,7 +532,7 @@ class TestLLMClientUsage:
         """The DEFAULT_MODEL from llm_client is used."""
         mock_response = _mock_llm_response(VALID_LLM_SUGGESTIONS)
 
-        with patch("agents.policy_suggester.get_client") as mock_get:
+        with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = mock_response
             mock_get.return_value = mock_client

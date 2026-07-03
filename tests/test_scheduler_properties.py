@@ -17,8 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from scheduler import JanitorScheduler, DEFAULT_SCHEDULE, _validate_cron

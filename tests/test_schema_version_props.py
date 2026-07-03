@@ -11,10 +11,11 @@ import re
 from unittest.mock import patch
 
 import pytest
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import given, settings, HealthCheck
 from hypothesis import strategies as st
 
-from orchestrator import Orchestrator, SCHEMA_VERSION
+from cloud_janitor.orchestrator import Orchestrator
+from cloud_janitor.orchestrator.orchestrator import SCHEMA_VERSION
 
 
 # Shared settings for all property tests in this module
@@ -41,7 +42,7 @@ def tmp_project(tmp_path):
 @pytest.fixture
 def orchestrator(tmp_project):
     """Create an Orchestrator instance with mocked TF_CMD."""
-    with patch("orchestrator._validate_tf_cmd", return_value="/usr/bin/tflocal"):
+    with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="/usr/bin/tflocal"):
         return Orchestrator(project_root=tmp_project)
 
 

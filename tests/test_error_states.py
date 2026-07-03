@@ -9,14 +9,12 @@ Validates the three core error scenarios from the Error Handling Rules:
 
 import json
 import subprocess
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.approval_gate import ApprovalGate
-from agents.remediation_architect import DependencyReport, RemediationPlan
-from orchestrator import ApprovalResult, AuditResult, Orchestrator
+from cloud_janitor.agents.remediation_architect import DependencyReport, RemediationPlan
+from cloud_janitor.orchestrator import ApprovalResult, Orchestrator
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -159,7 +157,7 @@ class TestDependencyBlocking:
         )
         orch._architect.plan = MagicMock(return_value=[blocked_plan])
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -183,7 +181,7 @@ class TestDependencyBlocking:
         )
         orch._architect.plan = MagicMock(return_value=[blocked_plan])
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -208,7 +206,7 @@ class TestDependencyBlocking:
         )
         orch._architect.plan = MagicMock(return_value=[blocked_plan])
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )
@@ -258,7 +256,7 @@ class TestTerraformValidateFails:
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
         (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=1, stdout="", stderr="Error: Unsupported block type on line 3"
             )
@@ -283,7 +281,7 @@ class TestTerraformValidateFails:
         (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
         error_text = "Error: Invalid resource type\n\n  on remediation.tf line 5"
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=2, stdout="", stderr=error_text
             )
@@ -308,7 +306,7 @@ class TestTerraformValidateFails:
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
         (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=1, stdout="", stderr="Error: Missing required argument"
             )
@@ -323,7 +321,7 @@ class TestTerraformValidateFails:
 
         # Additionally verify approve() behavior after a failed audit:
         # Even if plans are stored, the audit result should communicate the failure.
-        with patch("orchestrator.subprocess.run") as mock_apply:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_apply:
             mock_apply.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="Apply complete!", stderr=""
             )
@@ -349,7 +347,7 @@ class TestTerraformValidateFails:
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
         (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=1, stdout="syntax error near unexpected token",
                 stderr=""
@@ -377,7 +375,7 @@ class TestTerraformValidateFails:
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
         (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=1, stdout="Validation failed: missing provider", stderr=""
             )
@@ -494,7 +492,7 @@ class TestMalformedApproval:
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
         (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
-        with patch("orchestrator.subprocess.run") as mock_run:
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="", stderr=""
             )

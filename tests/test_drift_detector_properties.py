@@ -21,11 +21,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from agents.drift_detector import DriftDetector, MAX_SNAPSHOTS
+from cloud_janitor.agents.drift_detector import DriftDetector, MAX_SNAPSHOTS
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +127,7 @@ class TestDriftDetectorMaxSnapshotsInvariant:
         """After any number of save_snapshot calls, file has <= max_snapshots entries."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_get_client.return_value = mock_client
 
@@ -148,7 +147,7 @@ class TestDriftDetectorMaxSnapshotsInvariant:
         """With default max_snapshots=30, history never exceeds 30 entries."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_get_client.return_value = mock_client
 
@@ -175,7 +174,7 @@ class TestDriftDetectorMaxSnapshotsInvariant:
         """Rotation drops the oldest entries, keeping the most recent ones."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_get_client.return_value = mock_client
 
@@ -219,7 +218,7 @@ class TestDriftDetectorWasteDeltaCorrectness:
         """waste_delta must equal W_curr - W_prev for any two waste values."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Drift analysis complete."
@@ -244,7 +243,7 @@ class TestDriftDetectorWasteDeltaCorrectness:
         """When waste is the same in both snapshots, delta is 0."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "No change in waste."
@@ -271,7 +270,7 @@ class TestDriftDetectorWasteDeltaCorrectness:
         assume(w_curr < w_prev)
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Waste decreased."
@@ -312,7 +311,7 @@ class TestDriftDetectorFindingDiffCorrectness:
         """new_findings contains exactly the findings in current but not in previous."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Drift detected."
@@ -353,7 +352,7 @@ class TestDriftDetectorFindingDiffCorrectness:
         """resolved_findings contains exactly the findings in previous but not in current."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Some findings resolved."
@@ -389,7 +388,7 @@ class TestDriftDetectorFindingDiffCorrectness:
         """When both snapshots have the same findings, new and resolved are both empty."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "No drift."
@@ -416,7 +415,7 @@ class TestDriftDetectorFindingDiffCorrectness:
         """When previous has no findings and current has some, all are new."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "All new findings."
@@ -446,7 +445,7 @@ class TestDriftDetectorFindingDiffCorrectness:
         """When current has no findings and previous had some, all are resolved."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "All findings resolved."
@@ -506,7 +505,7 @@ class TestDriftDetectorOutputSchema:
         """detect() output has exactly the 6 required keys."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Schema test narrative."
@@ -534,7 +533,7 @@ class TestDriftDetectorOutputSchema:
         """Each field in detect() output has the correct type."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Type check narrative."
@@ -583,7 +582,7 @@ class TestDriftDetectorOutputSchema:
         """narrative is always a non-empty string (LLM or fallback)."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Non-empty narrative."
@@ -612,7 +611,7 @@ class TestDriftDetectorOutputSchema:
         """compared_scans contains [previous_scan_id, current_scan_id] in order."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Compare check."
@@ -639,7 +638,7 @@ class TestDriftDetectorOutputSchema:
         """Every element in new_findings and resolved_findings is a dict."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.return_value = _mock_llm_response(
                 "Dict check."
@@ -681,7 +680,7 @@ class TestDriftDetectorNegativeCases:
         """With no snapshots, detect returns insufficient history — never drift data."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_get_client.return_value = mock_client
 
@@ -702,7 +701,7 @@ class TestDriftDetectorNegativeCases:
         """With only 1 snapshot, detect returns insufficient history."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_get_client.return_value = mock_client
 
@@ -724,7 +723,7 @@ class TestDriftDetectorNegativeCases:
         """When LLM raises, detect still returns a valid result with fallback narrative."""
         history_path = _fresh_history_path()
 
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_client.chat.completions.create.side_effect = RuntimeError("LLM unavailable")
             mock_get_client.return_value = mock_client
@@ -750,7 +749,7 @@ class TestDriftDetectorNegativeCases:
         history_path = _fresh_history_path()
 
         # Save snapshots with working mock
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_client = MagicMock()
             mock_get_client.return_value = mock_client
 
@@ -759,7 +758,7 @@ class TestDriftDetectorNegativeCases:
             detector.save_snapshot("scan-curr", findings, [], 10.0)
 
         # Now detect with failing get_client
-        with patch("agents.drift_detector.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.drift_detector.get_client") as mock_get_client:
             mock_get_client.side_effect = EnvironmentError("OPENROUTER_API_KEY not set")
 
             result = detector.detect(findings)

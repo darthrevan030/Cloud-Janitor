@@ -11,7 +11,6 @@ from __future__ import annotations
 import ast
 import re
 import sys
-import textwrap
 from pathlib import Path
 from unittest.mock import patch
 
@@ -21,7 +20,7 @@ import pytest
 # Constants
 # ---------------------------------------------------------------------------
 
-APP_PY_PATH = Path(__file__).resolve().parent.parent / "app.py"
+APP_PY_PATH = Path(__file__).resolve().parent.parent / "src" / "cloud_janitor" / "app.py"
 
 # The 7 Phase B/C agents that must be individually imported
 EXPECTED_AGENTS = [
@@ -36,12 +35,12 @@ EXPECTED_AGENTS = [
 
 # Module paths for each agent (as they appear in app.py)
 AGENT_MODULES = {
-    "QueryInterpreter": "agents.query_interpreter",
-    "RemediationExplainer": "agents.explainer",
-    "PolicySuggester": "agents.policy_suggester",
-    "AnomalyDetector": "agents.anomaly_detector",
-    "DriftDetector": "agents.drift_detector",
-    "MultiAccountOrchestrator": "agents.multi_account_orchestrator",
+    "QueryInterpreter": "cloud_janitor.agents.query_interpreter",
+    "RemediationExplainer": "cloud_janitor.agents.explainer",
+    "PolicySuggester": "cloud_janitor.agents.policy_suggester",
+    "AnomalyDetector": "cloud_janitor.agents.anomaly_detector",
+    "DriftDetector": "cloud_janitor.agents.drift_detector",
+    "MultiAccountOrchestrator": "cloud_janitor.agents.multi_account_orchestrator",
     "JanitorScheduler": "scheduler",
 }
 
@@ -230,7 +229,7 @@ class TestIndividualImports:
 
         # Count try/except ImportError blocks that import from agent modules
         agent_import_pattern = re.compile(
-            r"try:\s*\n\s+from\s+(?:agents\.\w+|scheduler)\s+import\s+\w+\s*\n"
+            r"try:\s*\n\s+from\s+(?:cloud_janitor\.agents\.\w+|scheduler)\s+import\s+\w+\s*\n"
             r"except\s+ImportError:"
         )
         matches = agent_import_pattern.findall(source)
@@ -306,7 +305,7 @@ class TestNegativeCases:
         # Attempt to import a guaranteed-missing module
         with pytest.raises(ImportError):
             # This module definitely doesn't exist
-            from agents.nonexistent_agent_xyz import FakeAgent  # noqa: F401
+            from cloud_janitor.agents.nonexistent_agent_xyz import FakeAgent  # noqa: F401
 
     def test_bare_import_without_optional_annotation_is_detected(self):
         """If someone removes the Optional[type] annotation, our test catches it.

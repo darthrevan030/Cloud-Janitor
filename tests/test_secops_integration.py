@@ -10,14 +10,11 @@ Verifies that SecOpsGuard.scan() emits the correct reasoning events:
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
-import pytest
 
-from agents.reasoning_logger import ReasoningLogger
-from agents.secops_guard import SecOpsGuard
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger
+from cloud_janitor.agents.secops_guard import SecOpsGuard
 
 
 class TestSecOpsReasoningIntegration:

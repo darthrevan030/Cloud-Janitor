@@ -17,10 +17,10 @@ already_checked inputs, the PolicySuggester output satisfies:
 import json
 from unittest.mock import MagicMock, patch
 
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from agents.policy_suggester import PolicySuggester, KNOWN_CHECK_TYPES, VALID_PRIORITIES
+from cloud_janitor.agents.policy_suggester import PolicySuggester, KNOWN_CHECK_TYPES, VALID_PRIORITIES
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ def test_valid_llm_response_satisfies_all_invariants(
     suggester = PolicySuggester()
     mock_response = _build_mock_response(json.dumps(mock_suggestions))
 
-    with patch("agents.policy_suggester.get_client") as mock_get:
+    with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_get.return_value = mock_client
@@ -189,7 +189,7 @@ def test_llm_failure_satisfies_all_invariants(
     """
     suggester = PolicySuggester()
 
-    with patch("agents.policy_suggester.get_client") as mock_get:
+    with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
         if failure_mode == "connection_error":
             mock_get.side_effect = ConnectionError("Network unreachable")
         elif failure_mode == "environment_error":
@@ -238,7 +238,7 @@ def test_empty_findings_satisfies_all_invariants(
     suggester = PolicySuggester()
     mock_response = _build_mock_response(json.dumps(mock_suggestions))
 
-    with patch("agents.policy_suggester.get_client") as mock_get:
+    with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_get.return_value = mock_client
@@ -266,7 +266,7 @@ def test_empty_findings_llm_failure_uses_defaults_satisfying_invariants(
     """
     suggester = PolicySuggester()
 
-    with patch("agents.policy_suggester.get_client") as mock_get:
+    with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
         mock_get.side_effect = Exception("API unavailable")
 
         result = suggester.suggest([], already_checked)
@@ -305,7 +305,7 @@ def test_exclusion_property_with_explicit_check_types(
     suggester = PolicySuggester()
     mock_response = _build_mock_response(json.dumps(mock_suggestions))
 
-    with patch("agents.policy_suggester.get_client") as mock_get:
+    with patch("cloud_janitor.agents.policy_suggester.get_client") as mock_get:
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_get.return_value = mock_client

@@ -1,11 +1,10 @@
 """Unit tests for SavingsTracker."""
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
 
-from agents.savings_tracker import SavingsTracker
+from cloud_janitor.agents.savings_tracker import SavingsTracker
 
 
 @pytest.fixture

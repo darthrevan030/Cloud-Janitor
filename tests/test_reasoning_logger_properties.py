@@ -11,11 +11,10 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from agents.reasoning_logger import ReasoningLogger
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger
 
 
 # --- Strategies ---
@@ -253,7 +252,7 @@ def test_reasoning_log_append_preservation(existing_content):
         # (i.e., exactly one JSONL line was appended)
         appended_line = appended_text[:-1]
         assert "\n" not in appended_line, (
-            f"Expected exactly one appended line, but found embedded newlines"
+            "Expected exactly one appended line, but found embedded newlines"
         )
 
         # --- Assertion 3: The new line is valid JSON with required fields ---
@@ -269,7 +268,7 @@ def test_reasoning_log_append_preservation(existing_content):
         )
 
         # --- Assertion 4: Timestamp is valid ISO 8601 UTC ---
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         ts = datetime.fromisoformat(entry["timestamp"])
         assert ts.tzinfo is not None, "Timestamp must include timezone info"
@@ -315,7 +314,7 @@ def test_reasoning_log_start_run_creates_file_when_missing(data):
         assert len(entry.get("message", "")) > 0
 
         # Valid ISO 8601 UTC timestamp
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         ts = datetime.fromisoformat(entry["timestamp"])
         assert ts.tzinfo is not None

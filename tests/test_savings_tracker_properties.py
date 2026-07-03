@@ -8,11 +8,10 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from agents.savings_tracker import SavingsTracker
+from cloud_janitor.agents.savings_tracker import SavingsTracker
 
 
 # --- Strategies ---
@@ -288,8 +287,8 @@ def test_recalculate_from_source_invariant(run_sequence, data):
 # --- Property 4: Duplicate run idempotency ---
 # Feature: savings-tracker-localstack, Property 4: Duplicate run idempotency
 
-import os
-import time
+import os  # noqa: E402
+import time  # noqa: E402
 
 
 @settings(max_examples=100, deadline=None)
