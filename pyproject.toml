@@ -44,4 +44,12 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 
 [tool.ruff]
+src = ["src"]
 line-length = 100
+
+[tool.mypy]
+packages = ["cloud_janitor"]
+mypy_path = "src"
+strict = false
+warn_return_any = true
+warn_unused_configs = true

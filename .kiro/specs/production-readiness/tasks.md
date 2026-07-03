@@ -184,7 +184,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Verify all tests still pass after import rewrite
     - _Requirements: 3.1, 3.2_
 
-  - [ ] 7.4 Update `pyproject.toml` for src-layout
+  - [x] 7.4 Update `pyproject.toml` for src-layout
     - Change `[project.scripts]` to `cloud-janitor = "cloud_janitor.cli:main"`
     - Add `[tool.hatch.build.targets.wheel] packages = ["src/cloud_janitor"]`
     - Add `[tool.mypy]` section with `packages = ["cloud_janitor"]` and `mypy_path = "src"`

@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T07:14:47Z
+Generated: 2026-07-03T08:14:17Z
 
-**Summary:** 232 tasks — ✅ 218 done, ⏳ 2 partial, ❌ 12 pending
+**Summary:** 232 tasks — ✅ 219 done, ⏳ 1 partial, ❌ 12 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T07:14:47Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (23/30)
+## Production Readiness (24/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -183,7 +183,7 @@ Generated: 2026-07-03T07:14:47Z
 | 23 | 7. Batch 3 — Package structure migration and CI | ❌ Pending | — |
 | 24 | 7.1 Create `src/cloud_janitor/` directory structure and move modules | ✅ Done | no mapping |
 | 25 | 7.2 Update all source imports to `cloud_janitor.*` paths | ✅ Done | no mapping |
-| 26 | 7.3 Update all test imports to `cloud_janitor.*` paths | ⏳ Partial | no mapping |
+| 26 | 7.3 Update all test imports to `cloud_janitor.*` paths | ✅ Done | no mapping |
 | 27 | 7.4 Update `pyproject.toml` for src-layout | ❌ Pending | — |
 | 28 | 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`) | ❌ Pending | — |
 | 29 | 7.6 Verify package installability and type annotation marker | ❌ Pending | — |
