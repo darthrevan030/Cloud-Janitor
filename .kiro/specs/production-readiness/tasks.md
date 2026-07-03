@@ -191,7 +191,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Add `[tool.ruff] src = ["src"]`
     - _Requirements: 3.1, 3.5, 10.2_
 
-  - [ ] 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`)
+  - [x] 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`)
     - Add `lint` job: ruff check on entire codebase
     - Add `type-check` job: mypy on src/
     - Add `test` job: pytest matrix for Python 3.12 and 3.13
@@ -200,7 +200,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Ensure failed steps prevent dependent steps from executing
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
 
-  - [ ] 7.6 Verify package installability and type annotation marker
+  - [-] 7.6 Verify package installability and type annotation marker
     - Run `pip install -e .` and verify `import cloud_janitor` succeeds
     - Verify `cloud-janitor --help` exits 0
     - Verify `py.typed` is included in installed package
