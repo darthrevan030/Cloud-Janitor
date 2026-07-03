@@ -97,7 +97,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Mock only the OpenAI client (external I/O), not `call_llm` itself
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
 
-  - [ ] 3.4 Write unit tests for stub providers (`tests/test_stub_providers.py`)
+  - [x] 3.4 Write unit tests for stub providers (`tests/test_stub_providers.py`)
     - Test GCPProvider instantiation emits WARNING log
     - Test AzureProvider instantiation emits WARNING log
     - Test each stub method raises NotImplementedError with provider+method name
