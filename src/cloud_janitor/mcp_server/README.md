@@ -18,7 +18,7 @@ Exposes AWS infrastructure data and Terraform validation via the [Model Context 
 ## Running the Server
 
 ```bash
-python mcp_server/aws_janitor_mcp.py
+cloud-janitor mcp
 ```
 
 The server starts using FastMCP's default stdio transport.
@@ -153,7 +153,7 @@ CloudProvider (ABC)
 └── AzureProvider     — stub
 ```
 
-All providers live in `mcp_server/backends/` and implement three abstract methods:
+All providers live in `src/cloud_janitor/mcp_server/backends/` and implement three abstract methods:
 
 - `get_cost_data(resource_type, min_idle_days) -> dict`
 - `get_security_data(check_type) -> dict`
@@ -161,21 +161,21 @@ All providers live in `mcp_server/backends/` and implement three abstract method
 
 ## Adding a New Provider
 
-1. Create `mcp_server/backends/<name>_provider.py`
+1. Create `src/cloud_janitor/mcp_server/backends/<name>_provider.py`
 2. Import and inherit from `CloudProvider`:
 
    ```python
-   from mcp_server.backends import CloudProvider
+   from cloud_janitor.mcp_server.backends import CloudProvider
 
    class MyProvider(CloudProvider):
        ...
    ```
 
 3. Implement the three abstract methods: `get_cost_data`, `get_security_data`, `check_dependencies`
-4. Register the provider in `mcp_server/aws_janitor_mcp.py`:
+4. Register the provider in `src/cloud_janitor/mcp_server/aws_janitor_mcp.py`:
 
    ```python
-   from mcp_server.backends.my_provider import MyProvider
+   from cloud_janitor.mcp_server.backends.my_provider import MyProvider
 
    PROVIDER_REGISTRY["my_backend"] = MyProvider
    ```

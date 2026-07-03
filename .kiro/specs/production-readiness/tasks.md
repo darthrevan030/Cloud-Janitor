@@ -160,7 +160,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Batch 3 — Package structure migration and CI
-  - [ ] 7.1 Create `src/cloud_janitor/` directory structure and move modules
+  - [x] 7.1 Create `src/cloud_janitor/` directory structure and move modules
     - Create `src/cloud_janitor/` with `__init__.py` (importlib.metadata version)
     - Create `src/cloud_janitor/py.typed` marker file (0 bytes)
     - Move `agents/` → `src/cloud_janitor/agents/` (add `__init__.py`)

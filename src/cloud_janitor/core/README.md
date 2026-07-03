@@ -39,8 +39,8 @@ Structured error telemetry — captures agent exceptions as JSONL records for op
 ### Usage
 
 ```python
-from core.error_telemetry import build_error_record, write_error_record
-from core.paths import AUDIT_LOG_PATH
+from cloud_janitor.core.error_telemetry import build_error_record, write_error_record
+from cloud_janitor.core.paths import AUDIT_LOG_PATH
 
 try:
     agent.run()
@@ -68,7 +68,7 @@ Centralized logging configuration — call `configure_logging()` once at applica
 ### Usage
 
 ```python
-from core.logging_config import configure_logging
+from cloud_janitor.core.logging_config import configure_logging
 
 configure_logging()  # Call once at startup
 ```
@@ -105,7 +105,7 @@ Centralised LLM client — every AI agent imports from here instead of using the
 ### Usage
 
 ```python
-from core.llm_client import get_client, call_llm, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 client = get_client()
 response = call_llm(

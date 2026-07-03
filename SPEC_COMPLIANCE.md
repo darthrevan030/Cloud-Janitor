@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T05:22:05Z
+Generated: 2026-07-03T05:26:38Z
 
-**Summary:** 232 tasks — ✅ 215 done, ⏳ 1 partial, ❌ 16 pending
+**Summary:** 232 tasks — ✅ 216 done, ⏳ 1 partial, ❌ 15 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T05:22:05Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (20/30)
+## Production Readiness (21/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -179,7 +179,7 @@ Generated: 2026-07-03T05:22:05Z
 | 19 | 4. Checkpoint — Verify Batch 1 tests | ✅ Done | no mapping |
 | 20 | 5. Batch 2 — README accuracy | ✅ Done | no mapping |
 | 21 | 5.1 Update README.md with accurate documentation | ✅ Done | no mapping |
-| 22 | 6. Checkpoint — Verify Batch 2 | ❌ Pending | — |
+| 22 | 6. Checkpoint — Verify Batch 2 | ✅ Done | no mapping |
 | 23 | 7. Batch 3 — Package structure migration and CI | ❌ Pending | — |
 | 24 | 7.1 Create `src/cloud_janitor/` directory structure and move modules | ❌ Pending | — |
 | 25 | 7.2 Update all source imports to `cloud_janitor.*` paths | ❌ Pending | — |
