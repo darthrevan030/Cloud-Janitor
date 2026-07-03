@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T10:21:30Z
+Generated: 2026-07-03T15:09:30Z
 
-**Summary:** 232 tasks — ✅ 222 done, ⏳ 1 partial, ❌ 9 pending
+**Summary:** 232 tasks — ✅ 223 done, ⏳ 1 partial, ❌ 8 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T10:21:30Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (27/30)
+## Production Readiness (28/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -187,7 +187,7 @@ Generated: 2026-07-03T10:21:30Z
 | 27 | 7.4 Update `pyproject.toml` for src-layout | ✅ Done | no mapping |
 | 28 | 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`) | ✅ Done | no mapping |
 | 29 | 7.6 Verify package installability and type annotation marker | ✅ Done | no mapping |
-| 30 | 8. Final checkpoint — Ensure all tests pass | ❌ Pending | — |
+| 30 | 8. Final checkpoint — Ensure all tests pass | ✅ Done | no mapping |
 
 ## Provider Agnostic Backend (23/23)
 

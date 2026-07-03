@@ -65,9 +65,9 @@ valid_level_random_case = st.one_of(
     *[_random_case(level) for level in sorted(_ORACLE_VALID_LEVELS)]
 )
 
-# Strategy: arbitrary text strings excluding null bytes (OS env var constraint on Windows)
+# Strategy: arbitrary text strings excluding null bytes (OS env var constraint on Windows) and surrogates
 arbitrary_text = st.text(
-    alphabet=st.characters(blacklist_characters="\x00"),
+    alphabet=st.characters(blacklist_characters="\x00", exclude_categories=["Cs"]),
     min_size=0,
     max_size=50,
 )
