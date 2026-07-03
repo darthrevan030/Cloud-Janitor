@@ -50,7 +50,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - No top-level `import streamlit` anywhere in the module
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12, 9.1, 9.2, 9.3, 9.4, 12.2, 12.4_
 
-  - [ ] 1.5 Update stub providers with warning pattern
+  - [x] 1.5 Update stub providers with warning pattern
     - Modify `mcp_server/backends/gcp_provider.py`: add WARNING log on `__init__`, raise `NotImplementedError` with provider+method name in each stub method
     - Modify `mcp_server/backends/azure_provider.py`: same pattern as GCP
     - Ensure providers remain instantiable after warning (no exception on init)

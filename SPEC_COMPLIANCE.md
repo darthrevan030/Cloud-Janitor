@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T02:54:38Z
+Generated: 2026-07-03T02:57:57Z
 
-**Summary:** 227 tasks — ✅ 197 done, ⏳ 1 partial, ❌ 29 pending
+**Summary:** 227 tasks — ✅ 199 done, ⏳ 1 partial, ❌ 27 pending
 
 ## Audit Remediation (55/55)
 
@@ -102,11 +102,11 @@ Generated: 2026-07-03T02:54:38Z
 | 32 | 5. Record demo video for Devpost submission | ❌ Pending | — |
 | 33 | 6. Write Devpost submission copy | ❌ Pending | — |
 
-## Cloud Janitor Phase Bc (45/47)
+## Cloud Janitor Phase Bc (47/47)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
-| 1 | 1. Set up shared LLM infrastructure and project dependencies | ❌ Pending | — |
+| 1 | 1. Set up shared LLM infrastructure and project dependencies | ✅ Done | no mapping |
 | 2 | 1.1 Create `core/llm_client.py` | ✅ Done | no mapping |
 | 3 | 1.2 Update `requirements.txt` with new dependencies | ✅ Done | .kiro/specs/audit-remediation/requirements.md exists |
 | 4 | 1.3 Update `.gitignore` with sensitive data files | ✅ Done | no mapping |
@@ -124,7 +124,7 @@ Generated: 2026-07-03T02:54:38Z
 | 16 | 3.3 Implement `agents/anomaly_detector.py` | ✅ Done | no mapping |
 | 17 | 3.4 Write property tests for AnomalyDetector | ✅ Done | no mapping |
 | 18 | 4. Checkpoint - Ensure all Phase B agent tests pass | ✅ Done | no mapping |
-| 19 | 5. Implement Phase C platform agents (IncidentPolicyGenerator, DriftDetector) | ❌ Pending | — |
+| 19 | 5. Implement Phase C platform agents (IncidentPolicyGenerator, DriftDetector) | ✅ Done | no mapping |
 | 20 | 5.1 Implement `agents/incident_policy_generator.py` | ✅ Done | no mapping |
 | 21 | 5.2 Write property tests for IncidentPolicyGenerator | ✅ Done | no mapping |
 | 22 | 5.3 Implement `agents/drift_detector.py` | ✅ Done | no mapping |
