@@ -215,7 +215,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Call method with trimmed non-empty query when available
     - _Requirements: 10.1, 10.2, 10.3_
 
-  - [ ] 10.4 Write unit tests for NL audit feature detection (`tests/test_nl_audit.py`)
+  - [x] 10.4 Write unit tests for NL audit feature detection (`tests/test_nl_audit.py`)
     - Test that when `execute_natural_language_audit` is missing (`hasattr` returns False), UI shows "not yet available" message
     - Test that when method raises an exception, UI displays error and preserves prior audit state
     - Test that when method is available and query is non-empty, it is called with the trimmed query
