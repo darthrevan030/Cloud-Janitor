@@ -62,7 +62,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
   - Verify retry logic unit tests pass
   - Verify logging configuration tests pass
 
-- [ ] 3. Batch 1 — Tests for core infrastructure
+- [x] 3. Batch 1 — Tests for core infrastructure
   - [x] 3.1 Write unit tests for CLI (`tests/test_cli.py`)
     - Use Click's `CliRunner` to test all subcommands
     - Test `scan` calls `execute_audit()` and prints finding count
@@ -137,7 +137,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Assertion: delay follows formula; values > 60 cause immediate LLMRateLimitExceeded raise
     - **Validates: Requirements 8.6, 8.7**
 
-  - [ ] 3.10 Write property test for stub provider NotImplementedError content
+  - [x] 3.10 Write property test for stub provider NotImplementedError content
     - **Property 5: Stub Provider NotImplementedError Content**
     - Generator: random choice of (GCPProvider, AzureProvider) × random method name
     - Assertion: NotImplementedError message contains both provider class name and method name
