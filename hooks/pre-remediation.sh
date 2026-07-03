@@ -64,8 +64,10 @@ variable "environment" {
 EOF
 
     echo "[pre-remediation] Initializing $TF_CMD for $label..."
-    if ! $TF_CMD -chdir="$tmp_dir" init -backend=false -input=false >/dev/null 2>&1; then
+    tf_output=$($TF_CMD -chdir="$tmp_dir" init -backend=false -input=false 2>&1)
+    if [ $? -ne 0 ]; then
         echo "[pre-remediation] BLOCKED: $TF_CMD init failed for $label"
+        echo "$tf_output"
         return 1
     fi
 

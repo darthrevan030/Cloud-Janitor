@@ -16,4 +16,4 @@ demo:
 	if [ $$i -eq 30 ]; then \
 		echo "\nERROR: LocalStack failed to start within 60 seconds"; exit 1; \
 	fi
-	cloud-janitor dashboard
+	uv run cloud-janitor dashboard

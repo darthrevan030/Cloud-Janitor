@@ -247,14 +247,14 @@ class RemediationArchitect:
 
             # Step 3: Write individual rollback file
             rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
-            rollback_path.write_text(rollback_hcl)
+            rollback_path.write_text(rollback_hcl, encoding="utf-8")
 
         # Step 4: Write combined remediation file
         remediation_parts = [p.remediation_hcl for p in plans if p.remediation_hcl]
         if remediation_parts:
             combined_remediation = "\n\n".join(remediation_parts)
             remediation_path = self.output_dir / "remediation.tf"
-            remediation_path.write_text(combined_remediation)
+            remediation_path.write_text(combined_remediation, encoding="utf-8")
 
         remediated = len([p for p in plans if not p.blocked])
         blocked = len([p for p in plans if p.blocked])
