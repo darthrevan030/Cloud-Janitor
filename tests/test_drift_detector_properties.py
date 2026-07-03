@@ -21,7 +21,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 

@@ -6,7 +6,6 @@ ThreadPoolExecutor, and aggregates findings with fault isolation per account.
 
 import concurrent.futures
 import json
-import os
 import re
 import sys
 from pathlib import Path

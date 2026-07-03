@@ -21,10 +21,10 @@ from unittest.mock import MagicMock, patch
 import httpx
 import openai
 import pytest
-from hypothesis import assume, given, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from cloud_janitor.core.llm_client import LLMRateLimitExceeded, LLMRetryExhausted, call_llm
+from cloud_janitor.core.llm_client import LLMRateLimitExceeded, call_llm
 
 
 # ─── Error construction helpers ──────────────────────────────────────────────

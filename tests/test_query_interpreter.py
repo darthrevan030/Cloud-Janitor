@@ -7,10 +7,8 @@ Requirements: 1.1, 1.8, 1.9, 1.11, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8
 """
 
 import json
-import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 EXPECTED_KEYS = {"resource_types", "check_types", "min_idle_days", "intent_summary", "confidence"}
@@ -77,7 +75,7 @@ class TestSafeDefaultSchema:
 
     def test_safe_default_returns_copy_not_reference(self):
         """Mutating returned default must not affect the class constant."""
-        with patch("cloud_janitor.agents.query_interpreter.get_client") as mock_get_client:
+        with patch("cloud_janitor.agents.query_interpreter.get_client") as _mock_get_client:
             from cloud_janitor.agents.query_interpreter import QueryInterpreter
 
             qi = QueryInterpreter()

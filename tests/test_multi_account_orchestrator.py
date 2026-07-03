@@ -4,15 +4,13 @@ Covers: Requirement 9.1-9.8, 14.4, 14.7
 """
 
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
 from cloud_janitor.agents.multi_account_orchestrator import (
     MultiAccountOrchestrator,
-    PRIORITY_ORDER,
     _empty_result,
 )
 

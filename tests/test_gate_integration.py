@@ -10,13 +10,10 @@ Validates task 3.2 requirements:
 """
 
 import json
-import subprocess
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from cloud_janitor.orchestrator import Orchestrator, ApprovalResult, RollbackResult
+from cloud_janitor.orchestrator import Orchestrator
 
 
 @pytest.fixture
@@ -262,10 +259,10 @@ class TestRollbackGateEnforcement:
         assert r1.needs_confirmation is True
 
         # Now fail the CONFIRM step with wrong format
-        r2 = orch.rollback("CONFIRM ROLLBACK wrong-id")
+        _r2 = orch.rollback("CONFIRM ROLLBACK wrong-id")
         # This will fail at resource_id extraction (no pending for wrong-id)
         # Let's use the same resource_id but bad format
-        r2 = orch.rollback("CONFIRM ROLLBACK vol-abc123 extra")
+        _r2 = orch.rollback("CONFIRM ROLLBACK vol-abc123 extra")
         # parse_confirm_rollback will fail because it doesn't match exactly
         # Actually the prefix extraction gets "vol-abc123 extra" as resource_id
         # which won't be in pending_rollbacks

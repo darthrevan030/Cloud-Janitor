@@ -37,7 +37,7 @@ SENSITIVE_PORTS = [22, 3306, 5432, 6379, 27017]
 DATABASE_CACHE_PORTS = {3306, 5432, 6379, 27017}
 
 # Project root for output files
-from cloud_janitor.core.paths import FINDINGS_STORE_PATH
+from cloud_janitor.core.paths import FINDINGS_STORE_PATH  # noqa: E402
 
 
 class SecOpsGuard:

@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import re
 
-import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 

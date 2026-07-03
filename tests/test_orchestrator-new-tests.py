@@ -1,7 +1,6 @@
 """Regression tests for rollback apply behavior."""
 
 import subprocess
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest

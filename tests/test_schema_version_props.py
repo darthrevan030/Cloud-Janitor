@@ -11,7 +11,7 @@ import re
 from unittest.mock import patch
 
 import pytest
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import given, settings, HealthCheck
 from hypothesis import strategies as st
 
 from cloud_janitor.orchestrator import Orchestrator

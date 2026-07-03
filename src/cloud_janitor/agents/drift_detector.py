@@ -5,7 +5,6 @@ Generates plain-English drift narratives via claude-haiku-4-5 through OpenRouter
 """
 
 import json
-import os
 import sys
 import time
 from datetime import datetime, timezone

@@ -4,10 +4,9 @@ Validates Requirements 12.1, 12.2, 12.3.
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
-import pytest
 
 from cloud_janitor.core.error_telemetry import (
     ERROR_CATEGORIES,
@@ -191,7 +190,7 @@ class TestNegativeCases:
         log_path = tmp_path / "errors.jsonl"
         # Pre-existing content
         log_path.write_text('{"existing":"data"}\n', encoding="utf-8")
-        mtime_before = log_path.stat().st_mtime
+        mtime_before = log_path.stat().st_mtime  # noqa: F841
 
         import time
         time.sleep(0.01)  # ensure mtime changes

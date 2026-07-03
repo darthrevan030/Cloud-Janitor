@@ -11,12 +11,11 @@ non-exception case.
 """
 
 import json
-import logging
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import given, settings, HealthCheck
 from hypothesis import strategies as st
 
 from cloud_janitor.agents.remediation_architect import RemediationPlan
@@ -212,7 +211,7 @@ class TestProperty5SavingsExceptionSwallowing:
                 mock_logger = MagicMock()
                 mock_get_logger.return_value = mock_logger
 
-                result = orch.approve(f"APPROVE {resource_id}")
+                orch.approve(f"APPROVE {resource_id}")
 
             # (b) Verify WARNING was logged
             assert mock_logger.warning.called, (

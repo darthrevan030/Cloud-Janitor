@@ -9,14 +9,12 @@ Validates the three core error scenarios from the Error Handling Rules:
 
 import json
 import subprocess
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from cloud_janitor.agents.approval_gate import ApprovalGate
 from cloud_janitor.agents.remediation_architect import DependencyReport, RemediationPlan
-from cloud_janitor.orchestrator import ApprovalResult, AuditResult, Orchestrator
+from cloud_janitor.orchestrator import ApprovalResult, Orchestrator
 
 
 # ──────────────────────────────────────────────────────────────────────

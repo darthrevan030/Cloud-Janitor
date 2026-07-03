@@ -11,7 +11,6 @@ from __future__ import annotations
 import ast
 import re
 import sys
-import textwrap
 from pathlib import Path
 from unittest.mock import patch
 

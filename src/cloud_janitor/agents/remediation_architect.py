@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Optional
 
 # Import MCP tools directly (same process, no network transport needed)
-from cloud_janitor.mcp_server.aws_janitor_mcp import check_dependencies, validate_hcl
+from cloud_janitor.mcp_server.aws_janitor_mcp import check_dependencies
 
 from cloud_janitor.agents.reasoning_logger import ReasoningLogger
 
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 # Project root for output files
-from cloud_janitor.core.paths import FINDINGS_STORE_PATH, OUTPUT_DIR, ROLLBACKS_DIR
+from cloud_janitor.core.paths import FINDINGS_STORE_PATH, OUTPUT_DIR, ROLLBACKS_DIR  # noqa: E402
 
 
 def _sanitize_id(resource_id: str) -> str:
@@ -281,7 +281,6 @@ class RemediationArchitect:
         """EBS volume waste: snapshot first, then schedule destroy."""
         resource_id = finding["resource_id"]
         safe_id = _sanitize_id(resource_id)
-        metadata = finding.get("metadata", {})
 
         return (
             f'# Remediation: EBS volume {resource_id} — snapshot then destroy\n'
@@ -372,7 +371,6 @@ class RemediationArchitect:
         """ElastiCache waste: snapshot then delete."""
         resource_id = finding["resource_id"]
         safe_id = _sanitize_id(resource_id)
-        metadata = finding.get("metadata", {})
 
         return (
             f'# Remediation: ElastiCache {resource_id} — snapshot then delete\n'
@@ -543,8 +541,8 @@ def main() -> None:
             print(f"    ✓ {p.resource_id}")
 
     if remediated:
-        print(f"\n[Remediation Architect] Wrote output/remediation.tf")
-        print(f"[Remediation Architect] Wrote rollback files to rollbacks/")
+        print("\n[Remediation Architect] Wrote output/remediation.tf")
+        print("[Remediation Architect] Wrote rollback files to rollbacks/")
 
 
 if __name__ == "__main__":

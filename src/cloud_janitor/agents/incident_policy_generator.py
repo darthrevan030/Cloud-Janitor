@@ -6,7 +6,6 @@ structured policy JSON files that inform future scanning rules.
 
 import hashlib
 import json
-import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -198,7 +197,7 @@ class IncidentPolicyGenerator:
         raw_content = raw_content.strip()
         if raw_content.startswith("```"):
             lines = raw_content.split("\n")
-            lines = [l for l in lines if not l.strip().startswith("```")]
+            lines = [line for line in lines if not line.strip().startswith("```")]
             raw_content = "\n".join(lines)
 
         parsed = json.loads(raw_content)

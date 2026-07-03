@@ -6,17 +6,13 @@ Verifies:
   - plan() generates both remediation and rollback for the same finding
 """
 
-import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
 from cloud_janitor.agents.remediation_architect import (
     RemediationArchitect,
-    RemediationPlan,
-    DependencyReport,
     _sanitize_id,
 )
 

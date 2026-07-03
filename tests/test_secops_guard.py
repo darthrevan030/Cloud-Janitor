@@ -4,7 +4,6 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
 
 
 from cloud_janitor.agents.secops_guard import SecOpsGuard, SENSITIVE_PORTS
@@ -79,7 +78,7 @@ class TestSecOpsGuard:
             store_path.write_text(json.dumps(existing_store))
 
             guard = SecOpsGuard(findings_store_path=store_path)
-            findings = guard.scan()
+            guard.scan()
 
             store = json.loads(store_path.read_text())
             # Should have existing finops finding + 4 secops findings

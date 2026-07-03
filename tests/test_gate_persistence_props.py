@@ -10,7 +10,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from hypothesis import given, settings, HealthCheck
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cloud_janitor.agents.approval_gate import ApprovalGateStore

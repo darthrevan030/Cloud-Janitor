@@ -129,8 +129,8 @@ with patch('cloud_janitor.agents.tagger.get_client') as mock_get_client:
 print('Test 10 PASS: batch correctly splits into chunks of 10')
 
 # Test 11: verify module does not import openai directly
-import inspect
-import cloud_janitor.agents.tagger
+import inspect  # noqa: E402
+import cloud_janitor.agents.tagger  # noqa: E402
 source = inspect.getsource(cloud_janitor.agents.tagger)
 assert 'import openai' not in source
 assert 'from openai' not in source

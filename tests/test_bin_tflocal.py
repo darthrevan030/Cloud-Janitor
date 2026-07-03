@@ -3,12 +3,10 @@
 Validates Requirement 2.6: bin/tflocal dry-run and self-skip behavior.
 """
 
-import os
 import shutil
 import subprocess
 from pathlib import Path
 
-import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 WRAPPER = str(PROJECT_ROOT / "bin" / "tflocal").replace("\\", "/")

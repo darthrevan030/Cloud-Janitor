@@ -10,9 +10,8 @@ Tests the following:
 
 from __future__ import annotations
 
-import uuid
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -157,7 +156,7 @@ class TestExecuteAuditWithAIAgents:
                     with patch.object(tmp_orchestrator._finops, "scan", return_value=findings):
                         with patch.object(tmp_orchestrator._secops, "scan", return_value=[]):
                             with patch.object(tmp_orchestrator._architect, "plan", return_value=[]):
-                                result = tmp_orchestrator.execute_audit()
+                                tmp_orchestrator.execute_audit()
 
         # save_snapshot was called
         mock_save.assert_called_once()
@@ -237,7 +236,7 @@ class TestExecuteNaturalLanguageAudit:
         with patch.object(tmp_orchestrator._query_interpreter, "interpret", side_effect=RuntimeError("LLM error")):
             with patch.object(tmp_orchestrator, "execute_audit") as mock_audit:
                 mock_audit.return_value = AuditResult(success=True)
-                result = tmp_orchestrator.execute_natural_language_audit("anything")
+                tmp_orchestrator.execute_natural_language_audit("anything")
 
         mock_audit.assert_called_once()
 
@@ -324,7 +323,7 @@ class TestExecuteNaturalLanguageAudit:
                 with patch.object(tmp_orchestrator._drift_detector, "save_snapshot"):
                     with patch.object(tmp_orchestrator._drift_detector, "detect", return_value={"drift": None, "reason": "insufficient history"}):
                         with patch.object(tmp_orchestrator._architect, "plan", return_value=[]):
-                            result = tmp_orchestrator.execute_natural_language_audit("find idle ec2 and ebs")
+                            tmp_orchestrator.execute_natural_language_audit("find idle ec2 and ebs")
 
         # Called once for "ec2" and once for "ebs"
         assert mock_cost.call_count == 2

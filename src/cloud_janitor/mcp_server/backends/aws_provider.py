@@ -83,7 +83,6 @@ class AWSProvider(CloudProvider):
         Returns:
             {"resources": [...], "total_monthly_waste": float}
         """
-        import boto3
         from datetime import datetime, timedelta, timezone
 
         import botocore.exceptions

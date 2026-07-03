@@ -9,7 +9,6 @@ import logging
 import os
 import re
 import sys
-from io import StringIO
 from unittest.mock import patch
 
 import pytest
@@ -96,7 +95,7 @@ class TestDefaultLevel:
 
         # If we log at WARNING level and capture, there should be no "Invalid" message
         logger = logging.getLogger("cloud_janitor.core.logging_config")
-        with patch.object(logger, "warning") as mock_warn:
+        with patch.object(logger, "warning") as _mock_warn:
             # Re-run to check no warning emitted on the clean pass
             pass
         # The real check: capture log output and verify no invalid message

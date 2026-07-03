@@ -54,7 +54,7 @@ def _mock_import(name, *args, **kwargs):
 
 
 # Save the real __import__ for delegation
-import builtins
+import builtins  # noqa: E402
 original_import = builtins.__import__
 
 

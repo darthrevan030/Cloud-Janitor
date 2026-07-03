@@ -17,7 +17,7 @@ already_checked inputs, the PolicySuggester output satisfies:
 import json
 from unittest.mock import MagicMock, patch
 
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cloud_janitor.agents.policy_suggester import PolicySuggester, KNOWN_CHECK_TYPES, VALID_PRIORITIES

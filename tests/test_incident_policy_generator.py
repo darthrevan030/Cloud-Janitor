@@ -18,7 +18,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 # Ensure OPENROUTER_API_KEY is set for tests
 os.environ.setdefault("OPENROUTER_API_KEY", "test-key-for-testing")

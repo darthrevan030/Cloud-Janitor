@@ -11,7 +11,6 @@ Tests:
 """
 
 import json
-import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -119,7 +118,7 @@ class TestOsReplaceFailure:
         )
 
         # Record mtime of the original file
-        original_mtime = store_path.stat().st_mtime
+        original_mtime = store_path.stat().st_mtime  # noqa: F841
         original_content = store_path.read_text(encoding="utf-8")
 
         # Now attempt a write that will fail at os.replace

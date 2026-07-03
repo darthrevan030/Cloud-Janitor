@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 # Project root for output files
-from cloud_janitor.core.paths import FINDINGS_STORE_PATH
+from cloud_janitor.core.paths import FINDINGS_STORE_PATH  # noqa: E402
 
 
 class FinOpsAuditor:

@@ -1,10 +1,7 @@
 """Tests for ApprovalGateStore persistence layer."""
 
 import json
-import os
-from pathlib import Path
 
-import pytest
 
 from cloud_janitor.agents.approval_gate import ApprovalGateStore
 

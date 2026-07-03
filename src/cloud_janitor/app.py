@@ -12,15 +12,13 @@ from __future__ import annotations
 
 import difflib
 import json
-import threading
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from packaging.version import Version
 
 import streamlit as st
 
-from cloud_janitor.orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
+from cloud_janitor.orchestrator import Orchestrator
 from cloud_janitor.core.logging_config import configure_logging
 from cloud_janitor.core.paths import (
     FINDINGS_STORE_PATH,
@@ -35,7 +33,7 @@ configure_logging()
 
 # Phase B/C agent imports — each agent imported individually with explicit
 # ImportError handling so that type checkers see the fallback as Optional[type].
-from typing import Optional
+from typing import Optional  # noqa: E402
 
 try:
     from cloud_janitor.agents.query_interpreter import QueryInterpreter
@@ -724,18 +722,18 @@ def render_diff_html(left_text: str, right_text: str) -> tuple[str, str, bool]:
                 if idx < (i2 - i1):
                     left_parts.append(f'<div class="cj-diff-line cj-diff-left">- {_esc(left_lines[i1+idx])}</div>')
                 else:
-                    left_parts.append(f'<div class="cj-diff-line cj-diff-blank"> </div>')
+                    left_parts.append('<div class="cj-diff-line cj-diff-blank"> </div>')
                 if idx < (j2 - j1):
                     right_parts.append(f'<div class="cj-diff-line cj-diff-right">+ {_esc(right_lines[j1+idx])}</div>')
                 else:
-                    right_parts.append(f'<div class="cj-diff-line cj-diff-blank"> </div>')
+                    right_parts.append('<div class="cj-diff-line cj-diff-blank"> </div>')
         elif tag == "delete":
             for line in left_lines[i1:i2]:
                 left_parts.append(f'<div class="cj-diff-line cj-diff-remove">- {_esc(line)}</div>')
-                right_parts.append(f'<div class="cj-diff-line cj-diff-blank"> </div>')
+                right_parts.append('<div class="cj-diff-line cj-diff-blank"> </div>')
         elif tag == "insert":
             for line in right_lines[j1:j2]:
-                left_parts.append(f'<div class="cj-diff-line cj-diff-blank"> </div>')
+                left_parts.append('<div class="cj-diff-line cj-diff-blank"> </div>')
                 right_parts.append(f'<div class="cj-diff-line cj-diff-add">+ {_esc(line)}</div>')
 
     wrap = '<div class="cj-code" style="padding:6px 0;">{}</div>'
@@ -1427,5 +1425,5 @@ if MultiAccountOrchestrator is not None:
                     )
                     if error:
                         entry_html += f'<div class="cj-finding-meta" style="color:#f85149;">Error: {_esc(error)}</div>'
-                    entry_html += f'</div></div>'
+                    entry_html += '</div></div>'
                     st.markdown(entry_html, unsafe_allow_html=True)

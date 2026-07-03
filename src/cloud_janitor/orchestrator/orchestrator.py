@@ -19,8 +19,6 @@ from __future__ import annotations
 
 import json
 import logging
-
-logger = logging.getLogger(__name__)
 import os
 import platform
 import re
@@ -32,7 +30,9 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
+
+logger = logging.getLogger(__name__)
 
 
 def _find_bash() -> str:
@@ -73,28 +73,26 @@ def _to_bash_path(p: Path) -> str:
         return f"/{drive_letter}{posix[2:]}"
     return posix
 
-from cloud_janitor.agents.approval_gate import (
+from cloud_janitor.agents.approval_gate import (  # noqa: E402
     ApprovalGate,
     ApprovalGateStore,
-    parse_approval,
     parse_confirm_rollback,
     parse_rollback,
 )
-from cloud_janitor.agents.anomaly_detector import AnomalyDetector
-from cloud_janitor.agents.audit_logger import AuditLogger
-from cloud_janitor.agents.drift_detector import DriftDetector
-from cloud_janitor.agents.finops_auditor import FinOpsAuditor
-from cloud_janitor.agents.query_interpreter import QueryInterpreter
-from cloud_janitor.agents.reasoning_logger import ReasoningLogger
-from cloud_janitor.agents.remediation_architect import RemediationArchitect, RemediationPlan
-from cloud_janitor.agents.secops_guard import SecOpsGuard
-from cloud_janitor.mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
-from cloud_janitor.agents.savings_tracker import SavingsTracker
-from cloud_janitor.core.paths import (
+from cloud_janitor.agents.anomaly_detector import AnomalyDetector  # noqa: E402
+from cloud_janitor.agents.audit_logger import AuditLogger  # noqa: E402
+from cloud_janitor.agents.drift_detector import DriftDetector  # noqa: E402
+from cloud_janitor.agents.finops_auditor import FinOpsAuditor  # noqa: E402
+from cloud_janitor.agents.query_interpreter import QueryInterpreter  # noqa: E402
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger  # noqa: E402
+from cloud_janitor.agents.remediation_architect import RemediationArchitect, RemediationPlan  # noqa: E402
+from cloud_janitor.agents.secops_guard import SecOpsGuard  # noqa: E402
+from cloud_janitor.mcp_server.aws_janitor_mcp import get_cost_data, get_security_data  # noqa: E402
+from cloud_janitor.agents.savings_tracker import SavingsTracker  # noqa: E402
+from cloud_janitor.core.paths import (  # noqa: E402
     PROJECT_ROOT as _CORE_PROJECT_ROOT,
     OUTPUT_DIR as _CORE_OUTPUT_DIR,
     ROLLBACKS_DIR as _CORE_ROLLBACKS_DIR,
-    LOGS_DIR as _CORE_LOGS_DIR,
     FINDINGS_STORE_PATH as _CORE_FINDINGS_STORE_PATH,
     AUDIT_LOG_PATH as _CORE_AUDIT_LOG_PATH,
     REASONING_LOG_PATH as _CORE_REASONING_LOG_PATH,
@@ -103,7 +101,7 @@ from cloud_janitor.core.paths import (
     HOOKS_DIR as _CORE_HOOKS_DIR,
     ensure_output_dirs,
 )
-from cloud_janitor.core.error_telemetry import build_error_record, write_error_record
+from cloud_janitor.core.error_telemetry import build_error_record, write_error_record  # noqa: E402
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")

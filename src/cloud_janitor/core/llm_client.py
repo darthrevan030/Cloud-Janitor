@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 load_dotenv()  # loads .env from project root if present, no-op otherwise
 
-import openai
+import openai  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ def call_llm(client: openai.OpenAI, **kwargs) -> openai.types.chat.ChatCompletio
             )
             time.sleep(delay)
 
-        except openai.APITimeoutError as exc:
+        except openai.APITimeoutError:
             last_error = "timeout"
             if attempt >= _MAX_RETRIES:
                 break

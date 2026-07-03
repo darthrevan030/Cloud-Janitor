@@ -13,12 +13,11 @@ SHALL remain unchanged on disk.
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import given, settings, HealthCheck
 from hypothesis import strategies as st
 
-from cloud_janitor.agents.approval_gate import ApprovalGateStore
 from cloud_janitor.agents.remediation_architect import RemediationPlan
 from cloud_janitor.orchestrator import Orchestrator, RollbackResult
 
@@ -139,7 +138,7 @@ class TestProperty3RollbackFailureErrorPropagation:
                 stderr=stderr_text,
             )
 
-            with patch("subprocess.run", return_value=failed_validate) as mock_run:
+            with patch("subprocess.run", return_value=failed_validate) as _mock_run:
                 result = orch.rollback(f"CONFIRM ROLLBACK {resource_id}")
 
             # --- Assertions ---
@@ -221,7 +220,7 @@ class TestProperty3RollbackFailureErrorPropagation:
                     return failed_apply
                 return successful_validate
 
-            with patch("subprocess.run", side_effect=side_effect) as mock_run:
+            with patch("subprocess.run", side_effect=side_effect) as _mock_run:
                 result = orch.rollback(f"CONFIRM ROLLBACK {resource_id}")
 
             # --- Assertions ---

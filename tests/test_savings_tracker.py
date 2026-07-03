@@ -1,6 +1,5 @@
 """Unit tests for SavingsTracker."""
 import json
-import tempfile
 from pathlib import Path
 
 import pytest

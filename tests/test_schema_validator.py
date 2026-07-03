@@ -1,13 +1,7 @@
 """Tests for agents.schema_validator."""
 
-import pytest
 
 from cloud_janitor.agents.schema_validator import (
-    ALL_VALID_RESOURCE_TYPES,
-    VALID_AGENTS,
-    VALID_CATEGORIES,
-    VALID_RESOURCE_TYPES,
-    VALID_SEVERITIES,
     validate_finding,
     validate_findings_store,
 )

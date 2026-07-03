@@ -483,7 +483,6 @@ class TestResourceTaggerBatchOrder:
                 # Determine the chunk size from call sequence
                 start = call_count[0] * 10
                 end = min(start + 10, num_resources)
-                chunk_size = end - start
                 call_count[0] += 1
 
                 results = []
@@ -547,7 +546,6 @@ class TestResourceTaggerBatchOrder:
             def side_effect_fn(*args, **kwargs):
                 start = call_count[0] * 10
                 end = min(start + 10, num_resources)
-                chunk_size = end - start
                 call_count[0] += 1
 
                 results = [{

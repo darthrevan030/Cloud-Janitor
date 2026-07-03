@@ -19,9 +19,9 @@ a result with validated_paths containing one path per plan, and an empty failure
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import given, settings, HealthCheck
 from hypothesis import strategies as st
 
 from cloud_janitor.agents.remediation_architect import RemediationPlan

@@ -29,7 +29,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from hypothesis import given, settings, assume, HealthCheck
+from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
 os.environ.setdefault("OPENROUTER_API_KEY", "test-key-for-testing")

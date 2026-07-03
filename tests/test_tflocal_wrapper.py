@@ -6,10 +6,8 @@ Validates Requirement 2.6: bin/tflocal dry-run and delegation behavior.
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
-import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 WRAPPER = PROJECT_ROOT / "bin" / "tflocal"

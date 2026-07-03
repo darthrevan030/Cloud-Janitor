@@ -11,8 +11,7 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cloud_janitor.mcp_server.backends.fixture_provider import FixtureProvider

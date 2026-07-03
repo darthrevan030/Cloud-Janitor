@@ -11,17 +11,13 @@ Tests validate behavior per the design spec:
 
 import json
 import subprocess
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from cloud_janitor.orchestrator import (
-    ApprovalResult,
     AuditEntry,
-    AuditResult,
     Orchestrator,
-    RollbackResult,
 )
 
 
@@ -614,7 +610,6 @@ class TestAgentSequencing:
             side_effect=lambda: (call_order.append("secops"), [])[1]
         )
 
-        from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         orch._architect.plan = MagicMock(
             side_effect=lambda: (call_order.append("architect"), [])[1]

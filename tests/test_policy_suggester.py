@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from cloud_janitor.agents.policy_suggester import PolicySuggester, DEFAULT_SUGGESTIONS, VALID_PRIORITIES
+from cloud_janitor.agents.policy_suggester import PolicySuggester, VALID_PRIORITIES
 
 
 # ──────────────────────────────────────────────────────────────────────

@@ -16,11 +16,9 @@ actual behavior.
 import subprocess
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 
-from cloud_janitor.agents.approval_gate import ApprovalGateStore
 from cloud_janitor.agents.remediation_architect import RemediationPlan
 from cloud_janitor.orchestrator import Orchestrator, RollbackResult
 

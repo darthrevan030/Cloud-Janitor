@@ -7,7 +7,6 @@ Validates error classification into exactly one of:
 - "agent_failure" — default fallback for unclassified exceptions
 """
 
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest

@@ -180,7 +180,7 @@ class PolicySuggester:
         if raw_content.startswith("```"):
             lines = raw_content.split("\n")
             # Remove first and last lines (code fences)
-            lines = [l for l in lines if not l.strip().startswith("```")]
+            lines = [line for line in lines if not line.strip().startswith("```")]
             raw_content = "\n".join(lines)
 
         parsed = json.loads(raw_content)
@@ -214,7 +214,7 @@ class PolicySuggester:
             raw_content = raw_content.strip()
             if raw_content.startswith("```"):
                 lines = raw_content.split("\n")
-                lines = [l for l in lines if not l.strip().startswith("```")]
+                lines = [line for line in lines if not line.strip().startswith("```")]
                 raw_content = "\n".join(lines)
 
             parsed = json.loads(raw_content)

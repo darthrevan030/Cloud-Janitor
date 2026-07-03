@@ -8,11 +8,8 @@ Validates:
 - Req 12.5: Deterministic output when LLM is also mocked in fixture mode.
 """
 
-import importlib
 import json
-import os
 import sys
-import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -466,7 +463,7 @@ class TestNoBoto3InFixtureMode:
 
             # Exercise all fixture mode MCP tools
             cost_data = get_cost_data()
-            security_data = get_security_data()
+            security_data = get_security_data()  # noqa: F841
             interpret_query("Find idle resources")
             explain_remediation("sg-123", {}, "resource {}", "resource {}")
             suggest_policies([], [])
