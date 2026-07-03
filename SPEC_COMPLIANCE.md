@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T08:19:43Z
+Generated: 2026-07-03T08:23:34Z
 
-**Summary:** 232 tasks — ✅ 220 done, ⏳ 1 partial, ❌ 11 pending
+**Summary:** 232 tasks — ✅ 221 done, ⏳ 2 partial, ❌ 9 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T08:19:43Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (25/30)
+## Production Readiness (26/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -185,8 +185,8 @@ Generated: 2026-07-03T08:19:43Z
 | 25 | 7.2 Update all source imports to `cloud_janitor.*` paths | ✅ Done | no mapping |
 | 26 | 7.3 Update all test imports to `cloud_janitor.*` paths | ✅ Done | no mapping |
 | 27 | 7.4 Update `pyproject.toml` for src-layout | ✅ Done | no mapping |
-| 28 | 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`) | ❌ Pending | — |
-| 29 | 7.6 Verify package installability and type annotation marker | ❌ Pending | — |
+| 28 | 7.5 Create GitHub Actions CI pipeline (`.github/workflows/ci.yml`) | ✅ Done | no mapping |
+| 29 | 7.6 Verify package installability and type annotation marker | ⏳ Partial | no mapping |
 | 30 | 8. Final checkpoint — Ensure all tests pass | ❌ Pending | — |
 
 ## Provider Agnostic Backend (23/23)
@@ -304,7 +304,7 @@ Generated: 2026-07-03T08:19:43Z
 | LLM Retry Logic | Pending | Exponential backoff, Retry-After respect, max 3 retries |
 | CLI (`cloud-janitor` command) | Pending | No CLI file exists |
 | src-layout Package Structure | Complete | Flat layout currently — src-layout migration deferred to production-readiness Batch 3 |
-| GitHub Actions CI Pipeline | Pending | Lint + type-check + test + build + publish pipeline |
+| GitHub Actions CI Pipeline | Complete | Lint + type-check + test + build + publish pipeline |
 | LocalStack Integration (Docker) | Complete | docker-compose.yml with EC2, ElastiCache, S3, EBS services |
 | `bin/tflocal` Dry-Run Wrapper | Complete | Repo-local wrapper — prints command + exits 0 when JANITOR_DRY_RUN=1 |
 | Session-Isolated File Paths | Deferred | Requirement 14 explicitly deferred to post-hackathon prod-readiness milestone |
