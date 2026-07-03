@@ -1,8 +1,8 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T03:49:35Z
+Generated: 2026-07-03T03:53:47Z
 
-**Summary:** 232 tasks — ✅ 204 done, ⏳ 1 partial, ❌ 27 pending
+**Summary:** 232 tasks — ✅ 205 done, ⏳ 1 partial, ❌ 26 pending
 
 ## Audit Remediation (55/55)
 
@@ -154,7 +154,7 @@ Generated: 2026-07-03T03:49:35Z
 | 46 | 12. Never-raise guarantee validation | ✅ Done | no mapping |
 | 47 | 12.1 Write property test for never-raise guarantee across all agents | ✅ Done | no mapping |
 
-## Production Readiness (9/30)
+## Production Readiness (10/30)
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -169,7 +169,7 @@ Generated: 2026-07-03T03:49:35Z
 | 9 | 3.1 Write unit tests for CLI (`tests/test_cli.py`) | ✅ Done | no mapping |
 | 10 | 3.2 Write unit tests for logging config (`tests/test_logging_config.py`) | ✅ Done | no mapping |
 | 11 | 3.3 Write unit tests for LLM retry logic (`tests/test_llm_retry.py`) | ✅ Done | no mapping |
-| 12 | 3.4 Write unit tests for stub providers (`tests/test_stub_providers.py`) | ❌ Pending | — |
+| 12 | 3.4 Write unit tests for stub providers (`tests/test_stub_providers.py`) | ✅ Done | no mapping |
 | 13 | 3.5 Write unit tests for version logic in `cli.py` (`tests/test_version.py`) | ❌ Pending | — |
 | 14 | 3.6 Write property test for log level configuration mapping | ❌ Pending | — |
 | 15 | 3.7 Write property test for retry on retriable errors | ❌ Pending | — |

@@ -104,7 +104,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Test providers remain instantiable after warning
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-  - [ ] 3.5 Write unit tests for version logic in `cli.py` (`tests/test_version.py`)
+  - [x] 3.5 Write unit tests for version logic in `cli.py` (`tests/test_version.py`)
     - Test the inline `importlib.metadata.version("cloud-janitor")` call returns a string used by `--version`
     - Test fallback to "0.0.0-dev" when `importlib.metadata.version` raises `PackageNotFoundError` (mock `importlib.metadata.version`)
     - Test version string conforms to PEP 440 via `packaging.version.Version()`
