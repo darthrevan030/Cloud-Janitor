@@ -113,7 +113,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - The full `cloud_janitor.__version__` test (Req 9.1, 9.5) is deferred to task 7.6 after src-layout migration
     - _Requirements: 9.2, 9.3, 9.4_
 
-  - [ ] 3.6 Write property test for log level configuration mapping
+  - [x] 3.6 Write property test for log level configuration mapping
     - **Property 1: Log Level Configuration Mapping**
     - Generator: random strings (mix of valid levels in random casing + invalid strings)
     - Assertion: root logger level matches expected mapping; invalid values emit WARNING
