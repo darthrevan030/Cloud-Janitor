@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
 
 import logging
 

@@ -172,7 +172,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Move `app.py` → `src/cloud_janitor/app.py`
     - _Requirements: 3.1, 3.2, 3.4, 10.1_
 
-  - [ ] 7.2 Update all source imports to `cloud_janitor.*` paths
+  - [x] 7.2 Update all source imports to `cloud_janitor.*` paths
     - Rewrite imports in all moved source modules to use `cloud_janitor.` prefix
     - Update `cli.py` imports: `from cloud_janitor.orchestrator import Orchestrator`, etc.
     - Update agent imports to reference `cloud_janitor.core.llm_client`

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from filelock import FileLock, Timeout
 
-from core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
 
 import logging
 

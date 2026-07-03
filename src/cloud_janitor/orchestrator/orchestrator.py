@@ -73,24 +73,24 @@ def _to_bash_path(p: Path) -> str:
         return f"/{drive_letter}{posix[2:]}"
     return posix
 
-from agents.approval_gate import (
+from cloud_janitor.agents.approval_gate import (
     ApprovalGate,
     ApprovalGateStore,
     parse_approval,
     parse_confirm_rollback,
     parse_rollback,
 )
-from agents.anomaly_detector import AnomalyDetector
-from agents.audit_logger import AuditLogger
-from agents.drift_detector import DriftDetector
-from agents.finops_auditor import FinOpsAuditor
-from agents.query_interpreter import QueryInterpreter
-from agents.reasoning_logger import ReasoningLogger
-from agents.remediation_architect import RemediationArchitect, RemediationPlan
-from agents.secops_guard import SecOpsGuard
-from mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
-from agents.savings_tracker import SavingsTracker
-from core.paths import (
+from cloud_janitor.agents.anomaly_detector import AnomalyDetector
+from cloud_janitor.agents.audit_logger import AuditLogger
+from cloud_janitor.agents.drift_detector import DriftDetector
+from cloud_janitor.agents.finops_auditor import FinOpsAuditor
+from cloud_janitor.agents.query_interpreter import QueryInterpreter
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger
+from cloud_janitor.agents.remediation_architect import RemediationArchitect, RemediationPlan
+from cloud_janitor.agents.secops_guard import SecOpsGuard
+from cloud_janitor.mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
+from cloud_janitor.agents.savings_tracker import SavingsTracker
+from cloud_janitor.core.paths import (
     PROJECT_ROOT as _CORE_PROJECT_ROOT,
     OUTPUT_DIR as _CORE_OUTPUT_DIR,
     ROLLBACKS_DIR as _CORE_ROLLBACKS_DIR,
@@ -103,7 +103,7 @@ from core.paths import (
     HOOKS_DIR as _CORE_HOOKS_DIR,
     ensure_output_dirs,
 )
-from core.error_telemetry import build_error_record, write_error_record
+from cloud_janitor.core.error_telemetry import build_error_record, write_error_record
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")

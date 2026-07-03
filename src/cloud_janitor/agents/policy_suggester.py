@@ -7,7 +7,7 @@ relevant security and cost checks the user may have missed.
 import json
 import sys
 
-from core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
 
 import logging
 

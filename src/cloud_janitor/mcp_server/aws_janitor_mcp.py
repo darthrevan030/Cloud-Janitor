@@ -14,13 +14,13 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from mcp_server.backends import CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
-from agents.query_interpreter import QueryInterpreter
-from agents.explainer import RemediationExplainer
-from agents.policy_suggester import PolicySuggester
-from agents.tagger import ResourceTagger
-from agents.anomaly_detector import AnomalyDetector
-from agents.incident_policy_generator import IncidentPolicyGenerator
+from cloud_janitor.mcp_server.backends import CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
+from cloud_janitor.agents.query_interpreter import QueryInterpreter
+from cloud_janitor.agents.explainer import RemediationExplainer
+from cloud_janitor.agents.policy_suggester import PolicySuggester
+from cloud_janitor.agents.tagger import ResourceTagger
+from cloud_janitor.agents.anomaly_detector import AnomalyDetector
+from cloud_janitor.agents.incident_policy_generator import IncidentPolicyGenerator
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 

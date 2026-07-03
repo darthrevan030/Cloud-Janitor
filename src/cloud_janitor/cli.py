@@ -10,7 +10,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 import click
 
-from core.logging_config import configure_logging
+from cloud_janitor.core.logging_config import configure_logging
 
 try:
     _version = version("cloud-janitor")
@@ -32,7 +32,7 @@ def main() -> None:
 @click.option("--secops", is_flag=True, help="Run only SecOps guard")
 def scan(finops: bool, secops: bool) -> None:
     """Execute the audit pipeline and print a findings summary."""
-    from orchestrator import Orchestrator
+    from cloud_janitor.orchestrator import Orchestrator
 
     orch = Orchestrator()
 
@@ -63,7 +63,7 @@ def scan(finops: bool, secops: bool) -> None:
 @click.argument("resource_id")
 def approve(resource_id: str) -> None:
     """Approve a remediation plan for a specific resource."""
-    from orchestrator import Orchestrator
+    from cloud_janitor.orchestrator import Orchestrator
 
     orch = Orchestrator()
 
@@ -85,7 +85,7 @@ def approve(resource_id: str) -> None:
 @click.argument("resource_id")
 def rollback(resource_id: str) -> None:
     """Rollback a previously applied remediation."""
-    from orchestrator import Orchestrator
+    from cloud_janitor.orchestrator import Orchestrator
 
     orch = Orchestrator()
 
@@ -132,6 +132,6 @@ def dashboard() -> None:
 @main.command()
 def mcp() -> None:
     """Start the MCP server on stdio transport."""
-    from mcp_server.aws_janitor_mcp import mcp as mcp_server
+    from cloud_janitor.mcp_server.aws_janitor_mcp import mcp as mcp_server
 
     mcp_server.run(transport="stdio")

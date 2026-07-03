@@ -20,9 +20,9 @@ from packaging.version import Version
 
 import streamlit as st
 
-from orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
-from core.logging_config import configure_logging
-from core.paths import (
+from cloud_janitor.orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
+from cloud_janitor.core.logging_config import configure_logging
+from cloud_janitor.core.paths import (
     FINDINGS_STORE_PATH,
     ROLLBACKS_DIR,
     AUDIT_LOG_PATH,

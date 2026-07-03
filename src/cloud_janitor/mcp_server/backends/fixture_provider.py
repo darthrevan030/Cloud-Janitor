@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from mcp_server.backends import CloudProvider
+from cloud_janitor.mcp_server.backends import CloudProvider
 
 
 class FixtureProvider(CloudProvider):

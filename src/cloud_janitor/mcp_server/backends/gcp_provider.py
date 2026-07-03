@@ -7,7 +7,7 @@ Google Cloud Platform integration. All methods raise NotImplementedError.
 import logging
 from typing import Optional
 
-from mcp_server.backends import CloudProvider
+from cloud_janitor.mcp_server.backends import CloudProvider
 
 logger = logging.getLogger(__name__)
 

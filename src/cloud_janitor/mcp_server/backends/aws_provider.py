@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from mcp_server.backends import CloudProvider
+from cloud_janitor.mcp_server.backends import CloudProvider
 
 
 def _make_client(service: str, region: Optional[str]):

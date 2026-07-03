@@ -13,16 +13,14 @@ Usage:
 from __future__ import annotations
 
 import json
-import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 # Import MCP tool directly (same process, no network transport needed)
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from mcp_server.aws_janitor_mcp import get_cost_data
+from cloud_janitor.mcp_server.aws_janitor_mcp import get_cost_data
 
-from agents.reasoning_logger import ReasoningLogger
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger
 
 import logging
 

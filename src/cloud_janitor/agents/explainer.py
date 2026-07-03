@@ -10,7 +10,7 @@ Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 1.2, 1.8, 1.9, 1.11
 import json
 import sys
 
-from core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
 
 import logging
 

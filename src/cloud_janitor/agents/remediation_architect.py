@@ -21,10 +21,9 @@ from pathlib import Path
 from typing import Optional
 
 # Import MCP tools directly (same process, no network transport needed)
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from mcp_server.aws_janitor_mcp import check_dependencies, validate_hcl
+from cloud_janitor.mcp_server.aws_janitor_mcp import check_dependencies, validate_hcl
 
-from agents.reasoning_logger import ReasoningLogger
+from cloud_janitor.agents.reasoning_logger import ReasoningLogger
 
 import logging
 
