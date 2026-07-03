@@ -85,7 +85,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Test log format includes timestamp, level, name, message
     - _Requirements: 7.2, 7.3, 7.4, 7.6_
 
-  - [ ] 3.3 Write unit tests for LLM retry logic (`tests/test_llm_retry.py`)
+  - [x] 3.3 Write unit tests for LLM retry logic (`tests/test_llm_retry.py`)
     - Test successful call on first attempt (no retry)
     - Test retry on 429, 500, 502, 503, 504 — verify correct attempt count
     - Test retry on network timeout
