@@ -26,7 +26,7 @@ APPROVAL_GATES_PATH = OUTPUT_DIR / "approval_gates.json"
 SAVINGS_LEDGER_PATH = OUTPUT_DIR / "savings_ledger.json"
 
 # Hooks directory — shipped as package data inside cloud_janitor.hooks
-from cloud_janitor.hooks import HOOKS_DIR  # noqa: E402
+from cloud_janitor.hooks import HOOKS_DIR  # noqa: E402, F401
 
 # Required directories (created at Orchestrator init)
 REQUIRED_DIRS = [OUTPUT_DIR, ROLLBACKS_DIR, REMEDIATIONS_DIR, LOGS_DIR, POLICIES_DIR]
