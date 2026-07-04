@@ -12,7 +12,7 @@ from pathlib import Path
 
 from filelock import FileLock, Timeout
 
-from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 import logging
 
@@ -212,12 +212,12 @@ class DriftDetector:
             return []
 
     def _finding_keys(self, findings: list[dict]) -> set[tuple[str, str]]:
-        """Extract (resource_id, check_type) pairs from a findings list."""
+        """Extract (resource_id, check_type|category) pairs from a findings list."""
         keys = set()
         for f in findings:
             if isinstance(f, dict):
                 rid = f.get("resource_id", "")
-                ct = f.get("check_type", "")
+                ct = f.get("check_type", "") or f.get("category", "")
                 if rid and ct:
                     keys.add((rid, ct))
         return keys
@@ -267,7 +267,8 @@ class DriftDetector:
             )
 
             client = get_client()
-            response = client.chat.completions.create(
+            response = call_llm(
+                client,
                 model=self._model,
                 max_tokens=256,
                 messages=[
