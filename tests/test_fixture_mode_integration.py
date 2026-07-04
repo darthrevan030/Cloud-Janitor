@@ -363,7 +363,7 @@ class TestMultiAccountFixtureMode:
         from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 
         orch = MultiAccountOrchestrator(
-            accounts_path=PROJECT_ROOT / "accounts.json",
+            accounts_path=PROJECT_ROOT / "accounts.example.json",
         )
         result = orch.run_all()
 
@@ -381,7 +381,7 @@ class TestMultiAccountFixtureMode:
 
     @patch("cloud_janitor.core.llm_client.get_client")
     def test_multi_account_scans_all_accounts(self, mock_get_client, fixture_backend_env):
-        """All 3 fixture accounts should be scanned."""
+        """All accounts in accounts.example.json should be scanned."""
         mock_get_client.return_value = _make_mock_llm_client()
 
         from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator

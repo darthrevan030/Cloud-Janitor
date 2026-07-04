@@ -1367,11 +1367,11 @@ if MultiAccountOrchestrator is not None:
         if st.button("Run Multi-Account Audit", key="btn_multi_account", use_container_width=True):
             _accounts_file = PROJECT_ROOT / "accounts.json"
             if not _accounts_file.exists():
-                _example_file = PROJECT_ROOT / "accounts.json.example"
+                _example_file = PROJECT_ROOT / "accounts.example.json"
                 if _example_file.exists():
                     st.error(
                         "**accounts.json not found.** "
-                        "Copy `accounts.json.example` to `accounts.json` and fill in your account details."
+                        "Copy `accounts.example.json` to `accounts.json` and fill in your account details."
                     )
                 else:
                     st.error(

@@ -839,7 +839,7 @@ class Orchestrator:
             self._log_action("execution", resource_id, "success", "Remediation executed (dry-run)")
             self._run_post_remediation_hook(resource_id, "remediate", "success")
             try:
-                self._savings_tracker.record_run()
+                self._savings_tracker.record_run(resources_remediated=[resource_id])
             except Exception:
                 pass
             return ApprovalResult(success=True, resource_id=resource_id)

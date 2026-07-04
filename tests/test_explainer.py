@@ -182,8 +182,8 @@ class TestSuccessfulExplanation:
             assert len(value) > 0, f"{key} is empty"
 
     @patch("cloud_janitor.agents.explainer.get_client")
-    def test_max_tokens_is_400(self, mock_get_client):
-        """Requirement 3.5: max_tokens=400 on LLM call."""
+    def test_max_tokens_is_1024(self, mock_get_client):
+        """Requirement 3.5: max_tokens=1024 on LLM call."""
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
         mock_client.chat.completions.create.return_value = _make_mock_response(
@@ -194,7 +194,7 @@ class TestSuccessfulExplanation:
         explainer.explain("sg-12345", SAMPLE_FINDING, SAMPLE_REMEDIATION_HCL, SAMPLE_ROLLBACK_HCL)
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
-        assert call_kwargs["max_tokens"] == 400
+        assert call_kwargs["max_tokens"] == 1024
 
     @patch("cloud_janitor.agents.explainer.get_client")
     def test_uses_default_model(self, mock_get_client):
