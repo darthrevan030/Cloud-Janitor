@@ -20,6 +20,8 @@ venv/
 *.tfstate.backup
 .terraform.lock.hcl
 *.tfplan
+scripts/tf-provider-cache/.terraform/
+scripts/tf-provider-cache/.terraform.lock.hcl
 
 # Runtime outputs (repo-root output/)
 output/logs/audit.log

@@ -391,19 +391,27 @@ class RemediationArchitect:
         )
 
     def _remediation_elasticache_waste(self, finding: dict) -> str:
-        """ElastiCache waste: snapshot then delete."""
+        """ElastiCache waste: snapshot then delete via local-exec.
+
+        Note: There is no aws_elasticache_snapshot resource in Terraform.
+        We use null_resource + local-exec to create the snapshot and delete
+        the cluster via AWS CLI, with depends_on to enforce ordering.
+        """
         resource_id = finding["resource_id"]
         safe_id = _sanitize_id(resource_id)
 
         return (
             f'# Remediation: ElastiCache {resource_id} — snapshot then delete\n'
-            f'resource "aws_elasticache_snapshot" "pre_remediation_{safe_id}" {{\n'
-            f'  cluster_id       = "{resource_id}"\n'
-            f'  snapshot_name    = "pre-remediation-{resource_id}"\n'
+            f'resource "null_resource" "snapshot_{safe_id}" {{\n'
+            f'  provisioner "local-exec" {{\n'
+            f'    command = "aws elasticache create-snapshot --cache-cluster-id {resource_id} --snapshot-name pre-remediation-{resource_id}"\n'
+            f'  }}\n'
+            f'\n'
+            f'{self._tags_block(resource_id)}\n'
             f'}}\n'
             f'\n'
             f'resource "null_resource" "destroy_{safe_id}" {{\n'
-            f'  depends_on = [aws_elasticache_snapshot.pre_remediation_{safe_id}]\n'
+            f'  depends_on = [null_resource.snapshot_{safe_id}]\n'
             f'\n'
             f'  provisioner "local-exec" {{\n'
             f'    command = "aws elasticache delete-cache-cluster --cache-cluster-id {resource_id} --final-snapshot-identifier final-{resource_id}"\n'
@@ -431,7 +439,7 @@ class RemediationArchitect:
             f'  engine_version       = "{engine_version}"\n'
             f'  node_type            = "{node_type}"\n'
             f'  num_cache_nodes      = {num_nodes}\n'
-            f'  snapshot_name        = aws_elasticache_snapshot.pre_remediation_{safe_id}.snapshot_name\n'
+            f'  snapshot_name        = "pre-remediation-{resource_id}"\n'
             f'\n'
             f'{self._tags_block(resource_id)}\n'
             f'}}'

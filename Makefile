@@ -1,4 +1,4 @@
-.PHONY: demo demo-live seed clean
+.PHONY: demo demo-live seed clean tf-init
 
 # Community edition — fixture-based scan, LocalStack for apply only
 # Works without a LocalStack Pro token. ElastiCache apply won't work but everything else does.
@@ -26,7 +26,8 @@ demo:
 # Live mode — full end-to-end against LocalStack Pro (no fixtures)
 # Scan uses boto3 against seeded LocalStack resources, apply uses tflocal
 # Requires LOCALSTACK_AUTH_TOKEN in .env
-demo-live:
+# First run downloads the AWS provider (~300MB) — subsequent runs are instant.
+demo-live: tf-init
 	docker-compose -f docker-compose.yml -f docker-compose.pro.yml up -d
 	@echo "Waiting for LocalStack Pro..."
 	@i=0; while [ $$i -lt 30 ]; do \
@@ -44,8 +45,13 @@ demo-live:
 	@rm -f output/rollbacks/*.tf
 	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
 	@rm -f findings_store.json findings_store_*.json
-	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 JANITOR_DRY_RUN=1 uv run python scripts/seed_localstack.py
-	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 JANITOR_DRY_RUN=1 uv run cloud-janitor dashboard
+	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 uv run python scripts/seed_localstack.py
+	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 uv run cloud-janitor dashboard
+
+# Pre-download the Terraform AWS provider (only downloads if not already cached)
+tf-init:
+	@echo "Ensuring Terraform AWS provider is cached..."
+	@cd scripts/tf-provider-cache && terraform init -input=false -backend=false > /dev/null 2>&1 && echo "  ✓ AWS provider ready" || echo "  ⚠ terraform not found — approve will download provider on first use"
 
 # Seed LocalStack with demo resources (run after container is healthy)
 seed:

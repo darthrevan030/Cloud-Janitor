@@ -132,14 +132,21 @@ _REDACT_PATTERNS = [
 
 
 def _redact(text: str) -> str:
-    """Redact sensitive patterns from subprocess output before logging.
+    """Redact sensitive patterns and strip ANSI escape codes from subprocess output.
 
     Replaces AWS account IDs, ARNs, access keys, VPC/subnet IDs, and
-    API keys with [REDACTED] placeholders.
+    API keys with [REDACTED] placeholders. Also removes terminal color codes
+    so error messages are readable in logs and UI.
     """
+    # Strip ANSI escape sequences (color codes, cursor movement, etc.)
+    text = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
+    text = re.sub(r"\x1b\[?[0-9;]*[a-zA-Z]", "", text)
+    # Strip other common unicode box-drawing artifacts from terraform output
+    text = re.sub(r"[╷╵│╶]", "", text)
+
     for pattern in _REDACT_PATTERNS:
         text = pattern.sub("[REDACTED]", text)
-    return text
+    return text.strip()
 
 
 def _build_subprocess_env(kind: str) -> dict[str, str]:
@@ -807,6 +814,16 @@ class Orchestrator:
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
 
+        # Dry-run mode: skip terraform execution entirely (demo/dev convenience)
+        if os.environ.get("JANITOR_DRY_RUN") == "1":
+            self._log_action("execution", resource_id, "success", "Remediation executed (dry-run)")
+            self._run_post_remediation_hook(resource_id, "remediate", "success")
+            try:
+                self._savings_tracker.record_run()
+            except Exception:
+                pass
+            return ApprovalResult(success=True, resource_id=resource_id)
+
         # Isolate the approved resource's HCL into a temporary working directory
         # so terraform apply only affects the approved resource, not all resources.
         import tempfile
@@ -821,6 +838,56 @@ class Orchestrator:
                     success=False,
                     error="No remediation HCL available for this resource",
                     resource_id=resource_id,
+                )
+
+            # Inject provider config so terraform can connect to LocalStack or AWS
+            endpoint_url = os.environ.get("AWS_ENDPOINT_URL", "")
+            is_localstack = "localhost" in endpoint_url or "127.0.0.1" in endpoint_url
+            if is_localstack:
+                (apply_dir / "providers.tf").write_text(
+                    'terraform {\n'
+                    '  required_providers {\n'
+                    '    aws = {\n'
+                    '      source  = "hashicorp/aws"\n'
+                    '      version = ">= 4.0"\n'
+                    '    }\n'
+                    '  }\n'
+                    '}\n\n'
+                    'provider "aws" {\n'
+                    '  access_key                  = "test"\n'
+                    '  secret_key                  = "test"\n'
+                    '  skip_credentials_validation = true\n'
+                    '  skip_metadata_api_check     = true\n'
+                    '  skip_requesting_account_id  = true\n'
+                    f'  region                      = "{os.environ.get("AWS_DEFAULT_REGION", "us-east-1")}"\n'
+                    '\n'
+                    '  endpoints {\n'
+                    f'    ec2         = "{endpoint_url}"\n'
+                    f'    s3          = "{endpoint_url}"\n'
+                    f'    elasticache = "{endpoint_url}"\n'
+                    f'    iam         = "{endpoint_url}"\n'
+                    f'    sts         = "{endpoint_url}"\n'
+                    '  }\n'
+                    '}\n\n'
+                    'variable "environment" {\n'
+                    '  default = "dev"\n'
+                    '}\n',
+                    encoding="utf-8",
+                )
+            else:
+                (apply_dir / "providers.tf").write_text(
+                    'terraform {\n'
+                    '  required_providers {\n'
+                    '    aws = {\n'
+                    '      source  = "hashicorp/aws"\n'
+                    '      version = ">= 4.0"\n'
+                    '    }\n'
+                    '  }\n'
+                    '}\n\n'
+                    'variable "environment" {\n'
+                    '  default = "dev"\n'
+                    '}\n',
+                    encoding="utf-8",
                 )
 
             # Initialize the working directory before apply.

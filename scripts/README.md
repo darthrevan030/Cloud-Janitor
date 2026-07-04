@@ -36,6 +36,12 @@ Modular seed scenario files. Each file creates AWS resources in LocalStack for a
 
 Resources created in LocalStack are ephemeral — they disappear when the container stops. No cleanup needed.
 
+## `tf-provider-cache/`
+
+Minimal Terraform config that declares the AWS provider. Used by `make tf-init` (called automatically by `make demo-live`) to pre-download the ~300MB AWS provider plugin on first run. Subsequent runs are instant (cached in `.terraform/` inside this directory).
+
+The `.terraform/` subdirectory is gitignored.
+
 ## `generate_spec_compliance.py`
 
 Reads `.kiro/specs/**/tasks.md`, parses task checkboxes, verifies file artifacts exist, and outputs `SPEC_COMPLIANCE.md` at the project root.
