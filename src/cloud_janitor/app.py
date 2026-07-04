@@ -22,6 +22,7 @@ from cloud_janitor.orchestrator import Orchestrator
 from cloud_janitor.core.logging_config import configure_logging
 from cloud_janitor.core.paths import (
     FINDINGS_STORE_PATH,
+    REMEDIATIONS_DIR,
     ROLLBACKS_DIR,
     AUDIT_LOG_PATH,
     REASONING_LOG_PATH,
@@ -601,7 +602,11 @@ def load_findings() -> list[dict]:
         return []
 
 
-def load_remediation_hcl() -> str:
+def load_remediation_hcl(resource_id: str | None = None) -> str:
+    if resource_id:
+        per_resource_path = REMEDIATIONS_DIR / f"{resource_id}.tf"
+        if per_resource_path.exists():
+            return per_resource_path.read_text(encoding="utf-8", errors="replace")
     if not REMEDIATION_PATH.exists():
         return ""
     return REMEDIATION_PATH.read_text(encoding="utf-8", errors="replace")
@@ -964,12 +969,12 @@ with top_right:
 with bottom_left:
     st.markdown('<div class="cj-panel"><div class="cj-panel-title">Remediation vs Rollback</div>', unsafe_allow_html=True)
 
-    remediation_hcl = load_remediation_hcl()
     rollback_files = [f for f in ROLLBACKS_DIR.glob("*.tf") if f.stem != ".gitkeep"]
     resource_ids = [f.stem for f in rollback_files]
 
     if resource_ids:
         selected_diff_resource = st.selectbox("Resource", options=resource_ids, key="diff_resource_select", label_visibility="collapsed")
+        remediation_hcl = load_remediation_hcl(selected_diff_resource)
         rollback_hcl = load_rollback_hcl(selected_diff_resource)
         left_html, right_html, is_identical = render_diff_html(remediation_hcl, rollback_hcl)
 
@@ -984,7 +989,8 @@ with bottom_left:
             with dc_right:
                 st.markdown('<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#58a6ff;margin-bottom:4px;">ROLLBACK</div>', unsafe_allow_html=True)
                 st.markdown(right_html, unsafe_allow_html=True)
-    elif remediation_hcl:
+    elif load_remediation_hcl():
+        remediation_hcl = load_remediation_hcl()
         st.markdown(f'<div class="cj-code">{_esc(remediation_hcl)}</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div style="color:#8b949e;font-family:\'IBM Plex Mono\',monospace;font-size:0.82rem;padding:8px 0;">No remediation plan yet.</div>', unsafe_allow_html=True)
@@ -1155,7 +1161,7 @@ if audit_result is not None and audit_result.plans and RemediationExplainer is n
                             finding = f
                             break
 
-                remediation_hcl = load_remediation_hcl()
+                remediation_hcl = load_remediation_hcl(rid)
                 rollback_hcl = load_rollback_hcl(rid)
 
                 if remediation_hcl.strip() and rollback_hcl.strip():

@@ -93,7 +93,7 @@ Cloud Janitor runs a multi-agent pipeline in strict sequence:
 
 1. **FinOps Auditor** scans for idle/orphaned resources and writes `findings_store.json`.
 2. **SecOps Guard** appends security findings to the same store.
-3. **Remediation Architect** reads all findings, checks dependencies, and generates `output/remediation.tf` + per-resource rollback HCL in `rollbacks/`.
+3. **Remediation Architect** reads all findings, checks dependencies, and generates `output/remediation.tf` + per-resource HCL in `remediations/` and `rollbacks/`.
 4. **AI agents** explain the findings, detect anomalies, suggest follow-up policies, and track drift.
 5. **Approval Gate** requires exact typed approval (`APPROVE <resource-id>`) before any change executes. Three failed attempts lock the gate.
 6. On approval, `tflocal apply` executes against LocalStack. Rollback is a two-step process: `ROLLBACK <id>` then `CONFIRM ROLLBACK <id>`.
@@ -156,7 +156,8 @@ Generates Terraform HCL to fix findings, plus rollback HCL for every change.
 **Output files:**
 
 - `output/remediation.tf` — combined HCL for all unblocked findings (overwritten each run)
-- `rollbacks/<resource_id>.tf` — one file per resource
+- `remediations/<resource_id>.tf` — one remediation file per resource
+- `rollbacks/<resource_id>.tf` — one rollback file per resource
 
 ---
 
@@ -681,8 +682,9 @@ cloud-janitor/
 ├── output/
 │   ├── logs/                        # audit.log, scheduler.log, agent_reasoning.log
 │   ├── policies/                    # Incident-generated policy JSON files
+│   ├── remediations/                # Per-resource remediation HCL
 │   ├── rollbacks/                   # Per-resource rollback HCL
-│   └── remediation.tf               # Auto-generated (overwritten each scan)
+│   └── remediation.tf               # Combined HCL (overwritten each scan)
 ├── scripts/
 │   ├── seed_localstack.py           # Pre-seed LocalStack with demo resources (boto3, no CLI needed)
 │   ├── seeds/                       # Legacy bash seed scenarios (optional)

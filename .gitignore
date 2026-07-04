@@ -37,6 +37,8 @@ output/logs/agent_reasoning.log
 agent_reasoning.log
 output/rollbacks/*
 !output/rollbacks/.gitkeep
+output/remediations/*
+!output/remediations/.gitkeep
 output/policies/*.json
 output/remediation.tf
 audit.log

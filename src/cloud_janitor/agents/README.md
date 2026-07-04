@@ -71,6 +71,7 @@ Cloud Janitor's agent pipeline detects waste and security issues, generates Terr
 **Output files:**
 
 - `output/remediation.tf` — combined remediation HCL for all unblocked findings (overwritten each run)
+- `output/remediations/<resource_id>.tf` — one remediation file per resource (used by diff view)
 - `output/rollbacks/<resource_id>.tf` — one rollback file per resource
 
 **HCL generation rules:**

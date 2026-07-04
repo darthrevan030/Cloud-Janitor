@@ -14,6 +14,7 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 
 # Subdirectories
 ROLLBACKS_DIR = OUTPUT_DIR / "rollbacks"
+REMEDIATIONS_DIR = OUTPUT_DIR / "remediations"
 LOGS_DIR = OUTPUT_DIR / "logs"
 POLICIES_DIR = OUTPUT_DIR / "policies"
 
@@ -28,7 +29,7 @@ SAVINGS_LEDGER_PATH = OUTPUT_DIR / "savings_ledger.json"
 HOOKS_DIR = PROJECT_ROOT / "hooks"
 
 # Required directories (created at Orchestrator init)
-REQUIRED_DIRS = [OUTPUT_DIR, ROLLBACKS_DIR, LOGS_DIR, POLICIES_DIR]
+REQUIRED_DIRS = [OUTPUT_DIR, ROLLBACKS_DIR, REMEDIATIONS_DIR, LOGS_DIR, POLICIES_DIR]
 
 
 def ensure_output_dirs() -> None:

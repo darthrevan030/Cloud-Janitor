@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 # Project root for output files
-from cloud_janitor.core.paths import FINDINGS_STORE_PATH, OUTPUT_DIR, ROLLBACKS_DIR  # noqa: E402
+from cloud_janitor.core.paths import FINDINGS_STORE_PATH, OUTPUT_DIR, REMEDIATIONS_DIR, ROLLBACKS_DIR  # noqa: E402
 
 
 def _sanitize_id(resource_id: str) -> str:
@@ -86,11 +86,13 @@ class RemediationArchitect:
         findings_store_path: Path | None = None,
         output_dir: Path | None = None,
         rollbacks_dir: Path | None = None,
+        remediations_dir: Path | None = None,
         reasoning_logger: ReasoningLogger | None = None,
     ):
         self.findings_store_path = findings_store_path or FINDINGS_STORE_PATH
         self.output_dir = output_dir or OUTPUT_DIR
         self.rollbacks_dir = rollbacks_dir or ROLLBACKS_DIR
+        self.remediations_dir = remediations_dir or REMEDIATIONS_DIR
         self._logger = reasoning_logger or ReasoningLogger()
 
     def check_resource_dependencies(self, finding: dict) -> DependencyReport:
@@ -202,6 +204,7 @@ class RemediationArchitect:
         # Ensure output directories exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.rollbacks_dir.mkdir(parents=True, exist_ok=True)
+        self.remediations_dir.mkdir(parents=True, exist_ok=True)
 
         plans: list[RemediationPlan] = []
 
@@ -257,6 +260,10 @@ class RemediationArchitect:
             # Step 3: Write individual rollback file
             rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
             rollback_path.write_text(rollback_hcl, encoding="utf-8")
+
+            # Step 3b: Write individual remediation file (per-resource)
+            remediation_path = self.remediations_dir / f"{resource_id}.tf"
+            remediation_path.write_text(remediation_hcl, encoding="utf-8")
 
         # Step 4: Write combined remediation file
         remediation_parts = [p.remediation_hcl for p in plans if p.remediation_hcl]
