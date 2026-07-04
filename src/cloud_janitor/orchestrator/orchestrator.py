@@ -179,9 +179,20 @@ def _build_subprocess_env(kind: str) -> dict[str, str]:
             if var in os.environ:
                 env[var] = os.environ[var]
     elif kind == "hook":
-        # Hooks get nothing beyond PATH and system vars — they must not
-        # have access to API keys or cloud credentials.
-        pass
+        # Pre/post-remediation hooks run terraform validation — they need
+        # AWS credentials and endpoint for tflocal, but never LLM API keys.
+        for var in (
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_SESSION_TOKEN",
+            "AWS_DEFAULT_REGION",
+            "AWS_REGION",
+            "AWS_ENDPOINT_URL",
+            "LOCALSTACK_AUTH_TOKEN",
+            "TF_CMD",
+        ):
+            if var in os.environ:
+                env[var] = os.environ[var]
 
     # Explicitly: OPENROUTER_API_KEY, JANITOR_LLM_API_KEY never passed to children
     return env
@@ -1014,7 +1025,7 @@ class Orchestrator:
                     ],
                     capture_output=True,
                     text=True,
-                    timeout=60,
+                    timeout=180,
                     cwd=str(self.project_root),
                     env=_build_subprocess_env("hook"),
                 )

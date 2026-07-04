@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-04T10:35:45Z
+Generated: 2026-07-04T10:55:02Z
 
 **Summary:** 232 tasks — ✅ 223 done, ⏳ 1 partial, ❌ 8 pending
 
@@ -82,7 +82,7 @@ Generated: 2026-07-04T10:35:45Z
 | 12 | 2. SecOps Guard — calls MCP, appends to findings_store.json | ✅ Done | mcp_server/aws_janitor_mcp.py missing |
 | 13 | 3. Remediation Architect — reads findings, dependency check, generates HCL | ✅ Done | agents/remediation_architect.py missing |
 | 14 | 4. Rollback HCL generation (alongside remediation, not after) | ✅ Done | agents/remediation_architect.py missing |
-| 15 | 5. findings_store.json schema validation | ✅ Done | output/findings_store.json missing |
+| 15 | 5. findings_store.json schema validation | ✅ Done | output/findings_store.json exists |
 | 16 | 1. pre-remediation.sh — terraform validate gate | ✅ Done | agents/remediation_architect.py missing |
 | 17 | 2. post-remediation.sh — audit.log append | ✅ Done | agents/remediation_architect.py missing |
 | 18 | 3. Wire hooks into orchestrator call sequence | ✅ Done | no mapping |
