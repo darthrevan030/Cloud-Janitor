@@ -234,9 +234,9 @@ class MultiAccountOrchestrator:
         )
         # Override the findings store path to isolate per account
         orch.findings_store_path = findings_store_path
-        orch._finops._findings_store_path = findings_store_path  # type: ignore[attr-defined]
-        orch._secops._findings_store_path = findings_store_path  # type: ignore[attr-defined]
-        orch._architect._findings_store_path = findings_store_path  # type: ignore[attr-defined]
+        orch._finops.findings_store_path = findings_store_path  # type: ignore[attr-defined]
+        orch._secops.findings_store_path = findings_store_path  # type: ignore[attr-defined]
+        orch._architect.findings_store_path = findings_store_path  # type: ignore[attr-defined]
 
         # Execute the audit
         result = orch.execute_audit()
