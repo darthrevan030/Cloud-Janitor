@@ -57,14 +57,14 @@ cp accounts.example.json accounts.json
 # 5. Run the demo
 make demo           # Community (free, no token needed)
 # OR
-make demo-pro       # Pro (requires LOCALSTACK_AUTH_TOKEN — full ElastiCache support)
+make demo-live      # Pro (requires LOCALSTACK_AUTH_TOKEN — full end-to-end, no fixtures)
 ```
 
 `make demo` starts a LocalStack Community container (emulates EC2 + S3 at `localhost:4566`), waits for it to be ready, then launches the Streamlit dashboard at **<http://127.0.0.1:8501>** (bound to localhost only for security).
 
-`make demo-pro` uses the Pro image with full ElastiCache emulation — required for the `APPROVE cache-prod-legacy-01` step in the ghost cluster walkthrough.
+`make demo-live` uses the Pro image with full ElastiCache emulation and scans live seeded resources via boto3 — the full end-to-end experience with no fixture files involved.
 
-Click **Execute Audit** to run the full pipeline against fixture data. No AWS account required.
+Click **Run Audit** to run the full pipeline. No AWS account required.
 
 ---
 
@@ -530,11 +530,27 @@ make demo
 # Pro edition (requires LOCALSTACK_AUTH_TOKEN in .env — enables ElastiCache)
 make demo-pro
 
+# Live mode (Pro required) — full end-to-end against LocalStack, no fixtures
+# Scan uses boto3 against seeded LocalStack resources
+make demo-live
+
 # Manually (community)
 docker-compose up -d
 
 # Manually (pro)
 docker-compose -f docker-compose.yml -f docker-compose.pro.yml up -d
+```
+
+### Custom Seed Scenarios
+
+Cloud Janitor seeds LocalStack with demo resources automatically. You can also create custom scenarios to test specific resource configurations:
+
+```bash
+# Copy the template
+cp scripts/seeds/example-custom.sh scripts/seeds/my-test.sh
+# Edit with your resources (use awslocal commands)
+# Run with custom seed
+bash scripts/seed-localstack.sh scripts/seeds/my-test.sh
 ```
 
 ### Verify
@@ -656,7 +672,10 @@ cloud-janitor/
 │   ├── rollbacks/                   # Per-resource rollback HCL
 │   └── remediation.tf               # Auto-generated (overwritten each scan)
 ├── scripts/
-│   ├── seed-localstack.sh           # Pre-seed LocalStack with Ghost Cluster resources
+│   ├── seed-localstack.sh           # Pre-seed LocalStack with demo resources
+│   ├── seeds/                       # Modular seed scenarios
+│   │   ├── ghost-cluster.sh         # Default demo: idle cache + orphaned EBS + open SG
+│   │   └── example-custom.sh       # Template for custom scenarios
 │   ├── git-hooks/post-commit        # Git hook: auto-regen SPEC_COMPLIANCE.md
 │   ├── generate_spec_compliance.py  # Dev tool: spec compliance report
 │   └── setup-hooks.sh               # Install git hooks

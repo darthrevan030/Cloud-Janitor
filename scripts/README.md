@@ -4,20 +4,37 @@ Developer tooling and Git hook sources. None of these run automatically during t
 
 ## `seed-localstack.sh`
 
-Pre-seeds LocalStack with the Ghost Cluster demo resources so that `APPROVE` actually works end-to-end. Creates:
-
-- EBS volume (100GB gp2, unattached) — for the snapshot-then-delete flow
-- VPC + Security Group with port 6379 open to `0.0.0.0/0` — for the CIDR narrowing flow
-- ElastiCache cluster `cache-prod-legacy-01` (Pro only) — for the snapshot-then-delete flow
-- S3 bucket for terraform state
+Pre-seeds LocalStack with AWS resources for demo and testing. Reads from modular seed files in `scripts/seeds/`.
 
 **Usage:**
 
 ```bash
+# Default ghost cluster scenario
 bash scripts/seed-localstack.sh
+
+# Custom scenario
+bash scripts/seed-localstack.sh scripts/seeds/my-scenario.sh
 ```
 
-Called automatically by `make demo` and `make demo-pro` after LocalStack is healthy. Can also be run standalone via `make seed`.
+Called automatically by `make demo`, `make demo-pro`, and `make demo-live` after LocalStack is healthy. Can also be run standalone via `make seed`.
+
+## `seeds/`
+
+Modular seed scenario files. Each file creates AWS resources in LocalStack for a specific test case.
+
+| File | Scenario | Description |
+|------|----------|-------------|
+| `ghost-cluster.sh` | Ghost Cluster (default) | Idle ElastiCache + orphaned EBS + open Redis SG |
+| `example-custom.sh` | Template | Copy this to create your own scenarios |
+
+### Creating a Custom Seed
+
+1. Copy `scripts/seeds/example-custom.sh` to `scripts/seeds/my-scenario.sh`
+2. Add `awslocal` commands to create your resources
+3. Run: `bash scripts/seed-localstack.sh scripts/seeds/my-scenario.sh`
+4. Use `make demo-live` to scan against your seeded resources
+
+Resources created in LocalStack are ephemeral — they disappear when the container stops. No cleanup needed.
 
 ## `generate_spec_compliance.py`
 
