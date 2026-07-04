@@ -1277,13 +1277,25 @@ if audit_result is not None and ResourceTagger is not None:
                 resources_to_tag = []
                 seen_ids: set[str] = set()
                 for f in findings:
-                    rid = f.get("resource_id", "") if isinstance(f, dict) else ""
+                    if not isinstance(f, dict):
+                        continue
+                    rid = f.get("resource_id", "")
                     if rid and rid not in seen_ids:
                         seen_ids.add(rid)
-                        meta = f.get("metadata", {}) if isinstance(f, dict) else {}
+                        meta = f.get("metadata", {})
+                        # Build a meaningful resource_name from available fields.
+                        # metadata.name is best; fall back to title or description
+                        # which often contains the human-readable name.
+                        name = meta.get("name", "")
+                        if not name:
+                            # Extract name from title like "Idle ElastiCache cluster (cache-prod-legacy-01)"
+                            # or description like "Security group sg-prod-redis (sg-xxx) allows..."
+                            title = f.get("title", "")
+                            desc = f.get("description", "")
+                            name = title or desc[:80] or rid
                         resources_to_tag.append({
                             "resource_id": rid,
-                            "resource_name": meta.get("name", rid),
+                            "resource_name": name,
                         })
                 if resources_to_tag:
                     results = tagger.infer_batch(resources_to_tag)
@@ -1294,6 +1306,16 @@ if audit_result is not None and ResourceTagger is not None:
 
         tags_cache = st.session_state.resource_tags_cache
         if tags_cache:
+            # Check if all results are safe defaults (LLM likely unavailable)
+            all_defaults = all(
+                tags.get("confidence", 0.0) == 0.0 and tags.get("env") == "unknown"
+                for tags in tags_cache.values()
+            )
+            if all_defaults:
+                st.warning(
+                    "All tags returned defaults — LLM is likely unavailable. "
+                    "Set `OPENROUTER_API_KEY` in `.env` to enable AI inference."
+                )
             for rid, tags in tags_cache.items():
                 env = _esc(str(tags.get("env", "unknown")))
                 team = _esc(str(tags.get("team", "unknown")))
@@ -1367,11 +1389,11 @@ if IncidentPolicyGenerator is not None:
                     st.session_state.incident_policies = []
                 st.rerun()
 
-        policies = st.session_state.incident_policies
+        policies: list[dict] | None = st.session_state.incident_policies  # type: ignore[no-redef]
         if policies:
             for p in policies:
                 severity = p.get("severity", "medium").upper()
-                title = _esc(p.get("title", p.get("policy_id", "Untitled")))
+                title = _esc(p.get("title", p.get("policy_id", "Untitled")) or "Untitled")
                 description = _esc(p.get("description", ""))
                 check_type = _esc(p.get("check_type", ""))
                 resource_type = _esc(p.get("resource_type", ""))
@@ -1541,9 +1563,9 @@ if MultiAccountOrchestrator is not None:
                 with st.spinner("Running audits across accounts..."):
                     try:
                         multi_orch = MultiAccountOrchestrator()
-                        results = multi_orch.run_all()
-                        st.session_state.multi_account_results = results
-                        st.success(f"Multi-account audit complete — {results.get('accounts_scanned', 0)} account(s) scanned.")
+                        ma_results = multi_orch.run_all()
+                        st.session_state.multi_account_results = ma_results
+                        st.success(f"Multi-account audit complete — {ma_results.get('accounts_scanned', 0)} account(s) scanned.")
                         st.rerun()
                     except Exception as e:
                         render_structured_error(f"Multi-account audit failed: {e}")
@@ -1603,7 +1625,7 @@ if MultiAccountOrchestrator is not None:
                                 if not isinstance(f, dict):
                                     continue
                                 f_severity = str(f.get("severity", "unknown")).upper()
-                                f_title = _esc(f.get("title", f.get("resource_id", "unknown")))
+                                f_title = _esc(f.get("title", f.get("resource_id", "unknown")) or "unknown")
                                 f_resource = _esc(f.get("resource_id", ""))
                                 f_type = _esc(f.get("resource_type", ""))
                                 f_category = _esc(f.get("category", ""))
@@ -1643,7 +1665,7 @@ if MultiAccountOrchestrator is not None:
                             continue
                         st.markdown(f"**{sev}** ({len(items)})")
                         for f in items:
-                            f_title = _esc(f.get("title", f.get("resource_id", "unknown")))
+                            f_title = _esc(f.get("title", f.get("resource_id", "unknown")) or "unknown")
                             f_acct = _esc(f.get("account_id", ""))
                             f_resource = _esc(f.get("resource_id", ""))
                             st.markdown(

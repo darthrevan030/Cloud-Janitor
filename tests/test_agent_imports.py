@@ -22,7 +22,7 @@ import pytest
 
 APP_PY_PATH = Path(__file__).resolve().parent.parent / "src" / "cloud_janitor" / "app.py"
 
-# The 7 Phase B/C agents that must be individually imported
+# The 9 Phase B/C agents that must be individually imported
 EXPECTED_AGENTS = [
     "QueryInterpreter",
     "RemediationExplainer",
@@ -30,6 +30,8 @@ EXPECTED_AGENTS = [
     "AnomalyDetector",
     "DriftDetector",
     "MultiAccountOrchestrator",
+    "ResourceTagger",
+    "IncidentPolicyGenerator",
     "JanitorScheduler",
 ]
 
@@ -41,6 +43,8 @@ AGENT_MODULES = {
     "AnomalyDetector": "cloud_janitor.agents.anomaly_detector",
     "DriftDetector": "cloud_janitor.agents.drift_detector",
     "MultiAccountOrchestrator": "cloud_janitor.agents.multi_account_orchestrator",
+    "ResourceTagger": "cloud_janitor.agents.tagger",
+    "IncidentPolicyGenerator": "cloud_janitor.agents.incident_policy_generator",
     "JanitorScheduler": "scheduler",
 }
 
@@ -223,8 +227,8 @@ class TestIndividualImports:
             "Agent import section must not use importlib for dynamic loading"
         )
 
-    def test_exactly_seven_agents_imported(self):
-        """There must be exactly 7 individual try/except ImportError blocks for agents."""
+    def test_exactly_nine_agents_imported(self):
+        """There must be exactly 9 individual try/except ImportError blocks for agents."""
         source = _read_app_source()
 
         # Count try/except ImportError blocks that import from agent modules
@@ -233,8 +237,8 @@ class TestIndividualImports:
             r"except\s+ImportError:"
         )
         matches = agent_import_pattern.findall(source)
-        assert len(matches) == 7, (
-            f"Expected exactly 7 agent try/except ImportError blocks, found {len(matches)}"
+        assert len(matches) == 9, (
+            f"Expected exactly 9 agent try/except ImportError blocks, found {len(matches)}"
         )
 
 
