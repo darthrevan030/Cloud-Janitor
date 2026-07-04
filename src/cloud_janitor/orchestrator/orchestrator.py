@@ -114,6 +114,78 @@ SCHEMA_VERSION = "1.0.0"
 
 _RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}\Z")
 
+# ── Subprocess environment isolation (L2 fix) ─────────────────────────
+# Never pass the full parent environment to subprocesses. Build a minimal
+# env containing only what each child legitimately needs.
+
+# Regex patterns for sensitive data redaction (L1 fix)
+_REDACT_PATTERNS = [
+    re.compile(r"\b\d{12}\b"),                         # AWS account IDs
+    re.compile(r"arn:aws:[^\s\"']+"),                   # ARNs
+    re.compile(r"AKIA[0-9A-Z]{16}"),                   # AWS access key IDs
+    re.compile(r"ASIA[0-9A-Z]{16}"),                   # AWS temporary key IDs
+    re.compile(r"sk-or-[A-Za-z0-9\-]+"),               # OpenRouter keys
+    re.compile(r"sk-[A-Za-z0-9]{20,}"),                # Generic API keys
+    re.compile(r"vpc-[0-9a-f]+"),                       # VPC IDs
+    re.compile(r"subnet-[0-9a-f]+"),                    # Subnet IDs
+]
+
+
+def _redact(text: str) -> str:
+    """Redact sensitive patterns from subprocess output before logging.
+
+    Replaces AWS account IDs, ARNs, access keys, VPC/subnet IDs, and
+    API keys with [REDACTED] placeholders.
+    """
+    for pattern in _REDACT_PATTERNS:
+        text = pattern.sub("[REDACTED]", text)
+    return text
+
+
+def _build_subprocess_env(kind: str) -> dict[str, str]:
+    """Build a minimal, safe environment for a child process.
+
+    Args:
+        kind: One of "terraform" or "hook". Controls which env vars are passed.
+
+    Returns:
+        A dict suitable for subprocess.run(env=...).
+    """
+    # Start with minimal PATH (cleaned of any sensitive directories)
+    env: dict[str, str] = {}
+
+    # PATH is always needed
+    if "PATH" in os.environ:
+        env["PATH"] = os.environ["PATH"]
+
+    # Windows-specific system vars needed for process execution
+    for var in ("SYSTEMROOT", "TEMP", "TMP", "COMSPEC", "HOMEDRIVE", "HOMEPATH"):
+        if var in os.environ:
+            env[var] = os.environ[var]
+
+    if kind == "terraform":
+        # Terraform needs AWS credentials and region, plus endpoint override
+        for var in (
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_SESSION_TOKEN",
+            "AWS_DEFAULT_REGION",
+            "AWS_REGION",
+            "AWS_ENDPOINT_URL",
+            "LOCALSTACK_AUTH_TOKEN",
+            "TF_LOG",
+            "TF_DATA_DIR",
+        ):
+            if var in os.environ:
+                env[var] = os.environ[var]
+    elif kind == "hook":
+        # Hooks get nothing beyond PATH and system vars — they must not
+        # have access to API keys or cloud credentials.
+        pass
+
+    # Explicitly: OPENROUTER_API_KEY, JANITOR_LLM_API_KEY never passed to children
+    return env
+
 # Schema version for findings_store.json — bump when the schema changes.
 # The orchestrator will warn (not fail) if the store has a newer version than expected.
 FINDINGS_STORE_SCHEMA_VERSION = "1.0.0"
@@ -746,9 +818,10 @@ class Orchestrator:
                 text=True,
                 timeout=120,
                 cwd=str(apply_dir),
+                env=_build_subprocess_env("terraform"),
             )
             if init_result.returncode != 0:
-                error = init_result.stderr.strip() or init_result.stdout.strip()
+                error = _redact(init_result.stderr.strip() or init_result.stdout.strip())
                 self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
                 tf_exc = RuntimeError(f"{self.tf_cmd} init failed: {error}")
                 self._record_error(tf_exc, "Orchestrator", context="tf_apply")
@@ -765,9 +838,10 @@ class Orchestrator:
                 text=True,
                 timeout=120,
                 cwd=str(apply_dir),
+                env=_build_subprocess_env("terraform"),
             )
             if apply_result.returncode != 0:
-                error = apply_result.stderr.strip() or apply_result.stdout.strip()
+                error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
                 self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
                 tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
                 self._record_error(tf_exc, "Orchestrator", context="tf_apply")
@@ -903,7 +977,17 @@ class Orchestrator:
         """
         hook_path = self.hooks_dir / "pre-remediation.sh"
         if not hook_path.exists():
-            return None  # Hook not present, skip
+            # Fail closed: missing hook means validation cannot be confirmed.
+            # Log prominently so operators notice the missing hook.
+            logger.warning(
+                "Pre-remediation hook not found at %s — failing closed. "
+                "Remediation cannot proceed without validation.",
+                hook_path,
+            )
+            return (
+                "Pre-remediation hook missing — validation cannot be confirmed. "
+                "Create hooks/pre-remediation.sh to enable remediation."
+            )
 
         remediation_path = self.output_dir / "remediation.tf"
         if not remediation_path.exists():
@@ -932,10 +1016,11 @@ class Orchestrator:
                     text=True,
                     timeout=60,
                     cwd=str(self.project_root),
+                    env=_build_subprocess_env("hook"),
                 )
 
                 if result.returncode != 0:
-                    error_output = result.stderr.strip() or result.stdout.strip()
+                    error_output = _redact(result.stderr.strip() or result.stdout.strip())
                     return f"Pre-remediation hook failed: {error_output}"
 
         except subprocess.TimeoutExpired:
@@ -976,6 +1061,7 @@ class Orchestrator:
                 text=True,
                 timeout=30,
                 cwd=str(self.project_root),
+                env=_build_subprocess_env("hook"),
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             # Post-remediation hook is non-blocking — log but don't fail
@@ -1026,6 +1112,7 @@ class Orchestrator:
                     text=True,
                     timeout=max(remaining, 1),
                     cwd=str(self.project_root),
+                    env=_build_subprocess_env("hook"),
                 )
             except subprocess.TimeoutExpired:
                 raise TimeoutError(
@@ -1153,8 +1240,10 @@ class Orchestrator:
 
     def _validate_findings_store(self) -> str | None:
         """
-        Validate findings_store.json has entries from both FinOps and SecOps agents
-        and a compatible schema version.
+        Validate findings_store.json exists, is readable, and has a compatible
+        schema version. Both agents must have completed (tracked by the
+        'agents_completed' field), but zero findings from either agent is valid
+        — it means the account is healthy, not that an agent failed to run.
 
         Returns:
             Error string if validation fails, None if valid.
@@ -1173,6 +1262,18 @@ class Orchestrator:
         if schema_error:
             return schema_error
 
+        # Check agent completion markers (preferred) — distinguishes
+        # "agent ran and found nothing" from "agent never ran".
+        agents_completed = set(store.get("agents_completed", []))
+        if agents_completed:
+            if "finops" not in agents_completed:
+                return "findings_store.json: FinOps agent did not complete"
+            if "secops" not in agents_completed:
+                return "findings_store.json: SecOps agent did not complete"
+            return None
+
+        # Fallback for legacy stores without agents_completed:
+        # require at least one finding tagged from each agent.
         findings = store.get("findings", [])
         agents_present = {f.get("agent") for f in findings}
 
@@ -1342,9 +1443,10 @@ class Orchestrator:
             text=True,
             timeout=120,
             cwd=str(self.output_dir),
+            env=_build_subprocess_env("terraform"),
         )
         if init_result.returncode != 0:
-            error = init_result.stderr.strip() or init_result.stdout.strip()
+            error = _redact(init_result.stderr.strip() or init_result.stdout.strip())
             self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
             tf_exc = RuntimeError(f"{self.tf_cmd} init failed: {error}")
             self._record_error(tf_exc, "Orchestrator", context="tf_apply")
@@ -1363,9 +1465,10 @@ class Orchestrator:
             text=True,
             timeout=120,
             cwd=str(self.output_dir),
+            env=_build_subprocess_env("terraform"),
         )
         if apply_result.returncode != 0:
-            error = apply_result.stderr.strip() or apply_result.stdout.strip()
+            error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
             self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
             tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
             self._record_error(tf_exc, "Orchestrator", context="tf_apply")
