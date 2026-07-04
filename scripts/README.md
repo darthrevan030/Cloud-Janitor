@@ -2,6 +2,23 @@
 
 Developer tooling and Git hook sources. None of these run automatically during the pipeline — they're invoked manually or by Git.
 
+## `seed-localstack.sh`
+
+Pre-seeds LocalStack with the Ghost Cluster demo resources so that `APPROVE` actually works end-to-end. Creates:
+
+- EBS volume (100GB gp2, unattached) — for the snapshot-then-delete flow
+- VPC + Security Group with port 6379 open to `0.0.0.0/0` — for the CIDR narrowing flow
+- ElastiCache cluster `cache-prod-legacy-01` (Pro only) — for the snapshot-then-delete flow
+- S3 bucket for terraform state
+
+**Usage:**
+
+```bash
+bash scripts/seed-localstack.sh
+```
+
+Called automatically by `make demo` and `make demo-pro` after LocalStack is healthy. Can also be run standalone via `make seed`.
+
 ## `generate_spec_compliance.py`
 
 Reads `.kiro/specs/**/tasks.md`, parses task checkboxes, verifies file artifacts exist, and outputs `SPEC_COMPLIANCE.md` at the project root.

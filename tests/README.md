@@ -36,7 +36,7 @@ uv run pytest -k "approval"
 | `test_drift_detector.py` | DriftDetector snapshot comparison and LLM narrative generation |
 | `test_explainer.py` | RemediationExplainer plain-English explanations |
 | `test_incident_policy_generator.py` | IncidentPolicyGenerator policy JSON generation |
-| `test_llm_client.py` | Shared LLM client (`core/llm_client.py`): API key handling, base_url, DEFAULT_MODEL |
+| `test_llm_client.py` | Shared LLM client: API key handling, BYO-endpoint (`JANITOR_LLM_BASE_URL`/`JANITOR_LLM_API_KEY`), AI kill switch (`JANITOR_AI_ENABLED`), DEFAULT_MODEL |
 | `test_multi_account_orchestrator.py` | MultiAccountOrchestrator concurrent multi-account auditing |
 | `test_policy_suggester.py` | PolicySuggester LLM-based security policy recommendations |
 | `test_query_interpreter.py` | QueryInterpreter NL-to-structured-params parsing |

@@ -13,6 +13,7 @@ Cloud Custodian shows you what's wrong with a YAML rules engine. Cloud Janitor r
 - [Agents](#agents)
 - [AI Features](#ai-features)
 - [Environment Variables](#environment-variables)
+- [Security Hardening](#security-hardening)
 - [Running Modes](#running-modes)
 - [CLI Commands](#cli-commands)
 - [The Approval Gate](#the-approval-gate)
@@ -35,22 +36,33 @@ Cloud Custodian shows you what's wrong with a YAML rules engine. Cloud Janitor r
 git clone https://github.com/darthrevan030/Cloud-Janitor.git
 cd Cloud-Janitor
 
-# 2. Install the package
-pip install cloud-janitor
+# 2. Install the package (using uv — recommended)
+uv sync
+# Or via pip:
+# pip install cloud-janitor
 
 # For the optional Streamlit dashboard:
 # pip install cloud-janitor[dashboard]
 
 # 3. Set up environment
 cp .env.example .env
-# Open .env and add your OPENROUTER_API_KEY
-# Get a free key at https://openrouter.ai/keys
+# Open .env and add your OPENROUTER_API_KEY (or JANITOR_LLM_API_KEY for BYO-endpoint)
+# Get a free OpenRouter key at https://openrouter.ai/keys
 
-# 4. Run the demo
-make demo
+# 4. (Optional) Set up multi-account config
+cp accounts.example.json accounts.json
+# Edit accounts.json with your real account IDs and role ARNs
+# Note: accounts.json is gitignored — never committed
+
+# 5. Run the demo
+make demo           # Community (free, no token needed)
+# OR
+make demo-pro       # Pro (requires LOCALSTACK_AUTH_TOKEN — full ElastiCache support)
 ```
 
-`make demo` starts a LocalStack container (emulates AWS at `localhost:4566`), waits for it to be ready, then launches the Streamlit dashboard at **<http://localhost:8501>**.
+`make demo` starts a LocalStack Community container (emulates EC2 + S3 at `localhost:4566`), waits for it to be ready, then launches the Streamlit dashboard at **<http://127.0.0.1:8501>** (bound to localhost only for security).
+
+`make demo-pro` uses the Pro image with full ElastiCache emulation — required for the `APPROVE cache-prod-legacy-01` step in the ghost cluster walkthrough.
 
 Click **Execute Audit** to run the full pipeline against fixture data. No AWS account required.
 
@@ -164,9 +176,11 @@ Shared state that passes data between agents.
 
 ```json
 {
+  "schema_version": "1.0.0",
   "scan_id": "uuid-v4",
   "started_at": "ISO-8601 UTC",
   "completed_at": "ISO-8601 UTC or null",
+  "agents_completed": ["finops", "secops"],
   "findings": [
     {
       "id": "uuid-v4",
@@ -192,11 +206,21 @@ Shared state that passes data between agents.
 }
 ```
 
+The `agents_completed` field tracks which agents have successfully run. This distinguishes "agent ran and found nothing" (healthy account) from "agent never ran" (pipeline failure).
+
 ---
 
 ## AI Features
 
-All AI features route through OpenRouter via `src/cloud_janitor/core/llm_client.py`. Set `OPENROUTER_API_KEY` in your `.env` to enable them. Each agent fails gracefully to a safe default — the pipeline never crashes because of an LLM failure.
+All AI features route through a configurable LLM endpoint via `src/cloud_janitor/core/llm_client.py`. By default this is OpenRouter, but enterprises can point to any OpenAI-compatible API (Bedrock, Azure OpenAI, vLLM) using `JANITOR_LLM_BASE_URL`. Each agent fails gracefully to a safe default — the pipeline never crashes because of an LLM failure.
+
+### Privacy Controls
+
+| Mode | Variable | Effect |
+| --- | --- | --- |
+| BYO-endpoint | `JANITOR_LLM_BASE_URL` | Route all calls to your private LLM — zero third-party egress |
+| AI kill switch | `JANITOR_AI_ENABLED=false` | Disable all LLM calls entirely — no network calls made |
+| Strict mode | `JANITOR_PRIVACY_MODE=strict` | Require no-training provider policies; block free-tier models |
 
 ### Natural Language Query Interface
 
@@ -277,7 +301,7 @@ Policies are written to `policies/<policy_id>.json` and are idempotent (same inc
 
 ### Multi-Account Orchestrator
 
-Runs concurrent audits across multiple AWS accounts defined in `accounts.json`, using `ThreadPoolExecutor` with fault isolation per account. Findings are tagged with `account_id` before aggregation.
+Runs concurrent audits across multiple AWS accounts defined in `accounts.json` (copy `accounts.example.json` as a starting template — `accounts.json` is gitignored to prevent leaking real account IDs), using `ThreadPoolExecutor` with fault isolation per account. Findings are tagged with `account_id` before aggregation.
 
 Results are sorted by priority (high → medium → low), then alphabetically within the same priority.
 
@@ -308,13 +332,43 @@ Copy `.env.example` to `.env`:
 cp .env.example .env
 ```
 
+### LLM Configuration
+
 | Variable | Default | Required | Description |
 | --- | --- | --- | --- |
 | `OPENROUTER_API_KEY` | — | Yes (for AI) | API key for OpenRouter. Get one free at <https://openrouter.ai/keys> |
+| `JANITOR_LLM_API_KEY` | — | No | Override API key (takes precedence over `OPENROUTER_API_KEY`) |
+| `JANITOR_LLM_BASE_URL` | `https://openrouter.ai/api/v1` | No | BYO-endpoint: point to Bedrock, Azure OpenAI, vLLM, or any OpenAI-compatible API |
+| `JANITOR_LLM_MODEL` | `anthropic/claude-haiku-4-5` | No | LLM model string |
+| `JANITOR_AI_ENABLED` | `true` | No | Set to `false` to disable all LLM calls (AI kill switch — zero network egress) |
+| `JANITOR_PRIVACY_MODE` | — | No | Set to `strict` to require no-training provider policies and block free-tier models |
+
+### Infrastructure & Runtime
+
+| Variable | Default | Required | Description |
+| --- | --- | --- | --- |
 | `JANITOR_BACKEND` | `fixture` | No | Cloud provider: `fixture`, `aws`, `gcp`, `azure` |
 | `TF_CMD` | `tflocal` | No | Terraform binary: `tflocal` (LocalStack) or `terraform` (real AWS) |
-| `JANITOR_LLM_MODEL` | `anthropic/claude-haiku-4-5` | No | LLM model string via OpenRouter |
 | `JANITOR_SCHEDULE` | `disabled` | No | Cron expression for scheduled scans (e.g. `0 6 * * *`) |
+| `JANITOR_HOME` | cwd | No | Base directory for all output files |
+| `LOCALSTACK_AUTH_TOKEN` | — | Yes (for demo) | LocalStack auth token for container usage |
+
+### Enterprise Deployment (BYO-Endpoint)
+
+For enterprise environments where no data should leave the network, configure a private LLM endpoint:
+
+```bash
+# Route all AI calls through your own Bedrock proxy
+JANITOR_LLM_BASE_URL=https://your-bedrock-proxy.internal/v1
+JANITOR_LLM_API_KEY=your-internal-key
+JANITOR_LLM_MODEL=anthropic.claude-3-haiku-20240307-v1:0
+```
+
+Or disable AI entirely for a guaranteed zero-egress audit:
+
+```bash
+JANITOR_AI_ENABLED=false
+```
 
 ### Free LLM Models
 
@@ -327,6 +381,37 @@ These models are free on OpenRouter (no credit card needed) and work as drop-in 
 | Gemma 4 26B A4B | `google/gemma-4-26b-a4b-it:free` | Fast, high-volume — tagging, query interpretation |
 
 Free tier may queue under heavy load — the codebase retries automatically or returns safe defaults.
+
+---
+
+## Security Hardening
+
+Cloud Janitor implements defense-in-depth for sensitive operations:
+
+### Subprocess Environment Isolation
+
+All child processes (terraform, hooks) receive a **minimal environment** — never the full parent env. Specifically:
+
+- **Terraform children**: receive only `PATH`, AWS credentials, and `AWS_ENDPOINT_URL`. Never receive `OPENROUTER_API_KEY` or `JANITOR_LLM_API_KEY`.
+- **Hook children**: receive only `PATH` and system vars. No cloud credentials, no API keys.
+
+This prevents secrets from leaking to Terraform providers (which are arbitrary downloaded code) or to hook scripts.
+
+### Output Redaction
+
+Terraform error output is scrubbed before logging or display. Patterns redacted: AWS account IDs, ARNs, access keys (`AKIA*`/`ASIA*`), API keys (`sk-or-*`), VPC IDs, and subnet IDs.
+
+### Pre-Remediation Validation
+
+The pre-remediation hook (`hooks/pre-remediation.sh`) **fails closed** — if the hook script is missing, remediation is blocked. This ensures HCL validation cannot be silently bypassed.
+
+### Dashboard Binding
+
+The Streamlit dashboard binds to `127.0.0.1` only. It is not exposed to the network by default. For remote access, use an authenticated reverse proxy or SSH tunnel.
+
+### Docker Socket
+
+The `docker-compose.yml` mounts the Docker socket for LocalStack Redis container mode. On shared hosts, this is a privilege escalation vector — scope or remove it in production deployments.
 
 ---
 
@@ -439,11 +524,17 @@ which tflocal terraform
 ### Start LocalStack
 
 ```bash
-# Via Makefile (recommended — waits for ready signal)
+# Community edition (free — no auth token needed)
 make demo
 
-# Manually
+# Pro edition (requires LOCALSTACK_AUTH_TOKEN in .env — enables ElastiCache)
+make demo-pro
+
+# Manually (community)
 docker-compose up -d
+
+# Manually (pro)
+docker-compose -f docker-compose.yml -f docker-compose.pro.yml up -d
 ```
 
 ### Verify
@@ -535,7 +626,7 @@ cloud-janitor/
 │       │   ├── incident_policy_generator.py # Policies from incident descriptions
 │       │   └── multi_account_orchestrator.py # Concurrent multi-account audits
 │       ├── core/                    # Shared infrastructure
-│       │   ├── llm_client.py        # LLM client with retry (OpenRouter)
+│       │   ├── llm_client.py        # LLM client with retry, BYO-endpoint, AI kill switch
 │       │   ├── logging_config.py    # Logging configuration
 │       │   ├── paths.py             # Centralized path constants
 │       │   └── error_telemetry.py   # Structured error recording
@@ -565,14 +656,17 @@ cloud-janitor/
 │   ├── rollbacks/                   # Per-resource rollback HCL
 │   └── remediation.tf               # Auto-generated (overwritten each scan)
 ├── scripts/
+│   ├── seed-localstack.sh           # Pre-seed LocalStack with Ghost Cluster resources
 │   ├── git-hooks/post-commit        # Git hook: auto-regen SPEC_COMPLIANCE.md
 │   ├── generate_spec_compliance.py  # Dev tool: spec compliance report
 │   └── setup-hooks.sh               # Install git hooks
 ├── tests/                           # pytest + hypothesis property tests
 ├── scheduler.py                     # Cron-based background scans
+├── accounts.example.json            # Multi-account config template (copy to accounts.json)
 ├── .env.example                     # Environment variable template
-├── docker-compose.yml               # LocalStack container definition
-├── Makefile                         # make demo entry point
+├── docker-compose.yml               # LocalStack Community config (free tier)
+├── docker-compose.pro.yml           # LocalStack Pro override (ElastiCache, auth token)
+├── Makefile                         # make demo / make demo-pro entry points
 └── pyproject.toml                   # Project metadata
 ```
 
