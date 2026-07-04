@@ -53,6 +53,11 @@ src/cloud_janitor/output/
 .DS_Store
 Thumbs.db
 
+# Account configuration (contains real account IDs / role ARNs — never commit)
+accounts.json
+accounts.*.json
+!accounts.example.json
+
 # kiro steering local
 .kiro/steering/local/
 
