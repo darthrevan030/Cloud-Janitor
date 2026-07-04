@@ -2,14 +2,41 @@
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.pro.yml up -d
 # Requires LOCALSTACK_AUTH_TOKEN in .env
 services:
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    environment:
+      - CONTAINERS=1
+      - POST=1
+      - ALLOW_START=1
+      - ALLOW_STOP=1
+      - ALLOW_RESTART=1
+      - NETWORKS=1
+      - IMAGES=1
+      - VOLUMES=0
+      - EXEC=0
+      - BUILD=0
+      - COMMIT=0
+      - SWARM=0
+      - SYSTEM=0
+      - PLUGINS=0
+      - SERVICES=0
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - localstack-net
+
   localstack:
     image: localstack/localstack-pro:4.4.0
     environment:
       - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
       - SERVICES=ec2,elasticache,s3
       - AWS_DEFAULT_REGION=us-east-1
-    # NOTE: Docker socket mount is required for LocalStack Redis container mode.
-    # On shared/production hosts, run LocalStack in a separate VM or restrict
-    # access to the socket via a proxy (e.g., docker-socket-proxy).
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    # No direct docker.sock mount — proxied through docker-socket-proxy
+    # which restricts the Docker API surface to only what ElastiCache needs
+    # (container start/stop, image pull, network attach).
+    networks:
+      - localstack-net
+
+networks:
+  localstack-net:
