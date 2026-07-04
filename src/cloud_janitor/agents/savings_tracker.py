@@ -132,7 +132,10 @@ class SavingsTracker:
         return sum(r["monthly_savings_added"] for r in runs)  # type: ignore[no-any-return]
 
     def _read_findings_store(self) -> dict:
-        """Read and parse findings_store.json."""
-        content = self._findings_store_path.read_text(encoding="utf-8")
-        return json.loads(content)  # type: ignore[no-any-return]
+        """Read and parse findings_store.json. Returns empty store on missing/invalid file."""
+        try:
+            content = self._findings_store_path.read_text(encoding="utf-8")
+            return json.loads(content)  # type: ignore[no-any-return]
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return {"scan_id": "", "completed_at": "", "findings": []}
 
