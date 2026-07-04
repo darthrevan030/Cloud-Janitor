@@ -45,6 +45,8 @@
 - `boto3` for all AWS SDK calls.
 - **LocalStack** (via Docker) is used for local AWS simulation. The `AWS_ENDPOINT_URL` environment variable toggles boto3 clients between LocalStack and real AWS — never hardcode an endpoint.
 - **moto** (`@mock_aws`) is used for AWS service mocking in unit tests — do not stand up LocalStack for unit-level tests where moto suffices.
+- **Docker socket isolation**: The base `docker-compose.yml` (ec2/s3 only) has no docker.sock mount. The Pro override (`docker-compose.pro.yml`) routes Docker API access through `docker-socket-proxy` with a minimal allowlist — never re-add a raw `/var/run/docker.sock` mount to the LocalStack service itself.
+- **Post-hackathon**: Once moving to a hosted MCP endpoint or shared EC2, the LocalStack compose stack must not run on the same host that holds production AWS credentials or LLM API keys. Isolate it in a separate VM or container namespace.
 
 ## Terraform / Remediation Execution
 

@@ -8,5 +8,4 @@ services:
     environment:
       - SERVICES=ec2,s3
       - AWS_DEFAULT_REGION=us-east-1
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
+    # No docker.sock mount needed — ec2/s3 don't use container-mode emulation
