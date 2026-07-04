@@ -41,4 +41,4 @@ source "$SEED_FILE"
 
 echo ""
 echo "✅ LocalStack seeded successfully."
-echo "   Run 'make demo', 'make demo-pro', or 'make demo-live' to start the dashboard."
+echo "   Run 'make demo' or 'make demo-live' to start the dashboard."
