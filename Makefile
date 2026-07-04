@@ -16,9 +16,11 @@ demo:
 	if [ $$i -eq 30 ]; then \
 		echo "\nERROR: LocalStack failed to start within 60 seconds"; exit 1; \
 	fi
-	@rm -f output/findings_store.json output/findings_store_*.json output/remediation.tf output/scan_history.json output/savings_ledger.json
+	@rm -f output/findings_store.json output/findings_store_*.json output/remediation.tf output/scan_history.json output/savings_ledger.json output/approval_gates.json
 	@rm -f output/rollbacks/*.tf
-	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
+	@rm -f output/remediations/*.tf
+	@rm -f output/policies/*.json
+	@rm -f output/logs/audit.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
 	@rm -f findings_store.json findings_store_*.json
 	uv run python scripts/seed_localstack.py
 	uv run cloud-janitor dashboard
@@ -41,9 +43,11 @@ demo-live: tf-init
 	if [ $$i -eq 30 ]; then \
 		echo "\nERROR: LocalStack Pro failed to start within 60 seconds"; exit 1; \
 	fi
-	@rm -f output/findings_store.json output/findings_store_*.json output/remediation.tf output/scan_history.json output/savings_ledger.json
+	@rm -f output/findings_store.json output/findings_store_*.json output/remediation.tf output/scan_history.json output/savings_ledger.json output/approval_gates.json
 	@rm -f output/rollbacks/*.tf
-	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
+	@rm -f output/remediations/*.tf
+	@rm -f output/policies/*.json
+	@rm -f output/logs/audit.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
 	@rm -f findings_store.json findings_store_*.json
 	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 JANITOR_DRY_RUN=1 uv run python scripts/seed_localstack.py
 	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 JANITOR_DRY_RUN=1 uv run cloud-janitor dashboard
@@ -59,7 +63,9 @@ seed:
 
 # Clear all runtime output so the dashboard starts fresh
 clean:
-	@rm -f output/findings_store.json output/findings_store_*.json output/remediation.tf output/scan_history.json output/savings_ledger.json
+	@rm -f output/findings_store.json output/findings_store_*.json output/remediation.tf output/scan_history.json output/savings_ledger.json output/approval_gates.json
 	@rm -f output/rollbacks/*.tf
-	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
+	@rm -f output/remediations/*.tf
+	@rm -f output/policies/*.json
+	@rm -f output/logs/audit.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
 	@rm -f findings_store.json findings_store_*.json
