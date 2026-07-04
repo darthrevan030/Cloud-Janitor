@@ -12,12 +12,5 @@
     "role_arn": "arn:aws:iam::555666777888:role/CloudJanitorReadOnly",
     "region": "us-west-2",
     "priority": "medium"
-  },
-  {
-    "account_id": "999000111222",
-    "account_name": "Development",
-    "role_arn": "arn:aws:iam::999000111222:role/CloudJanitorReadOnly",
-    "region": "eu-west-1",
-    "priority": "low"
   }
 ]

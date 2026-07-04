@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-03T17:57:12Z
+Generated: 2026-07-04T14:03:59Z
 
 **Summary:** 232 tasks — ✅ 223 done, ⏳ 1 partial, ❌ 8 pending
 
@@ -90,7 +90,7 @@ Generated: 2026-07-03T17:57:12Z
 | 20 | 2. Rollback gate — parse "ROLLBACK \<id\>" + "CONFIRM ROLLBACK \<id\>" | ✅ Done | no mapping |
 | 21 | 3. Audit log writer (append-only) | ✅ Done | no mapping |
 | 22 | 4. Error states: dependency found, validate fails, malformed approval | ✅ Done | "APPROVE" not found in codebase |
-| 23 | 1. Streamlit layout — 4 panels (agent feed, findings, diff, audit log) | ✅ Done | audit log not found |
+| 23 | 1. Streamlit layout — 4 panels (agent feed, findings, diff, audit log) | ✅ Done | audit log writer found |
 | 24 | 2. Agent activity feed with live status dots | ✅ Done | no mapping |
 | 25 | 3. Side-by-side diff view (remediation HCL vs rollback HCL) | ✅ Done | agents/remediation_architect.py missing |
 | 26 | 4. Approval input field + confirmation display | ✅ Done | no mapping |
@@ -146,7 +146,7 @@ Generated: 2026-07-03T17:57:12Z
 | 38 | 8.8 Write unit tests for MCP tools (Phase B+C) | ✅ Done | mcp_server/aws_janitor_mcp.py missing |
 | 39 | 9. Implement fixture mode compatibility | ✅ Done | fixtures/ exists |
 | 40 | 9.1 Update fixture provider for Phase B+C features | ✅ Done | fixtures/ exists |
-| 41 | 9.2 Create `accounts.json` fixture for multi-account testing | ✅ Done | fixtures/ exists |
+| 41 | 9.2 Create `accounts.example.json` template for multi-account testing | ✅ Done | no mapping |
 | 42 | 9.3 Write integration tests for fixture mode | ✅ Done | fixtures/ exists |
 | 43 | 10. Implement Streamlit UI integration | ✅ Done | app.py missing |
 | 44 | 10.1 Add NL query input and AI panels to `app.py` | ✅ Done | app.py missing |

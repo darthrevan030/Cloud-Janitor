@@ -20,7 +20,7 @@ APPROVER="$4"
 
 # Resolve project root from script's directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 AUDIT_LOG="$PROJECT_ROOT/audit.log"
 
 # Generate ISO-8601 UTC timestamp

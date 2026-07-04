@@ -8,7 +8,7 @@ agents would miss.
 import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 import logging
 
@@ -127,7 +127,8 @@ class AnomalyDetector:
         prompt = PROMPT_TEMPLATE.format(resources_json=resources_json)
 
         client = get_client()
-        response = client.chat.completions.create(
+        response = call_llm(
+            client,
             model=self._model,
             max_tokens=1024,
             messages=[

@@ -9,13 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-extras --group dev
       - run: uv build
       - run: uv run twine check dist/*
-      - run: pip install dist/*.whl
-      - run: python -c "import cloud_janitor; print(cloud_janitor.__version__)"
-      - run: cloud-janitor --help
+      - run: uv pip install dist/*.whl
+      - run: uv run python -c "import cloud_janitor; print(cloud_janitor.__version__)"
+      - run: uv run cloud-janitor --help
       - uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -34,4 +34,4 @@ jobs:
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-            skip-existing: true
+          skip-existing: true

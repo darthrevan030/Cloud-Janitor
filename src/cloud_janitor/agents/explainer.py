@@ -10,7 +10,7 @@ Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 1.2, 1.8, 1.9, 1.11
 import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 import logging
 
@@ -86,9 +86,10 @@ class RemediationExplainer:
                 rollback_hcl=rollback_hcl.strip(),
             )
 
-            response = client.chat.completions.create(
+            response = call_llm(
+                client,
                 model=self._model,
-                max_tokens=400,  # Requirement 3.5
+                max_tokens=1024,  # Requirement 3.5
                 messages=[
                     {
                         "role": "system",
@@ -99,7 +100,21 @@ class RemediationExplainer:
             )
 
             raw_content = response.choices[0].message.content
-            parsed = json.loads(raw_content)  # type: ignore[arg-type]
+            if not raw_content or not raw_content.strip():
+                return dict(SAFE_DEFAULT)
+
+            # Strip markdown code fences that models often wrap JSON in
+            text = raw_content.strip()
+            if text.startswith("```"):
+                # Remove ```json\n...\n``` wrapper
+                lines = text.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                text = "\n".join(lines)
+
+            parsed = json.loads(text)
 
             return self._validate(parsed)
 

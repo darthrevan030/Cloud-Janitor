@@ -52,15 +52,17 @@ class TestGetClient:
         assert client.api_key == "sk-or-test-key-xyz"
 
     def test_raises_environment_error_when_key_missing(self, monkeypatch):
-        """get_client() raises EnvironmentError when OPENROUTER_API_KEY is not set."""
+        """get_client() raises EnvironmentError when no API key is configured."""
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-        with pytest.raises(EnvironmentError, match="OPENROUTER_API_KEY is not set"):
+        monkeypatch.delenv("JANITOR_LLM_API_KEY", raising=False)
+        with pytest.raises(EnvironmentError, match="No LLM API key configured"):
             llm_client.get_client()
 
     def test_raises_environment_error_when_key_is_empty_string(self, monkeypatch):
-        """get_client() raises EnvironmentError when OPENROUTER_API_KEY is empty."""
+        """get_client() raises EnvironmentError when API keys are empty."""
         monkeypatch.setenv("OPENROUTER_API_KEY", "")
-        with pytest.raises(EnvironmentError, match="OPENROUTER_API_KEY is not set"):
+        monkeypatch.delenv("JANITOR_LLM_API_KEY", raising=False)
+        with pytest.raises(EnvironmentError, match="No LLM API key configured"):
             llm_client.get_client()
 
 

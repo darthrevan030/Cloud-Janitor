@@ -2,8 +2,15 @@
 # Trigger: before Remediation Architect surfaces approval prompt
 # Action: validate generated HCL — block if invalid
 # This hook runs automatically; engineers cannot skip it.
+# When JANITOR_DRY_RUN=1, skips init/validate (avoids provider download).
 
 set -e
+
+# Dry-run mode: skip validation entirely (demo/dev convenience)
+if [ "${JANITOR_DRY_RUN:-0}" = "1" ]; then
+    echo "[pre-remediation] DRY RUN — skipping HCL validation"
+    exit 0
+fi
 
 TF_CMD="${TF_CMD:-tflocal}"
 

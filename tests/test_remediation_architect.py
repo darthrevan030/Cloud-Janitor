@@ -157,7 +157,7 @@ class TestGenerateRollback:
     def test_elasticache_rollback_references_snapshot(self):
         hcl = self.architect.generate_rollback(_elasticache_finding())
         assert "snapshot_name" in hcl
-        assert "aws_elasticache_snapshot.pre_remediation_" in hcl
+        assert "pre-remediation-" in hcl
 
     def test_elasticache_rollback_includes_engine_details(self):
         hcl = self.architect.generate_rollback(_elasticache_finding())

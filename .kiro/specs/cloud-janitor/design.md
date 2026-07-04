@@ -111,7 +111,7 @@ sequenceDiagram
 
 - Reads `.kiro/steering/AGENTS.md` for agent configuration
 - Enforces strict sequential execution: FinOps → SecOps → Remediation
-- Validates that `findings_store.json` contains entries from both prior agents before spawning Remediation Architect
+- Validates that `findings_store.json` confirms both prior agents completed (via `agents_completed` field). Zero findings from either agent is valid — it means the account is healthy. (Deviation: originally required findings from both agents to be present; changed per audit finding C5 — a healthy account with zero findings is a success, not a failure.)
 - Manages approval gate protocol
 
 **Interface:**

@@ -114,6 +114,97 @@ SCHEMA_VERSION = "1.0.0"
 
 _RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}\Z")
 
+# ── Subprocess environment isolation (L2 fix) ─────────────────────────
+# Never pass the full parent environment to subprocesses. Build a minimal
+# env containing only what each child legitimately needs.
+
+# Regex patterns for sensitive data redaction (L1 fix)
+_REDACT_PATTERNS = [
+    re.compile(r"\b\d{12}\b"),                         # AWS account IDs
+    re.compile(r"arn:aws:[^\s\"']+"),                   # ARNs
+    re.compile(r"AKIA[0-9A-Z]{16}"),                   # AWS access key IDs
+    re.compile(r"ASIA[0-9A-Z]{16}"),                   # AWS temporary key IDs
+    re.compile(r"sk-or-[A-Za-z0-9\-]+"),               # OpenRouter keys
+    re.compile(r"sk-[A-Za-z0-9]{20,}"),                # Generic API keys
+    re.compile(r"vpc-[0-9a-f]+"),                       # VPC IDs
+    re.compile(r"subnet-[0-9a-f]+"),                    # Subnet IDs
+]
+
+
+def _redact(text: str) -> str:
+    """Redact sensitive patterns and strip ANSI escape codes from subprocess output.
+
+    Replaces AWS account IDs, ARNs, access keys, VPC/subnet IDs, and
+    API keys with [REDACTED] placeholders. Also removes terminal color codes
+    so error messages are readable in logs and UI.
+    """
+    # Strip ANSI escape sequences (color codes, cursor movement, etc.)
+    text = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
+    text = re.sub(r"\x1b\[?[0-9;]*[a-zA-Z]", "", text)
+    # Strip other common unicode box-drawing artifacts from terraform output
+    text = re.sub(r"[╷╵│╶]", "", text)
+
+    for pattern in _REDACT_PATTERNS:
+        text = pattern.sub("[REDACTED]", text)
+    return text.strip()
+
+
+def _build_subprocess_env(kind: str) -> dict[str, str]:
+    """Build a minimal, safe environment for a child process.
+
+    Args:
+        kind: One of "terraform" or "hook". Controls which env vars are passed.
+
+    Returns:
+        A dict suitable for subprocess.run(env=...).
+    """
+    # Start with minimal PATH (cleaned of any sensitive directories)
+    env: dict[str, str] = {}
+
+    # PATH is always needed
+    if "PATH" in os.environ:
+        env["PATH"] = os.environ["PATH"]
+
+    # Windows-specific system vars needed for process execution
+    for var in ("SYSTEMROOT", "TEMP", "TMP", "COMSPEC", "HOMEDRIVE", "HOMEPATH"):
+        if var in os.environ:
+            env[var] = os.environ[var]
+
+    if kind == "terraform":
+        # Terraform needs AWS credentials and region, plus endpoint override
+        for var in (
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_SESSION_TOKEN",
+            "AWS_DEFAULT_REGION",
+            "AWS_REGION",
+            "AWS_ENDPOINT_URL",
+            "LOCALSTACK_AUTH_TOKEN",
+            "TF_LOG",
+            "TF_DATA_DIR",
+        ):
+            if var in os.environ:
+                env[var] = os.environ[var]
+    elif kind == "hook":
+        # Pre/post-remediation hooks run terraform validation — they need
+        # AWS credentials and endpoint for tflocal, but never LLM API keys.
+        for var in (
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_SESSION_TOKEN",
+            "AWS_DEFAULT_REGION",
+            "AWS_REGION",
+            "AWS_ENDPOINT_URL",
+            "LOCALSTACK_AUTH_TOKEN",
+            "TF_CMD",
+            "JANITOR_DRY_RUN",
+        ):
+            if var in os.environ:
+                env[var] = os.environ[var]
+
+    # Explicitly: OPENROUTER_API_KEY, JANITOR_LLM_API_KEY never passed to children
+    return env
+
 # Schema version for findings_store.json — bump when the schema changes.
 # The orchestrator will warn (not fail) if the store has a newer version than expected.
 FINDINGS_STORE_SCHEMA_VERSION = "1.0.0"
@@ -288,8 +379,8 @@ class Orchestrator:
 
         self.approver = approver
 
-        # Validate and resolve TF_CMD binary
-        self._tf_cmd = _validate_tf_cmd()
+        # Validate and resolve TF_CMD binary lazily (only when actually needed)
+        self._tf_cmd: str | None = None
 
         # Reasoning logger (shared across all agents)
         reasoning_log_path = (
@@ -359,6 +450,21 @@ class Orchestrator:
         self._pending_rollbacks: set[str] = set()
 
     # ──────────────────────────────────────────────────────────────────────
+    # Properties
+    # ──────────────────────────────────────────────────────────────────────
+
+    @property
+    def tf_cmd(self) -> str:
+        """Lazily validate and resolve TF_CMD binary.
+
+        Only called when terraform operations are actually needed (approve/rollback),
+        not during scan-only usage.
+        """
+        if self._tf_cmd is None:
+            self._tf_cmd = _validate_tf_cmd()
+        return self._tf_cmd
+
+    # ──────────────────────────────────────────────────────────────────────
     # Public API
     # ──────────────────────────────────────────────────────────────────────
 
@@ -385,6 +491,7 @@ class Orchestrator:
         self._reasoning_logger.truncate()
 
         # Step 1: FinOps Auditor scan
+        logger.info("[Orchestrator] Step 1: Running FinOps Auditor scan...")
         _emit("finops", "running")
         self._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
         try:
@@ -393,10 +500,12 @@ class Orchestrator:
             _emit("finops", "failure")
             self._record_error(e, "FinOpsAuditor", context="")
             return AuditResult(success=False, error=f"FinOps Auditor failed: {e}", error_category="agent_failure", error_agent="FinOpsAuditor")
+        logger.info("[Orchestrator] Step 1 complete: FinOps found %d finding(s)", len(finops_findings))
         self._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
         _emit("finops", "success")
 
         # Step 2: SecOps Guard scan
+        logger.info("[Orchestrator] Step 2: Running SecOps Guard scan...")
         _emit("secops", "running")
         self._log_action("scan", "all", "started", "SecOps Guard scan initiated")
         try:
@@ -411,20 +520,25 @@ class Orchestrator:
                 error_category="agent_failure",
                 error_agent="SecOpsGuard",
             )
+        logger.info("[Orchestrator] Step 2 complete: SecOps found %d finding(s)", len(secops_findings))
         self._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
         _emit("secops", "success")
 
         # Step 3: Validate findings_store has entries from both agents
+        logger.info("[Orchestrator] Step 3: Validating findings store...")
         _emit("remediation", "running")
         validation_error = self._validate_findings_store()
         if validation_error:
+            logger.warning("[Orchestrator] Step 3 failed: %s", validation_error)
             self._log_action("plan", "all", "failure", validation_error)
             _emit("remediation", "failure")
             val_exc = RuntimeError(validation_error)
             self._record_error(val_exc, "Orchestrator", context="schema_check")
             return AuditResult(success=False, error=validation_error, error_category="validation_failure", error_agent="Orchestrator")
+        logger.info("[Orchestrator] Step 3 complete: Findings store valid")
 
         # Step 4: Remediation Architect plans
+        logger.info("[Orchestrator] Step 4: Running Remediation Architect (dependency checks + HCL generation)...")
         self._log_action("plan", "all", "started", "Remediation Architect planning")
         try:
             plans = self._architect.plan()
@@ -447,6 +561,10 @@ class Orchestrator:
         for p in blocked_plans:
             self._log_action("plan", p.resource_id, "blocked", p.block_reason)
 
+        logger.info(
+            "[Orchestrator] Step 4 complete: %d plan(s) generated, %d blocked",
+            len(active_plans), len(blocked_plans),
+        )
         self._log_action(
             "plan", "all", "success",
             f"Generated {len(active_plans)} plan(s), {len(blocked_plans)} blocked"
@@ -454,8 +572,10 @@ class Orchestrator:
 
         # Step 5: Run pre-remediation hook on active plans
         if active_plans:
+            logger.info("[Orchestrator] Step 5: Running pre-remediation hook (terraform validate)...")
             hook_error = self._run_pre_remediation_hook(active_plans)
             if hook_error:
+                logger.warning("[Orchestrator] Step 5 failed: %s", hook_error[:100])
                 self._log_action("plan", "all", "blocked", f"Pre-remediation hook failed: {hook_error}")
                 _emit("remediation", "failure")
                 hook_exc = RuntimeError(hook_error)
@@ -469,22 +589,29 @@ class Orchestrator:
                     error_category="validation_failure",
                     error_agent="Orchestrator",
                 )
+            logger.info("[Orchestrator] Step 5 complete: Hook validation passed")
 
         _emit("remediation", "success")
         all_findings = finops_findings + secops_findings
 
         # Step 6: Anomaly Detection (post-scan, before drift) — Req 6.4
-        resources = self._gather_resources()
-        anomalies = self._run_anomaly_detection(resources, all_findings)
+        logger.info("[Orchestrator] Step 6: Running anomaly detection...")
+        # Use findings as the resource pool for anomaly detection to avoid
+        # redundant API/fixture calls (agents already fetched the data).
+        anomalies = self._run_anomaly_detection(all_findings, all_findings)
+        logger.info("[Orchestrator] Step 6 complete: %d anomalies detected", len(anomalies))
 
         # Step 7: Drift Detection — save snapshot then detect
+        logger.info("[Orchestrator] Step 7: Running drift detection...")
         total_waste = sum(
             f.get("cost_estimate_monthly", 0.0) for f in all_findings
         )
         scan_id = str(uuid.uuid4())
         self._drift_detector.save_snapshot(scan_id, all_findings, anomalies, total_waste)
         drift_report = self._drift_detector.detect(all_findings)
+        logger.info("[Orchestrator] Step 7 complete: Drift report generated")
 
+        logger.info("[Orchestrator] ✅ Audit complete: %d findings, %d plans", len(all_findings), len(active_plans))
         return AuditResult(
             success=True,
             findings=all_findings,
@@ -548,7 +675,22 @@ class Orchestrator:
             else:
                 cost_data = get_cost_data(min_idle_days=min_idle_days)
                 all_resources.extend(cost_data.get("resources", []))
-            cost_findings = list(all_resources)
+            # Transform raw resources into finding-like dicts for downstream compatibility
+            for r in all_resources:
+                cost_findings.append({
+                    "id": r.get("id", ""),
+                    "resource_id": r.get("id", ""),
+                    "resource_type": r.get("type", "unknown"),
+                    "agent": "finops",
+                    "category": "waste",
+                    "severity": "MEDIUM" if r.get("type") == "ebs" else "HIGH" if r.get("type") == "elasticache" else "LOW",
+                    "title": r.get("description", f"Idle {r.get('type', 'resource')}"),
+                    "description": r.get("description", ""),
+                    "cost_estimate_monthly": r.get("monthly_cost", 0.0),
+                    "idle_days": r.get("idle_days", 0),
+                    "metadata": {k: v for k, v in r.items() if k not in ("id", "type", "idle_days", "monthly_cost", "description")},
+                    "detected_at": r.get("created_at", ""),
+                })
         except Exception as exc:
             print(
                 f"[Orchestrator] get_cost_data error: {type(exc).__name__}: {exc}",
@@ -692,45 +834,127 @@ class Orchestrator:
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
 
-        # Initialize the working directory before apply. Without this, terraform
-        # has no provider plugin selected and no lock file, causing apply to fail
-        # with "inconsistent dependency lock file" or similar init-required errors.
-        init_result = subprocess.run(
-            [self._tf_cmd, "init", "-input=false"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(self.output_dir),
-        )
-        if init_result.returncode != 0:
-            error = init_result.stderr.strip() or init_result.stdout.strip()
-            self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
-            tf_exc = RuntimeError(f"{self._tf_cmd} init failed: {error}")
-            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
-            return ApprovalResult(
-                success=False,
-                error=f"{self._tf_cmd} init failed: {error}",
-                resource_id=resource_id,
-            )
+        # Dry-run mode: skip terraform execution entirely (demo/dev convenience)
+        if os.environ.get("JANITOR_DRY_RUN") == "1":
+            self._log_action("execution", resource_id, "success", "Remediation executed (dry-run)")
+            self._run_post_remediation_hook(resource_id, "remediate", "success")
+            try:
+                self._savings_tracker.record_run(resources_remediated=[resource_id])
+            except Exception:
+                pass
+            return ApprovalResult(success=True, resource_id=resource_id)
 
-        # Execute terraform apply against LocalStack
-        apply_result = subprocess.run(
-            [self._tf_cmd, "apply", "-auto-approve"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(self.output_dir),
-        )
-        if apply_result.returncode != 0:
-            error = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
-            tf_exc = RuntimeError(f"{self._tf_cmd} apply failed: {error}")
-            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
-            return ApprovalResult(
-                success=False,
-                error=f"{self._tf_cmd} apply failed: {error}",
-                resource_id=resource_id,
+        # Isolate the approved resource's HCL into a temporary working directory
+        # so terraform apply only affects the approved resource, not all resources.
+        import tempfile
+        apply_dir = Path(tempfile.mkdtemp(prefix="janitor_apply_"))
+        try:
+            # Write only this resource's remediation HCL
+            if plan.remediation_hcl:
+                (apply_dir / "main.tf").write_text(plan.remediation_hcl, encoding="utf-8")
+            else:
+                self._log_action("execution", resource_id, "failure", "No remediation HCL for resource")
+                return ApprovalResult(
+                    success=False,
+                    error="No remediation HCL available for this resource",
+                    resource_id=resource_id,
+                )
+
+            # Inject provider config so terraform can connect to LocalStack or AWS
+            endpoint_url = os.environ.get("AWS_ENDPOINT_URL", "")
+            is_localstack = "localhost" in endpoint_url or "127.0.0.1" in endpoint_url
+            if is_localstack:
+                (apply_dir / "providers.tf").write_text(
+                    'terraform {\n'
+                    '  required_providers {\n'
+                    '    aws = {\n'
+                    '      source  = "hashicorp/aws"\n'
+                    '      version = ">= 4.0"\n'
+                    '    }\n'
+                    '  }\n'
+                    '}\n\n'
+                    'provider "aws" {\n'
+                    '  access_key                  = "test"\n'
+                    '  secret_key                  = "test"\n'
+                    '  skip_credentials_validation = true\n'
+                    '  skip_metadata_api_check     = true\n'
+                    '  skip_requesting_account_id  = true\n'
+                    f'  region                      = "{os.environ.get("AWS_DEFAULT_REGION", "us-east-1")}"\n'
+                    '\n'
+                    '  endpoints {\n'
+                    f'    ec2         = "{endpoint_url}"\n'
+                    f'    s3          = "{endpoint_url}"\n'
+                    f'    elasticache = "{endpoint_url}"\n'
+                    f'    iam         = "{endpoint_url}"\n'
+                    f'    sts         = "{endpoint_url}"\n'
+                    '  }\n'
+                    '}\n\n'
+                    'variable "environment" {\n'
+                    '  default = "dev"\n'
+                    '}\n',
+                    encoding="utf-8",
+                )
+            else:
+                (apply_dir / "providers.tf").write_text(
+                    'terraform {\n'
+                    '  required_providers {\n'
+                    '    aws = {\n'
+                    '      source  = "hashicorp/aws"\n'
+                    '      version = ">= 4.0"\n'
+                    '    }\n'
+                    '  }\n'
+                    '}\n\n'
+                    'variable "environment" {\n'
+                    '  default = "dev"\n'
+                    '}\n',
+                    encoding="utf-8",
+                )
+
+            # Initialize the working directory before apply.
+            logger.info("[Orchestrator] Running terraform init for %s...", resource_id)
+            init_result = subprocess.run(
+                [self.tf_cmd, "init", "-input=false"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(apply_dir),
+                env=_build_subprocess_env("terraform"),
             )
+            if init_result.returncode != 0:
+                error = _redact(init_result.stderr.strip() or init_result.stdout.strip())
+                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
+                tf_exc = RuntimeError(f"{self.tf_cmd} init failed: {error}")
+                self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+                return ApprovalResult(
+                    success=False,
+                    error=f"{self.tf_cmd} init failed: {error}",
+                    resource_id=resource_id,
+                )
+
+            # Execute terraform apply only for the approved resource
+            logger.info("[Orchestrator] Running terraform apply for %s...", resource_id)
+            apply_result = subprocess.run(
+                [self.tf_cmd, "apply", "-auto-approve"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(apply_dir),
+                env=_build_subprocess_env("terraform"),
+            )
+            if apply_result.returncode != 0:
+                error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
+                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
+                tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
+                self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+                return ApprovalResult(
+                    success=False,
+                    error=f"{self.tf_cmd} apply failed: {error}",
+                    resource_id=resource_id,
+                )
+        finally:
+            # Clean up temp directory
+            import shutil as _shutil
+            _shutil.rmtree(apply_dir, ignore_errors=True)
 
         self._log_action("execution", resource_id, "success", "Remediation executed")
 
@@ -854,7 +1078,17 @@ class Orchestrator:
         """
         hook_path = self.hooks_dir / "pre-remediation.sh"
         if not hook_path.exists():
-            return None  # Hook not present, skip
+            # Fail closed: missing hook means validation cannot be confirmed.
+            # Log prominently so operators notice the missing hook.
+            logger.warning(
+                "Pre-remediation hook not found at %s — failing closed. "
+                "Remediation cannot proceed without validation.",
+                hook_path,
+            )
+            return (
+                "Pre-remediation hook missing — validation cannot be confirmed. "
+                "Create hooks/pre-remediation.sh to enable remediation."
+            )
 
         remediation_path = self.output_dir / "remediation.tf"
         if not remediation_path.exists():
@@ -881,12 +1115,13 @@ class Orchestrator:
                     ],
                     capture_output=True,
                     text=True,
-                    timeout=60,
+                    timeout=180,
                     cwd=str(self.project_root),
+                    env=_build_subprocess_env("hook"),
                 )
 
                 if result.returncode != 0:
-                    error_output = result.stderr.strip() or result.stdout.strip()
+                    error_output = _redact(result.stderr.strip() or result.stdout.strip())
                     return f"Pre-remediation hook failed: {error_output}"
 
         except subprocess.TimeoutExpired:
@@ -927,6 +1162,7 @@ class Orchestrator:
                 text=True,
                 timeout=30,
                 cwd=str(self.project_root),
+                env=_build_subprocess_env("hook"),
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             # Post-remediation hook is non-blocking — log but don't fail
@@ -972,11 +1208,12 @@ class Orchestrator:
             remaining = timeout - (time.monotonic() - start)
             try:
                 result = subprocess.run(
-                    ["bash", _to_bash_path(hook_path), _to_bash_path(rollback_path)],
+                    [BASH_CMD, _to_bash_path(hook_path), _to_bash_path(rollback_path)],
                     capture_output=True,
                     text=True,
                     timeout=max(remaining, 1),
                     cwd=str(self.project_root),
+                    env=_build_subprocess_env("hook"),
                 )
             except subprocess.TimeoutExpired:
                 raise TimeoutError(
@@ -1104,8 +1341,10 @@ class Orchestrator:
 
     def _validate_findings_store(self) -> str | None:
         """
-        Validate findings_store.json has entries from both FinOps and SecOps agents
-        and a compatible schema version.
+        Validate findings_store.json exists, is readable, and has a compatible
+        schema version. Both agents must have completed (tracked by the
+        'agents_completed' field), but zero findings from either agent is valid
+        — it means the account is healthy, not that an agent failed to run.
 
         Returns:
             Error string if validation fails, None if valid.
@@ -1124,6 +1363,18 @@ class Orchestrator:
         if schema_error:
             return schema_error
 
+        # Check agent completion markers (preferred) — distinguishes
+        # "agent ran and found nothing" from "agent never ran".
+        agents_completed = set(store.get("agents_completed", []))
+        if agents_completed:
+            if "finops" not in agents_completed:
+                return "findings_store.json: FinOps agent did not complete"
+            if "secops" not in agents_completed:
+                return "findings_store.json: SecOps agent did not complete"
+            return None
+
+        # Fallback for legacy stores without agents_completed:
+        # require at least one finding tagged from each agent.
         findings = store.get("findings", [])
         agents_present = {f.get("agent") for f in findings}
 
@@ -1200,6 +1451,13 @@ class Orchestrator:
             return RollbackResult(
                 success=False,
                 error="Missing resource ID in confirm rollback command",
+            )
+
+        # Validate resource_id format (defense-in-depth)
+        if not _RESOURCE_ID_PATTERN.match(resource_id):
+            return RollbackResult(
+                success=False,
+                error="Invalid resource ID format in confirm rollback command",
             )
 
         # Guard: reject if gate store is corrupted
@@ -1280,44 +1538,48 @@ class Orchestrator:
                 error=f"Failed to stage rollback artifact: {e}",
             )
 
+        logger.info("[Orchestrator] Running terraform init for rollback %s...", resource_id)
         init_result = subprocess.run(
-            [self._tf_cmd, "init", "-input=false"],
+            [self.tf_cmd, "init", "-input=false"],
             capture_output=True,
             text=True,
             timeout=120,
             cwd=str(self.output_dir),
+            env=_build_subprocess_env("terraform"),
         )
         if init_result.returncode != 0:
-            error = init_result.stderr.strip() or init_result.stdout.strip()
-            self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
-            tf_exc = RuntimeError(f"{self._tf_cmd} init failed: {error}")
+            error = _redact(init_result.stderr.strip() or init_result.stdout.strip())
+            self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
+            tf_exc = RuntimeError(f"{self.tf_cmd} init failed: {error}")
             self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
-                error=f"{self._tf_cmd} init failed: {error}",
+                error=f"{self.tf_cmd} init failed: {error}",
                 error_category="terraform_failure",
                 error_agent="Orchestrator",
                 exit_code=init_result.returncode,
             )
 
+        logger.info("[Orchestrator] Running terraform apply for rollback %s...", resource_id)
         apply_result = subprocess.run(
-            [self._tf_cmd, "apply", "-auto-approve"],
+            [self.tf_cmd, "apply", "-auto-approve"],
             capture_output=True,
             text=True,
             timeout=120,
             cwd=str(self.output_dir),
+            env=_build_subprocess_env("terraform"),
         )
         if apply_result.returncode != 0:
-            error = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
-            tf_exc = RuntimeError(f"{self._tf_cmd} apply failed: {error}")
+            error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
+            self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
+            tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
             self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             # Leave the resource pending so the caller can retry CONFIRM ROLLBACK
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
-                error=f"{self._tf_cmd} apply failed: {error}",
+                error=f"{self.tf_cmd} apply failed: {error}",
                 error_category="terraform_failure",
                 error_agent="Orchestrator",
                 exit_code=apply_result.returncode,

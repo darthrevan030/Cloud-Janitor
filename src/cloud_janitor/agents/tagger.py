@@ -9,7 +9,7 @@ Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 1.4, 1.8, 1.9, 1.11
 import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 import logging
 
@@ -108,7 +108,8 @@ class ResourceTagger:
                 existing_tags_json=json.dumps(existing_tags, default=str),
             )
 
-            response = client.chat.completions.create(
+            response = call_llm(
+                client,
                 model=self._model,
                 max_tokens=256,
                 messages=[
@@ -175,7 +176,8 @@ class ResourceTagger:
                 resources_json=json.dumps(resources_for_prompt, default=str),
             )
 
-            response = client.chat.completions.create(
+            response = call_llm(
+                client,
                 model=self._model,
                 max_tokens=256 * len(chunk),
                 messages=[

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cloud-janitor"
-version = "0.1.1"
+version = "0.2.0"
 description = "Multi-agent cloud infrastructure auditor and remediation system using MCP protocol"
 readme = "README.md"
 requires-python = ">=3.12"

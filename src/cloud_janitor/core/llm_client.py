@@ -1,13 +1,23 @@
 """Shared LLM client module for Cloud Janitor.
 
 All AI agents import from this module instead of using the OpenAI SDK directly.
-Routes all LLM calls through OpenRouter's OpenAI-compatible API.
+Routes all LLM calls through a configurable OpenAI-compatible endpoint.
+
+Configuration (via environment variables):
+- JANITOR_LLM_BASE_URL: LLM API endpoint (default: https://openrouter.ai/api/v1)
+- JANITOR_LLM_API_KEY: API key for the configured endpoint (falls back to OPENROUTER_API_KEY)
+- JANITOR_LLM_MODEL: Model identifier (default: anthropic/claude-haiku-4-5)
+- JANITOR_AI_ENABLED: Set to "false" to disable all LLM calls (AI kill switch)
+- JANITOR_PRIVACY_MODE: Set to "strict" to require no-training provider policies
 
 Includes:
 - 30-second timeout to prevent indefinite hangs
 - Manual retry loop with exponential backoff (max 3 retries, 4 total attempts)
 - Respects Retry-After header for HTTP 429 (up to 60s max)
 - Structured logging via logging module (no print statements)
+- BYO-endpoint support for enterprise deployments (Bedrock, Azure OpenAI, vLLM)
+- AI kill switch for zero-egress operation
+- Fail-closed strict mode for provider routing policy
 """
 
 import logging
@@ -29,6 +39,25 @@ _MULTIPLIER = 2
 _TIMEOUT = 30  # seconds
 _MAX_RETRY_AFTER = 60  # seconds — above this, don't wait
 _RETRIABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+# AI kill switch — set JANITOR_AI_ENABLED=false to disable all LLM calls
+_AI_ENABLED = os.environ.get("JANITOR_AI_ENABLED", "true").lower() not in ("false", "0", "no")
+
+# Privacy mode — "strict" requires no-training provider policies
+_PRIVACY_MODE = os.environ.get("JANITOR_PRIVACY_MODE", "").lower()
+
+# Free-tier router patterns that should be blocked in strict mode
+_FREE_ROUTER_PATTERNS = (":free", "/free", "openrouter/auto")
+
+
+class AIDisabledError(Exception):
+    """Raised when an LLM call is attempted but AI is disabled via JANITOR_AI_ENABLED=false."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "AI features are disabled (JANITOR_AI_ENABLED=false). "
+            "No LLM calls will be made. Set JANITOR_AI_ENABLED=true to re-enable."
+        )
 
 
 class LLMRetryExhausted(Exception):
@@ -80,10 +109,25 @@ def call_llm(client: openai.OpenAI, **kwargs) -> openai.types.chat.ChatCompletio
         The ChatCompletion response from the API.
 
     Raises:
+        AIDisabledError: If JANITOR_AI_ENABLED=false.
         LLMRetryExhausted: If all retry attempts are exhausted.
         LLMRateLimitExceeded: If Retry-After header exceeds 60s.
         openai.APIStatusError: If a non-retriable HTTP error occurs.
     """
+    if not _AI_ENABLED:
+        raise AIDisabledError()
+
+    # In strict privacy mode, inject provider routing preferences to require
+    # no-training/zero-data-retention from the upstream provider.
+    if _PRIVACY_MODE == "strict":
+        extra_body = kwargs.pop("extra_body", {}) or {}
+        extra_body.setdefault("provider", {
+            "require_parameters": True,
+            "data_collection": "deny",
+            "allow_fallbacks": False,
+        })
+        kwargs["extra_body"] = extra_body
+
     start_time = time.monotonic()
     last_error: str = "unknown"
 
@@ -141,23 +185,56 @@ def call_llm(client: openai.OpenAI, **kwargs) -> openai.types.chat.ChatCompletio
 
 
 def get_client() -> openai.OpenAI:
-    """Return an OpenAI client configured for OpenRouter with timeout.
+    """Return an OpenAI client configured for the LLM endpoint with timeout.
+
+    Supports BYO-endpoint via environment variables:
+    - JANITOR_LLM_BASE_URL: Override the API base URL (default: OpenRouter)
+    - JANITOR_LLM_API_KEY: Override the API key (falls back to OPENROUTER_API_KEY)
 
     The client has a 30-second timeout to prevent indefinite hangs when
-    OpenRouter is slow or unreachable. Retry logic is handled externally
+    the endpoint is slow or unreachable. Retry logic is handled externally
     by call_llm(), not by the SDK's built-in retry.
 
     Raises:
-        EnvironmentError: If OPENROUTER_API_KEY is not set.
+        AIDisabledError: If JANITOR_AI_ENABLED=false.
+        EnvironmentError: If no API key is configured.
+        RuntimeError: If strict privacy mode blocks the configured model.
     """
-    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not _AI_ENABLED:
+        raise AIDisabledError()
+
+    # BYO-endpoint: prefer JANITOR_LLM_* over legacy OPENROUTER_* keys
+    base_url = os.environ.get(
+        "JANITOR_LLM_BASE_URL",
+        "https://openrouter.ai/api/v1",
+    )
+    api_key = os.environ.get("JANITOR_LLM_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
-        raise EnvironmentError("OPENROUTER_API_KEY is not set")
+        raise EnvironmentError(
+            "No LLM API key configured. Set JANITOR_LLM_API_KEY (preferred) "
+            "or OPENROUTER_API_KEY."
+        )
+
+    # Strict privacy mode: refuse to start if using the free router
+    if _PRIVACY_MODE == "strict":
+        model = DEFAULT_MODEL
+        if any(pattern in model for pattern in _FREE_ROUTER_PATTERNS):
+            raise RuntimeError(
+                f"JANITOR_PRIVACY_MODE=strict blocks free-tier model '{model}'. "
+                f"Free-tier routes to nondeterministic providers that may train on data. "
+                f"Set JANITOR_LLM_MODEL to a paid model or disable strict mode."
+            )
+
     return openai.OpenAI(
-        base_url="https://openrouter.ai/api/v1",
+        base_url=base_url,
         api_key=api_key,
         timeout=_TIMEOUT,
     )
 
 
 DEFAULT_MODEL: str = os.environ.get("JANITOR_LLM_MODEL", "anthropic/claude-haiku-4-5")
+
+
+def is_ai_enabled() -> bool:
+    """Check if AI features are enabled. Useful for agents to short-circuit."""
+    return _AI_ENABLED

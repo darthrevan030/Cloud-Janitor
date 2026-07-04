@@ -209,6 +209,7 @@ class FinOpsAuditor:
             "scan_id": str(uuid.uuid4()),
             "started_at": now,
             "completed_at": now,
+            "agents_completed": ["finops"],
             "findings": findings,
             "summary": {
                 "total": len(findings),

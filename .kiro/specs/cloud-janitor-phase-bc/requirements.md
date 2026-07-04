@@ -73,7 +73,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 2. WHEN a remediation plan is generated, THE RemediationExplainer SHALL produce a what_terraform_does description of the HCL change in 2-3 sentences with a minimum length of 20 characters
 3. WHEN a remediation plan is generated, THE RemediationExplainer SHALL produce a what_rollback_restores description in 1-2 sentences with a minimum length of 20 characters
 4. THE RemediationExplainer SHALL return a dict containing exactly three keys: risk_explanation, what_terraform_does, what_rollback_restores, where each value is a non-empty string
-5. THE RemediationExplainer SHALL limit LLM output to 400 max_tokens to keep explanations concise for the UI panel
+5. THE RemediationExplainer SHALL limit LLM output to 1024 max_tokens to prevent response truncation that causes JSON parse failures. (Originally 400; increased after observing that structured JSON responses with 3 explanation fields regularly exceeded 400 tokens, producing incomplete JSON that the parser could not handle.)
 6. IF the remediation_hcl or rollback_hcl input is empty or whitespace-only, THEN THE RemediationExplainer SHALL return all three keys populated with "Explanation unavailable." without calling the LLM, regardless of which specific input is missing
 
 ### Requirement 4: Policy Suggestion
@@ -159,7 +159,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 2. IF one account's audit fails or times out, THEN THE MultiAccountOrchestrator SHALL continue auditing remaining accounts and record the failure in that account's by_account entry with status="failed" and error containing the exception message
 3. WHEN results are aggregated, THE MultiAccountOrchestrator SHALL inject account_id into each finding before aggregation
 4. WHEN results are returned, THE MultiAccountOrchestrator SHALL sort by_account by priority: high first, then medium, then low, with accounts of equal priority ordered alphabetically by account_name
-5. IF accounts.json is missing, fails JSON parsing, or contains entries missing any required field (account_id, account_name, role_arn, region, priority), THEN THE MultiAccountOrchestrator SHALL return an empty result dict with accounts_scanned=0 and empty by_account and aggregate_findings lists
+5. IF accounts.json is missing (gitignored; users copy from accounts.example.json), fails JSON parsing, or contains entries missing any required field (account_id, account_name, role_arn, region, priority), THEN THE MultiAccountOrchestrator SHALL return an empty result dict with accounts_scanned=0 and empty by_account and aggregate_findings lists
 6. WHEN multi-account audit completes, THE MultiAccountOrchestrator SHALL report cross_account_duplicates as the total count of findings that share the same (resource_type, check_type) pair with at least one finding in a different account
 7. THE MultiAccountOrchestrator SHALL use an isolated findings store per account (findings_store_{account_id}.json) to ensure thread safety
 8. WHEN results are returned, THE MultiAccountOrchestrator SHALL include in the result dict: accounts_scanned (int), total_findings (int), total_waste (float), critical_count (int), by_account (list), aggregate_findings (list), and cross_account_duplicates (int)

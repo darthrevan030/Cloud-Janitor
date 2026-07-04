@@ -255,7 +255,7 @@ class RemediationExplainer:
 - Explain why a finding is risky in plain English
 - Describe what the Terraform remediation will change
 - Describe what the rollback will restore
-- max_tokens: 400 — this is a UI panel, not a report
+- max_tokens: 1024 — prevents JSON truncation while keeping explanations concise for the UI panel (increased from 400 after observing parse failures)
 - Never raise — return all three keys populated with "Explanation unavailable." on failure
 
 ---
@@ -567,7 +567,7 @@ class MultiAccountOrchestrator:
 
 - Load account configurations from `accounts.json`
 - Run concurrent audits via ThreadPoolExecutor(max_workers=5)
-- Each account scan uses a separate Orchestrator instance with isolated findings_store: `findings_store_{account_id}.json`
+- Each account scan uses a separate Orchestrator instance with isolated findings_store: `output/findings_store_{account_id}.json` (stored under output/, not project root, to prevent git-tracked file pollution)
 - Sort by_account by priority: high first, then medium, then low
 - Deduplicate cross_account_duplicates by (resource_type, check_type) pairs
 - Inject account_id field into all findings before aggregation

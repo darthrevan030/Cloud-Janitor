@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 
 VALID_SEVERITIES = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
-VALID_RESOURCE_TYPES = {"elasticache", "ebs", "security_group"}
+VALID_RESOURCE_TYPES = {"elasticache", "ebs", "security_group", "ec2"}
 VALID_AGENTS = {"finops", "secops"}
 VALID_CATEGORIES = {"waste", "security"}
 

@@ -10,9 +10,15 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
 
   - [x] 1.1 Create `core/llm_client.py`
 
-    - Implement `get_client() -> openai.OpenAI` configured with `base_url="https://openrouter.ai/api/v1"` and `api_key` from `OPENROUTER_API_KEY` env var
+    - Implement `get_client() -> openai.OpenAI` with configurable endpoint:
+      - `JANITOR_LLM_BASE_URL` overrides base URL (default: `https://openrouter.ai/api/v1`)
+      - `JANITOR_LLM_API_KEY` takes precedence over `OPENROUTER_API_KEY` for API key
+      - BYO-endpoint support: enterprises route through Bedrock/Azure/vLLM with zero third-party egress
     - Implement `DEFAULT_MODEL: str` reading from `JANITOR_LLM_MODEL` env var, defaulting to `"anthropic/claude-haiku-4-5"`
-    - Raise `EnvironmentError("OPENROUTER_API_KEY is not set")` if env var missing
+    - Implement AI kill switch: `JANITOR_AI_ENABLED=false` raises `AIDisabledError` on any LLM call (zero network egress)
+    - Implement strict privacy mode: `JANITOR_PRIVACY_MODE=strict` blocks free-tier models and injects no-training provider policies
+    - Raise `EnvironmentError` if no API key configured (checks `JANITOR_LLM_API_KEY` then `OPENROUTER_API_KEY`)
+    - (Deviation from original spec: originally hardcoded OpenRouter; now configurable per security audit finding L6)
     - _Requirements: 13.1, 13.2, 13.3, 13.4_
   - [x] 1.2 Update `requirements.txt` with new dependencies
 
@@ -53,7 +59,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
 
     - Create `RemediationExplainer` class with `explain(resource_id, finding, remediation_hcl, rollback_hcl) -> dict`
     - Return dict with exactly 3 keys: risk_explanation, what_terraform_does, what_rollback_restores
-    - Set max_tokens=400 on LLM call
+    - Set max_tokens=1024 on LLM call (increased from 400 to prevent JSON truncation)
     - Return all keys as "Explanation unavailable." when remediation_hcl or rollback_hcl is empty/whitespace (without calling LLM)
     - Return all keys as "Explanation unavailable." on any exception
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 1.2, 1.8, 1.9, 1.11_
@@ -171,7 +177,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
   - [x] 6.1 Implement `agents/multi_account_orchestrator.py`
 
     - Create `MultiAccountOrchestrator` class with `run_all() -> dict` and `load_accounts() -> list[dict]`
-    - Load accounts from `accounts.json`; return empty result if file missing/invalid/entries missing required fields
+    - Load accounts from `accounts.json` (gitignored; copy from `accounts.example.json`); return empty result if file missing/invalid/entries missing required fields
     - Validate role_arn matches `arn:aws:iam::\d{12}:role/.+`; skip invalid entries with error logged to stderr
     - Execute concurrent audits via ThreadPoolExecutor(max_workers=5) with 300s per-account timeout
     - Each account uses isolated findings store: `findings_store_{account_id}.json`
@@ -273,7 +279,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Ensure fixture data contains at least one finding per check_type ("security_group", "encryption", "public_access")
     - Ensure all MCP tools produce conforming output schemas in fixture mode
     - _Requirements: 12.1, 12.2_
-  - [x] 9.2 Create `accounts.json` fixture for multi-account testing
+  - [x] 9.2 Create `accounts.example.json` template for multi-account testing
 
     - Include 2-3 sample accounts with valid account_id, account_name, role_arn, region, priority fields
     - Used for development/testing when JANITOR_BACKEND=fixture

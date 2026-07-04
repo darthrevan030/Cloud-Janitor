@@ -199,9 +199,9 @@ def dashboard() -> None:
     # src/cloud_janitor/app.py (sibling file in the package root).
     app_path = str(Path(__file__).parent / "app.py")
     proc = subprocess.Popen(
-        ["streamlit", "run", app_path, "--server.headless", "true"],
+        ["streamlit", "run", app_path, "--server.headless", "true", "--server.address", "127.0.0.1"],
     )
-    click.echo(f"Dashboard running at http://localhost:8501")
+    click.echo(f"Dashboard running at http://127.0.0.1:8501")
     proc.wait()
 
 

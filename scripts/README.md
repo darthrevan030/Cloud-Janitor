@@ -2,6 +2,46 @@
 
 Developer tooling and Git hook sources. None of these run automatically during the pipeline — they're invoked manually or by Git.
 
+## `seed_localstack.py`
+
+Pre-seeds LocalStack with AWS resources for demo and testing using **boto3 directly** — no `awslocal` or AWS CLI installation required. Uses the same boto3 already in the project venv.
+
+**Usage:**
+
+```bash
+# Default ghost cluster scenario
+uv run python scripts/seed_localstack.py
+
+# Specific scenario
+uv run python scripts/seed_localstack.py --scenario ghost-cluster
+```
+
+Called automatically by `make demo` and `make demo-live` after LocalStack is healthy. Can also be run standalone via `make seed`.
+
+## `seeds/`
+
+Modular seed scenario files. Each file creates AWS resources in LocalStack for a specific test case.
+
+| File | Scenario | Description |
+|------|----------|-------------|
+| `ghost-cluster.sh` | Ghost Cluster (default) | Multi-account: ElastiCache + EBS + open SGs across 3 simulated accounts |
+| `example-custom.sh` | Template | Copy this to create your own scenarios |
+
+### Creating a Custom Seed
+
+1. Add a new scenario function in `scripts/seed_localstack.py`
+2. Register it in the `if __name__ == "__main__"` block
+3. Run: `uv run python scripts/seed_localstack.py --scenario my-scenario`
+4. Use `make demo-live` to scan against your seeded resources
+
+Resources created in LocalStack are ephemeral — they disappear when the container stops. No cleanup needed.
+
+## `tf-provider-cache/`
+
+Minimal Terraform config that declares the AWS provider. Used by `make tf-init` (called automatically by `make demo-live`) to pre-download the ~300MB AWS provider plugin on first run. Subsequent runs are instant (cached in `.terraform/` inside this directory).
+
+The `.terraform/` subdirectory is gitignored.
+
 ## `generate_spec_compliance.py`
 
 Reads `.kiro/specs/**/tasks.md`, parses task checkboxes, verifies file artifacts exist, and outputs `SPEC_COMPLIANCE.md` at the project root.

@@ -233,6 +233,15 @@ class RemediationArchitect:
             remediation_hcl = self.generate_remediation(finding)
             rollback_hcl = self.generate_rollback(finding)
 
+            # Ensure per-resource HCL is self-contained (includes shared data sources)
+            if "data.aws_vpc.current" in remediation_hcl:
+                vpc_data_block = (
+                    'data "aws_vpc" "current" {\n'
+                    '  default = true\n'
+                    '}\n\n'
+                )
+                remediation_hcl = vpc_data_block + remediation_hcl
+
             self._logger.emit("remediation_architect", "decision", resource_id, f"Generated remediation + rollback HCL for {resource_id}")
 
             plan = RemediationPlan(
@@ -252,7 +261,25 @@ class RemediationArchitect:
         # Step 4: Write combined remediation file
         remediation_parts = [p.remediation_hcl for p in plans if p.remediation_hcl]
         if remediation_parts:
-            combined_remediation = "\n\n".join(remediation_parts)
+            # Deduplicate shared data sources — extract them from individual parts
+            # and emit once at the top of the combined file.
+            vpc_data_block = (
+                'data "aws_vpc" "current" {\n'
+                '  default = true\n'
+                '}'
+            )
+            # Remove inline vpc data blocks from parts to avoid duplicates
+            cleaned_parts = [
+                part.replace(vpc_data_block + '\n\n', '').replace(vpc_data_block + '\n', '')
+                for part in remediation_parts
+            ]
+            # Prepend once if any part references it
+            preamble_parts = []
+            if any("data.aws_vpc.current" in part for part in cleaned_parts):
+                preamble_parts.append(vpc_data_block)
+
+            all_parts = preamble_parts + cleaned_parts
+            combined_remediation = "\n\n".join(all_parts)
             remediation_path = self.output_dir / "remediation.tf"
             remediation_path.write_text(combined_remediation, encoding="utf-8")
 
@@ -330,10 +357,6 @@ class RemediationArchitect:
 
         return (
             f'# Remediation: Narrow {resource_id} port {port} to VPC-only\n'
-            f'data "aws_vpc" "current" {{\n'
-            f'  default = true\n'
-            f'}}\n'
-            f'\n'
             f'resource "aws_security_group_rule" "remediate_{safe_id}_port_{port}" {{\n'
             f'  type              = "ingress"\n'
             f'  from_port         = {port}\n'
@@ -368,25 +391,30 @@ class RemediationArchitect:
         )
 
     def _remediation_elasticache_waste(self, finding: dict) -> str:
-        """ElastiCache waste: snapshot then delete."""
+        """ElastiCache waste: snapshot then delete via local-exec.
+
+        Note: There is no aws_elasticache_snapshot resource in Terraform.
+        We use null_resource + local-exec to create the snapshot and delete
+        the cluster via AWS CLI, with depends_on to enforce ordering.
+        null_resource does not support tags — tags are only on the rollback resource.
+        """
         resource_id = finding["resource_id"]
         safe_id = _sanitize_id(resource_id)
 
         return (
             f'# Remediation: ElastiCache {resource_id} — snapshot then delete\n'
-            f'resource "aws_elasticache_snapshot" "pre_remediation_{safe_id}" {{\n'
-            f'  cluster_id       = "{resource_id}"\n'
-            f'  snapshot_name    = "pre-remediation-{resource_id}"\n'
+            f'resource "null_resource" "snapshot_{safe_id}" {{\n'
+            f'  provisioner "local-exec" {{\n'
+            f'    command = "aws elasticache create-snapshot --cache-cluster-id {resource_id} --snapshot-name pre-remediation-{resource_id}"\n'
+            f'  }}\n'
             f'}}\n'
             f'\n'
             f'resource "null_resource" "destroy_{safe_id}" {{\n'
-            f'  depends_on = [aws_elasticache_snapshot.pre_remediation_{safe_id}]\n'
+            f'  depends_on = [null_resource.snapshot_{safe_id}]\n'
             f'\n'
             f'  provisioner "local-exec" {{\n'
             f'    command = "aws elasticache delete-cache-cluster --cache-cluster-id {resource_id} --final-snapshot-identifier final-{resource_id}"\n'
             f'  }}\n'
-            f'\n'
-            f'{self._tags_block(resource_id)}\n'
             f'}}'
         )
 
@@ -408,7 +436,7 @@ class RemediationArchitect:
             f'  engine_version       = "{engine_version}"\n'
             f'  node_type            = "{node_type}"\n'
             f'  num_cache_nodes      = {num_nodes}\n'
-            f'  snapshot_name        = aws_elasticache_snapshot.pre_remediation_{safe_id}.snapshot_name\n'
+            f'  snapshot_name        = "pre-remediation-{resource_id}"\n'
             f'\n'
             f'{self._tags_block(resource_id)}\n'
             f'}}'

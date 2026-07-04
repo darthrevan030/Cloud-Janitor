@@ -20,10 +20,13 @@ venv/
 *.tfstate.backup
 .terraform.lock.hcl
 *.tfplan
+scripts/tf-provider-cache/.terraform/
+scripts/tf-provider-cache/.terraform.lock.hcl
 
 # Runtime outputs (repo-root output/)
 output/logs/audit.log
 output/findings_store.json
+output/findings_store_*.json
 findings_store_*.json
 output/scan_history.json
 output/scan_history.json.tmp
@@ -52,6 +55,11 @@ src/cloud_janitor/output/
 # OS
 .DS_Store
 Thumbs.db
+
+# Account configuration (contains real account IDs / role ARNs — never commit)
+accounts.json
+accounts.*.json
+!accounts.example.json
 
 # kiro steering local
 .kiro/steering/local/

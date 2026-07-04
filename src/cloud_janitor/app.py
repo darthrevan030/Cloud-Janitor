@@ -1137,6 +1137,11 @@ else:
 
 if audit_result is not None and audit_result.plans and RemediationExplainer is not None:
     with st.expander("💡 Remediation Explanations", expanded=False):
+        # Retry button — clears explanation cache and re-runs LLM calls
+        if st.button("🔄 Retry Explanations", key="btn_retry_explanations"):
+            st.session_state.explanation_cache = {}
+            st.rerun()
+
         for plan in audit_result.plans:
             rid = plan.resource_id
             cache_key = rid
@@ -1160,15 +1165,15 @@ if audit_result is not None and audit_result.plans and RemediationExplainer is n
                         st.session_state.explanation_cache[cache_key] = explanation
                     except Exception:
                         st.session_state.explanation_cache[cache_key] = {
-                            "risk_explanation": "Explanation unavailable.",
-                            "what_terraform_does": "Explanation unavailable.",
-                            "what_rollback_restores": "Explanation unavailable.",
+                            "risk_explanation": "Explanation unavailable — click Retry.",
+                            "what_terraform_does": "Explanation unavailable — click Retry.",
+                            "what_rollback_restores": "Explanation unavailable — click Retry.",
                         }
                 else:
                     st.session_state.explanation_cache[cache_key] = {
-                        "risk_explanation": "Explanation unavailable.",
-                        "what_terraform_does": "Explanation unavailable.",
-                        "what_rollback_restores": "Explanation unavailable.",
+                        "risk_explanation": "Explanation unavailable (no HCL).",
+                        "what_terraform_does": "Explanation unavailable (no HCL).",
+                        "what_rollback_restores": "Explanation unavailable (no HCL).",
                     }
 
             explanation = st.session_state.explanation_cache[cache_key]
@@ -1187,6 +1192,11 @@ st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
 if audit_result is not None and PolicySuggester is not None:
     with st.expander("📋 Policy Suggestions", expanded=False):
+        # Retry button
+        if st.button("🔄 Retry Suggestions", key="btn_retry_suggestions"):
+            st.session_state.policy_suggestions = None
+            st.rerun()
+
         if st.session_state.policy_suggestions is None:
             try:
                 suggester = PolicySuggester()
@@ -1357,11 +1367,11 @@ if MultiAccountOrchestrator is not None:
         if st.button("Run Multi-Account Audit", key="btn_multi_account", use_container_width=True):
             _accounts_file = PROJECT_ROOT / "accounts.json"
             if not _accounts_file.exists():
-                _example_file = PROJECT_ROOT / "accounts.json.example"
+                _example_file = PROJECT_ROOT / "accounts.example.json"
                 if _example_file.exists():
                     st.error(
                         "**accounts.json not found.** "
-                        "Copy `accounts.json.example` to `accounts.json` and fill in your account details."
+                        "Copy `accounts.example.json` to `accounts.json` and fill in your account details."
                     )
                 else:
                     st.error(

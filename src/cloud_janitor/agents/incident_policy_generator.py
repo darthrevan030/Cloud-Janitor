@@ -11,7 +11,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 import logging
 
@@ -180,7 +180,8 @@ class IncidentPolicyGenerator:
         client = get_client()
         prompt = PROMPT_TEMPLATE.format(incident_description=description)
 
-        response = client.chat.completions.create(
+        response = call_llm(
+            client,
             model=self._model,
             max_tokens=1024,
             messages=[
