@@ -684,10 +684,10 @@ cloud-janitor/
 │   ├── rollbacks/                   # Per-resource rollback HCL
 │   └── remediation.tf               # Auto-generated (overwritten each scan)
 ├── scripts/
-│   ├── seed-localstack.sh           # Pre-seed LocalStack with demo resources
-│   ├── seeds/                       # Modular seed scenarios
-│   │   ├── ghost-cluster.sh         # Default demo: idle cache + orphaned EBS + open SG
-│   │   └── example-custom.sh       # Template for custom scenarios
+│   ├── seed_localstack.py           # Pre-seed LocalStack with demo resources (boto3, no CLI needed)
+│   ├── seeds/                       # Legacy bash seed scenarios (optional)
+│   │   ├── ghost-cluster.sh         # Bash version of ghost cluster seed
+│   │   └── example-custom.sh       # Template for custom bash scenarios
 │   ├── git-hooks/post-commit        # Git hook: auto-regen SPEC_COMPLIANCE.md
 │   ├── generate_spec_compliance.py  # Dev tool: spec compliance report
 │   └── setup-hooks.sh               # Install git hooks

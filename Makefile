@@ -6,7 +6,7 @@ demo:
 	docker-compose up -d
 	@echo "Waiting for LocalStack..."
 	@i=0; while [ $$i -lt 30 ]; do \
-		if curl -s http://localhost:4566/_localstack/health | grep -q '"ec2"'; then \
+		if curl -s http://localhost:4566/_localstack/health | grep -q '"ec2": "available"'; then \
 			echo " ready!"; break; \
 		fi; \
 		printf "."; \
@@ -20,7 +20,7 @@ demo:
 	@rm -f output/rollbacks/*.tf
 	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
 	@rm -f findings_store.json findings_store_*.json
-	bash scripts/seed-localstack.sh
+	uv run python scripts/seed_localstack.py
 	uv run cloud-janitor dashboard
 
 # Live mode — full end-to-end against LocalStack Pro (no fixtures)
@@ -44,12 +44,12 @@ demo-live:
 	@rm -f output/rollbacks/*.tf
 	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
 	@rm -f findings_store.json findings_store_*.json
-	bash scripts/seed-localstack.sh
-	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test uv run cloud-janitor dashboard
+	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 uv run python scripts/seed_localstack.py
+	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 uv run cloud-janitor dashboard
 
 # Seed LocalStack with demo resources (run after container is healthy)
 seed:
-	bash scripts/seed-localstack.sh
+	uv run python scripts/seed_localstack.py
 
 # Clear all runtime output so the dashboard starts fresh
 clean:

@@ -2,18 +2,18 @@
 
 Developer tooling and Git hook sources. None of these run automatically during the pipeline — they're invoked manually or by Git.
 
-## `seed-localstack.sh`
+## `seed_localstack.py`
 
-Pre-seeds LocalStack with AWS resources for demo and testing. Reads from modular seed files in `scripts/seeds/`.
+Pre-seeds LocalStack with AWS resources for demo and testing using **boto3 directly** — no `awslocal` or AWS CLI installation required. Uses the same boto3 already in the project venv.
 
 **Usage:**
 
 ```bash
 # Default ghost cluster scenario
-bash scripts/seed-localstack.sh
+uv run python scripts/seed_localstack.py
 
-# Custom scenario
-bash scripts/seed-localstack.sh scripts/seeds/my-scenario.sh
+# Specific scenario
+uv run python scripts/seed_localstack.py --scenario ghost-cluster
 ```
 
 Called automatically by `make demo` and `make demo-live` after LocalStack is healthy. Can also be run standalone via `make seed`.
@@ -29,9 +29,9 @@ Modular seed scenario files. Each file creates AWS resources in LocalStack for a
 
 ### Creating a Custom Seed
 
-1. Copy `scripts/seeds/example-custom.sh` to `scripts/seeds/my-scenario.sh`
-2. Add `awslocal` commands to create your resources
-3. Run: `bash scripts/seed-localstack.sh scripts/seeds/my-scenario.sh`
+1. Add a new scenario function in `scripts/seed_localstack.py`
+2. Register it in the `if __name__ == "__main__"` block
+3. Run: `uv run python scripts/seed_localstack.py --scenario my-scenario`
 4. Use `make demo-live` to scan against your seeded resources
 
 Resources created in LocalStack are ephemeral — they disappear when the container stops. No cleanup needed.

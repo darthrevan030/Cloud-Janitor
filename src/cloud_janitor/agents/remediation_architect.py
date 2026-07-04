@@ -233,6 +233,15 @@ class RemediationArchitect:
             remediation_hcl = self.generate_remediation(finding)
             rollback_hcl = self.generate_rollback(finding)
 
+            # Ensure per-resource HCL is self-contained (includes shared data sources)
+            if "data.aws_vpc.current" in remediation_hcl:
+                vpc_data_block = (
+                    'data "aws_vpc" "current" {\n'
+                    '  default = true\n'
+                    '}\n\n'
+                )
+                remediation_hcl = vpc_data_block + remediation_hcl
+
             self._logger.emit("remediation_architect", "decision", resource_id, f"Generated remediation + rollback HCL for {resource_id}")
 
             plan = RemediationPlan(
@@ -252,7 +261,25 @@ class RemediationArchitect:
         # Step 4: Write combined remediation file
         remediation_parts = [p.remediation_hcl for p in plans if p.remediation_hcl]
         if remediation_parts:
-            combined_remediation = "\n\n".join(remediation_parts)
+            # Deduplicate shared data sources — extract them from individual parts
+            # and emit once at the top of the combined file.
+            vpc_data_block = (
+                'data "aws_vpc" "current" {\n'
+                '  default = true\n'
+                '}'
+            )
+            # Remove inline vpc data blocks from parts to avoid duplicates
+            cleaned_parts = [
+                part.replace(vpc_data_block + '\n\n', '').replace(vpc_data_block + '\n', '')
+                for part in remediation_parts
+            ]
+            # Prepend once if any part references it
+            preamble_parts = []
+            if any("data.aws_vpc.current" in part for part in cleaned_parts):
+                preamble_parts.append(vpc_data_block)
+
+            all_parts = preamble_parts + cleaned_parts
+            combined_remediation = "\n\n".join(all_parts)
             remediation_path = self.output_dir / "remediation.tf"
             remediation_path.write_text(combined_remediation, encoding="utf-8")
 
@@ -330,10 +357,6 @@ class RemediationArchitect:
 
         return (
             f'# Remediation: Narrow {resource_id} port {port} to VPC-only\n'
-            f'data "aws_vpc" "current" {{\n'
-            f'  default = true\n'
-            f'}}\n'
-            f'\n'
             f'resource "aws_security_group_rule" "remediate_{safe_id}_port_{port}" {{\n'
             f'  type              = "ingress"\n'
             f'  from_port         = {port}\n'
