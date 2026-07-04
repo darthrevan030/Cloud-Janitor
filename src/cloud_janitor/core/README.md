@@ -13,6 +13,7 @@ Centralised path configuration — every module that reads or writes runtime art
 | `PROJECT_ROOT` | `Path` | Resolved project root directory |
 | `OUTPUT_DIR` | `Path` | Base output directory (`output/`) |
 | `ROLLBACKS_DIR` | `Path` | Rollback files (`output/rollbacks/`) |
+| `REMEDIATIONS_DIR` | `Path` | Per-resource remediation files (`output/remediations/`) |
 | `LOGS_DIR` | `Path` | Log files (`output/logs/`) |
 | `POLICIES_DIR` | `Path` | Policy artifacts (`output/policies/`) |
 | `FINDINGS_STORE_PATH` | `Path` | Findings JSON (`output/findings_store.json`) |

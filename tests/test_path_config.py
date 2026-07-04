@@ -19,6 +19,7 @@ from cloud_janitor.core.paths import (
     LOGS_DIR,
     OUTPUT_DIR,
     POLICIES_DIR,
+    REMEDIATIONS_DIR,
     REQUIRED_DIRS,
     ROLLBACKS_DIR,
     ensure_output_dirs,
@@ -26,11 +27,11 @@ from cloud_janitor.core.paths import (
 
 
 class TestRequiredDirsConstant:
-    """REQUIRED_DIRS must contain exactly the four expected directories."""
+    """REQUIRED_DIRS must contain exactly the five expected directories."""
 
-    def test_contains_exactly_four_entries(self) -> None:
-        """REQUIRED_DIRS has exactly 4 elements."""
-        assert len(REQUIRED_DIRS) == 4
+    def test_contains_exactly_five_entries(self) -> None:
+        """REQUIRED_DIRS has exactly 5 elements."""
+        assert len(REQUIRED_DIRS) == 5
 
     def test_contains_output_dir(self) -> None:
         """REQUIRED_DIRS includes OUTPUT_DIR."""
@@ -39,6 +40,10 @@ class TestRequiredDirsConstant:
     def test_contains_rollbacks_dir(self) -> None:
         """REQUIRED_DIRS includes ROLLBACKS_DIR."""
         assert ROLLBACKS_DIR in REQUIRED_DIRS
+
+    def test_contains_remediations_dir(self) -> None:
+        """REQUIRED_DIRS includes REMEDIATIONS_DIR."""
+        assert REMEDIATIONS_DIR in REQUIRED_DIRS
 
     def test_contains_logs_dir(self) -> None:
         """REQUIRED_DIRS includes LOGS_DIR."""
@@ -49,8 +54,8 @@ class TestRequiredDirsConstant:
         assert POLICIES_DIR in REQUIRED_DIRS
 
     def test_exact_content(self) -> None:
-        """REQUIRED_DIRS is exactly [OUTPUT_DIR, ROLLBACKS_DIR, LOGS_DIR, POLICIES_DIR]."""
-        expected = [OUTPUT_DIR, ROLLBACKS_DIR, LOGS_DIR, POLICIES_DIR]
+        """REQUIRED_DIRS is exactly [OUTPUT_DIR, ROLLBACKS_DIR, REMEDIATIONS_DIR, LOGS_DIR, POLICIES_DIR]."""
+        expected = [OUTPUT_DIR, ROLLBACKS_DIR, REMEDIATIONS_DIR, LOGS_DIR, POLICIES_DIR]
         assert REQUIRED_DIRS == expected
 
 

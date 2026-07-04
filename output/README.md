@@ -14,6 +14,8 @@ output/
 │   └── scheduler.log         # Cron scheduler log (rotating, 10MB max)
 ├── policies/                 # Incident-response policy JSON files
 │   └── policy-*.json
+├── remediations/             # Per-resource remediation HCL
+│   └── <resource_id>.tf
 ├── rollbacks/                # Per-resource rollback HCL
 │   └── <resource_id>.tf
 └── README.md
@@ -38,9 +40,14 @@ output/
 1. RemediationArchitect reads `findings_store.json` and runs dependency checks
 2. For each actionable finding, generates remediation HCL
 3. All remediations written to `remediation.tf`, replacing any previous content
-4. Pre-remediation hook validates the file (`tflocal validate`)
-5. Approval Gate displays HCL and waits for `APPROVE <resource-id>`
-6. On approval, submitted to `tflocal apply`
+4. Per-resource remediation files written to `remediations/<resource_id>.tf`
+5. Pre-remediation hook validates the file (`tflocal validate`)
+6. Approval Gate displays HCL and waits for `APPROVE <resource-id>`
+7. On approval, submitted to `tflocal apply`
+
+## `remediations/`
+
+Per-resource remediation Terraform files. Each file contains the remediation HCL for a single resource, used by the dashboard diff view to display remediation vs rollback side-by-side. Gitignored.
 
 ## `logs/`
 
@@ -66,6 +73,7 @@ All runtime artifacts are excluded from version control:
 
 - `findings_store.json`, `scan_history.json`, `savings_ledger.json`
 - `logs/*.log` (all log files)
+- `remediations/*` (except `.gitkeep`)
 - `rollbacks/*` (except `.gitkeep`)
 - `policies/*.json`
 - `remediation.tf`
