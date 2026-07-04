@@ -396,6 +396,7 @@ class RemediationArchitect:
         Note: There is no aws_elasticache_snapshot resource in Terraform.
         We use null_resource + local-exec to create the snapshot and delete
         the cluster via AWS CLI, with depends_on to enforce ordering.
+        null_resource does not support tags — tags are only on the rollback resource.
         """
         resource_id = finding["resource_id"]
         safe_id = _sanitize_id(resource_id)
@@ -406,8 +407,6 @@ class RemediationArchitect:
             f'  provisioner "local-exec" {{\n'
             f'    command = "aws elasticache create-snapshot --cache-cluster-id {resource_id} --snapshot-name pre-remediation-{resource_id}"\n'
             f'  }}\n'
-            f'\n'
-            f'{self._tags_block(resource_id)}\n'
             f'}}\n'
             f'\n'
             f'resource "null_resource" "destroy_{safe_id}" {{\n'
@@ -416,8 +415,6 @@ class RemediationArchitect:
             f'  provisioner "local-exec" {{\n'
             f'    command = "aws elasticache delete-cache-cluster --cache-cluster-id {resource_id} --final-snapshot-identifier final-{resource_id}"\n'
             f'  }}\n'
-            f'\n'
-            f'{self._tags_block(resource_id)}\n'
             f'}}'
         )
 

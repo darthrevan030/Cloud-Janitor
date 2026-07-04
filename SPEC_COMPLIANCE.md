@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-04T11:31:12Z
+Generated: 2026-07-04T12:42:44Z
 
 **Summary:** 232 tasks — ✅ 223 done, ⏳ 1 partial, ❌ 8 pending
 
@@ -90,7 +90,7 @@ Generated: 2026-07-04T11:31:12Z
 | 20 | 2. Rollback gate — parse "ROLLBACK \<id\>" + "CONFIRM ROLLBACK \<id\>" | ✅ Done | no mapping |
 | 21 | 3. Audit log writer (append-only) | ✅ Done | no mapping |
 | 22 | 4. Error states: dependency found, validate fails, malformed approval | ✅ Done | "APPROVE" not found in codebase |
-| 23 | 1. Streamlit layout — 4 panels (agent feed, findings, diff, audit log) | ✅ Done | audit log not found |
+| 23 | 1. Streamlit layout — 4 panels (agent feed, findings, diff, audit log) | ✅ Done | audit log writer found |
 | 24 | 2. Agent activity feed with live status dots | ✅ Done | no mapping |
 | 25 | 3. Side-by-side diff view (remediation HCL vs rollback HCL) | ✅ Done | agents/remediation_architect.py missing |
 | 26 | 4. Approval input field + confirmation display | ✅ Done | no mapping |
