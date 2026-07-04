@@ -317,6 +317,12 @@ class SecOpsGuard:
             "total_monthly_waste": round(total_monthly_waste, 2),
         }
 
+        # Track agent completion — append "secops" to the list
+        agents_completed = store.get("agents_completed", [])
+        if "secops" not in agents_completed:
+            agents_completed.append("secops")
+        store["agents_completed"] = agents_completed
+
         # Write updated store (atomic: tmp + rename)
         tmp_path = self.findings_store_path.with_suffix(".json.tmp")
         tmp_path.write_text(json.dumps(store, indent=2))
