@@ -1,0 +1,15 @@
+# Pro override — adds ElastiCache support and uses the Pro image.
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.pro.yml up -d
+# Requires LOCALSTACK_AUTH_TOKEN in .env
+services:
+  localstack:
+    image: localstack/localstack-pro:4.4.0
+    environment:
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+      - SERVICES=ec2,elasticache,s3
+      - AWS_DEFAULT_REGION=us-east-1
+    # NOTE: Docker socket mount is required for LocalStack Redis container mode.
+    # On shared/production hosts, run LocalStack in a separate VM or restrict
+    # access to the socket via a proxy (e.g., docker-socket-proxy).
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
