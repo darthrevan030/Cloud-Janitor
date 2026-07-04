@@ -1,15 +1,15 @@
 [
   {
-    "account_id": "YOUR_ACCOUNT_ID",
+    "account_id": "111222333444",
     "account_name": "Production",
-    "role_arn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/CloudJanitorReadOnly",
+    "role_arn": "arn:aws:iam::111222333444:role/CloudJanitorReadOnly",
     "region": "us-east-1",
     "priority": "high"
   },
   {
-    "account_id": "YOUR_ACCOUNT_ID",
+    "account_id": "555666777888",
     "account_name": "Staging",
-    "role_arn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/CloudJanitorReadOnly",
+    "role_arn": "arn:aws:iam::555666777888:role/CloudJanitorReadOnly",
     "region": "us-west-2",
     "priority": "medium"
   }

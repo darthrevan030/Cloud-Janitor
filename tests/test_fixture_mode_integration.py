@@ -387,13 +387,13 @@ class TestMultiAccountFixtureMode:
         from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 
         orch = MultiAccountOrchestrator(
-            accounts_path=PROJECT_ROOT / "accounts.json",
+            accounts_path=PROJECT_ROOT / "accounts.example.json",
         )
         result = orch.run_all()
 
-        # accounts.json has 3 accounts
-        assert result["accounts_scanned"] == 3
-        assert len(result["by_account"]) == 3
+        # accounts.example.json has 2 accounts
+        assert result["accounts_scanned"] == 2
+        assert len(result["by_account"]) == 2
 
     @patch("cloud_janitor.core.llm_client.get_client")
     def test_multi_account_sorted_by_priority(self, mock_get_client, fixture_backend_env):
@@ -403,7 +403,7 @@ class TestMultiAccountFixtureMode:
         from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 
         orch = MultiAccountOrchestrator(
-            accounts_path=PROJECT_ROOT / "accounts.json",
+            accounts_path=PROJECT_ROOT / "accounts.example.json",
         )
         result = orch.run_all()
 
