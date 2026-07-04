@@ -24,6 +24,7 @@ venv/
 # Runtime outputs (repo-root output/)
 output/logs/audit.log
 output/findings_store.json
+output/findings_store_*.json
 findings_store_*.json
 output/scan_history.json
 output/scan_history.json.tmp
