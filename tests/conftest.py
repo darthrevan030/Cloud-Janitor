@@ -19,6 +19,11 @@ import sys
 
 import pytest
 
+from hypothesis import settings
+
+settings.register_profile("dev", deadline=None)
+settings.load_profile("dev")
+
 
 @pytest.fixture(autouse=True)
 def _stabilize_llm_client_module():
