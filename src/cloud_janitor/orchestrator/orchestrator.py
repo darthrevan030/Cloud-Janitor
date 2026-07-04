@@ -491,6 +491,7 @@ class Orchestrator:
         self._reasoning_logger.truncate()
 
         # Step 1: FinOps Auditor scan
+        logger.info("[Orchestrator] Step 1: Running FinOps Auditor scan...")
         _emit("finops", "running")
         self._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
         try:
@@ -499,10 +500,12 @@ class Orchestrator:
             _emit("finops", "failure")
             self._record_error(e, "FinOpsAuditor", context="")
             return AuditResult(success=False, error=f"FinOps Auditor failed: {e}", error_category="agent_failure", error_agent="FinOpsAuditor")
+        logger.info("[Orchestrator] Step 1 complete: FinOps found %d finding(s)", len(finops_findings))
         self._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
         _emit("finops", "success")
 
         # Step 2: SecOps Guard scan
+        logger.info("[Orchestrator] Step 2: Running SecOps Guard scan...")
         _emit("secops", "running")
         self._log_action("scan", "all", "started", "SecOps Guard scan initiated")
         try:
@@ -517,20 +520,25 @@ class Orchestrator:
                 error_category="agent_failure",
                 error_agent="SecOpsGuard",
             )
+        logger.info("[Orchestrator] Step 2 complete: SecOps found %d finding(s)", len(secops_findings))
         self._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
         _emit("secops", "success")
 
         # Step 3: Validate findings_store has entries from both agents
+        logger.info("[Orchestrator] Step 3: Validating findings store...")
         _emit("remediation", "running")
         validation_error = self._validate_findings_store()
         if validation_error:
+            logger.warning("[Orchestrator] Step 3 failed: %s", validation_error)
             self._log_action("plan", "all", "failure", validation_error)
             _emit("remediation", "failure")
             val_exc = RuntimeError(validation_error)
             self._record_error(val_exc, "Orchestrator", context="schema_check")
             return AuditResult(success=False, error=validation_error, error_category="validation_failure", error_agent="Orchestrator")
+        logger.info("[Orchestrator] Step 3 complete: Findings store valid")
 
         # Step 4: Remediation Architect plans
+        logger.info("[Orchestrator] Step 4: Running Remediation Architect (dependency checks + HCL generation)...")
         self._log_action("plan", "all", "started", "Remediation Architect planning")
         try:
             plans = self._architect.plan()
@@ -553,6 +561,10 @@ class Orchestrator:
         for p in blocked_plans:
             self._log_action("plan", p.resource_id, "blocked", p.block_reason)
 
+        logger.info(
+            "[Orchestrator] Step 4 complete: %d plan(s) generated, %d blocked",
+            len(active_plans), len(blocked_plans),
+        )
         self._log_action(
             "plan", "all", "success",
             f"Generated {len(active_plans)} plan(s), {len(blocked_plans)} blocked"
@@ -560,8 +572,10 @@ class Orchestrator:
 
         # Step 5: Run pre-remediation hook on active plans
         if active_plans:
+            logger.info("[Orchestrator] Step 5: Running pre-remediation hook (terraform validate)...")
             hook_error = self._run_pre_remediation_hook(active_plans)
             if hook_error:
+                logger.warning("[Orchestrator] Step 5 failed: %s", hook_error[:100])
                 self._log_action("plan", "all", "blocked", f"Pre-remediation hook failed: {hook_error}")
                 _emit("remediation", "failure")
                 hook_exc = RuntimeError(hook_error)
@@ -575,23 +589,29 @@ class Orchestrator:
                     error_category="validation_failure",
                     error_agent="Orchestrator",
                 )
+            logger.info("[Orchestrator] Step 5 complete: Hook validation passed")
 
         _emit("remediation", "success")
         all_findings = finops_findings + secops_findings
 
         # Step 6: Anomaly Detection (post-scan, before drift) — Req 6.4
+        logger.info("[Orchestrator] Step 6: Running anomaly detection...")
         # Use findings as the resource pool for anomaly detection to avoid
         # redundant API/fixture calls (agents already fetched the data).
         anomalies = self._run_anomaly_detection(all_findings, all_findings)
+        logger.info("[Orchestrator] Step 6 complete: %d anomalies detected", len(anomalies))
 
         # Step 7: Drift Detection — save snapshot then detect
+        logger.info("[Orchestrator] Step 7: Running drift detection...")
         total_waste = sum(
             f.get("cost_estimate_monthly", 0.0) for f in all_findings
         )
         scan_id = str(uuid.uuid4())
         self._drift_detector.save_snapshot(scan_id, all_findings, anomalies, total_waste)
         drift_report = self._drift_detector.detect(all_findings)
+        logger.info("[Orchestrator] Step 7 complete: Drift report generated")
 
+        logger.info("[Orchestrator] ✅ Audit complete: %d findings, %d plans", len(all_findings), len(active_plans))
         return AuditResult(
             success=True,
             findings=all_findings,
@@ -891,6 +911,7 @@ class Orchestrator:
                 )
 
             # Initialize the working directory before apply.
+            logger.info("[Orchestrator] Running terraform init for %s...", resource_id)
             init_result = subprocess.run(
                 [self.tf_cmd, "init", "-input=false"],
                 capture_output=True,
@@ -911,6 +932,7 @@ class Orchestrator:
                 )
 
             # Execute terraform apply only for the approved resource
+            logger.info("[Orchestrator] Running terraform apply for %s...", resource_id)
             apply_result = subprocess.run(
                 [self.tf_cmd, "apply", "-auto-approve"],
                 capture_output=True,
@@ -1516,6 +1538,7 @@ class Orchestrator:
                 error=f"Failed to stage rollback artifact: {e}",
             )
 
+        logger.info("[Orchestrator] Running terraform init for rollback %s...", resource_id)
         init_result = subprocess.run(
             [self.tf_cmd, "init", "-input=false"],
             capture_output=True,
@@ -1538,6 +1561,7 @@ class Orchestrator:
                 exit_code=init_result.returncode,
             )
 
+        logger.info("[Orchestrator] Running terraform apply for rollback %s...", resource_id)
         apply_result = subprocess.run(
             [self.tf_cmd, "apply", "-auto-approve"],
             capture_output=True,
