@@ -94,7 +94,7 @@ Cloud Janitor runs a multi-agent pipeline in strict sequence:
 1. **FinOps Auditor** scans for idle/orphaned resources and writes `findings_store.json`.
 2. **SecOps Guard** appends security findings to the same store.
 3. **Remediation Architect** reads all findings, checks dependencies, and generates `output/remediation.tf` + per-resource HCL in `remediations/` and `rollbacks/`.
-4. **AI agents** explain the findings, detect anomalies, suggest follow-up policies, and track drift.
+4. **AI agents** explain findings, detect anomalies, suggest follow-up policies, track drift, infer resource tags, and generate incident policies — all surfaced in the dashboard.
 5. **Approval Gate** requires exact typed approval (`APPROVE <resource-id>`) before any change executes. Three failed attempts lock the gate.
 6. On approval, `tflocal apply` executes against LocalStack. Rollback is a two-step process: `ROLLBACK <id>` then `CONFIRM ROLLBACK <id>`.
 
@@ -288,6 +288,8 @@ Supports single inference and batch mode (chunks of 10, one LLM call per chunk).
 
 **Model string:** `src/cloud_janitor/agents/tagger.py` — `ResourceTagger`
 
+**Dashboard panel:** 🏷️ Resource Tags — auto-runs `infer_batch()` on all unique resources after a scan. Shows env, team, owner, risk level, and confidence.
+
 ---
 
 ### Incident Policy Generator
@@ -297,6 +299,8 @@ Describe a past incident or breach in natural language — the agent generates 3
 Policies are written to `policies/<policy_id>.json` and are idempotent (same incident text returns same policies without a second LLM call).
 
 **Model string:** `src/cloud_janitor/agents/incident_policy_generator.py` — `IncidentPolicyGenerator`
+
+**Dashboard panel:** 🚨 Incident Policy Generator — text input for incident descriptions, generates policies on demand, and can load previously saved policies from disk.
 
 ---
 

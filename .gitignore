@@ -25,6 +25,7 @@ scripts/tf-provider-cache/.terraform.lock.hcl
 
 # Runtime outputs (repo-root output/)
 output/logs/audit.log
+output/logs/audit_*.log
 output/findings_store.json
 output/findings_store_*.json
 findings_store_*.json
@@ -41,10 +42,17 @@ output/remediations/*
 !output/remediations/.gitkeep
 output/policies/*.json
 output/remediation.tf
+output/approval_gates.json
 audit.log
 
 # Runtime outputs accidentally written inside src if any
 src/cloud_janitor/output/
+
+# Legacy root-level fixtures (canonical copies are in src/cloud_janitor/fixtures/)
+fixtures/
+
+# Stale terraform overrides
+localstack_providers_override.tf
 
 # If JANITOR_HOME is set to a path inside the repo
 .janitor_home

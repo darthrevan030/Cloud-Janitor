@@ -27,9 +27,10 @@
 
 ## Project Layout
 
-- Current layout is **flat** (no `src/` directory). Do not introduce a `src/` layout, package renames, or import-path changes unless explicitly working the src-layout migration task — that work is deliberately deferred and must not be mixed into unrelated changes, to avoid import-path conflicts with in-flight work.
+- Current layout uses `src/cloud_janitor/` (src-layout). Package installs via `hatchling` with `packages = ["src/cloud_janitor"]`.
 - All generated/runtime artifacts are consolidated under `output/`, with subdirectories:
   - `output/rollbacks/`
+  - `output/remediations/`
   - `output/logs/`
   - `output/policies/`
 - Runtime artifacts (`remediation_*.tf`, `rollback_*.tf`, `findings_store.json`, etc.) are **never** committed to git.
@@ -38,7 +39,7 @@
 
 - Multi-agent system with an `Orchestrator` coordinating specialized agents for auditing (cost/security findings) and remediation (Terraform HCL generation).
 - Human-in-the-loop approval gate before any remediation is executed — no agent applies infrastructure changes without explicit approval.
-- Before checking whether a class is *used*, always verify it's actually *instantiated* (`grep "ClassName("`), not just imported (`grep "ClassName"`) — several agents are imported in `app.py` but never wired in.
+- Before checking whether a class is *used*, always verify it's actually *instantiated* (`grep "ClassName("`), not just imported (`grep "ClassName"`) — some agents are instantiated in the orchestrator and used indirectly by the dashboard via `execute_audit()`.
 
 ## AWS Interaction
 
