@@ -22,6 +22,7 @@ from cloud_janitor.orchestrator import Orchestrator
 from cloud_janitor.core.logging_config import configure_logging
 from cloud_janitor.core.paths import (
     FINDINGS_STORE_PATH,
+    REMEDIATIONS_DIR,
     ROLLBACKS_DIR,
     AUDIT_LOG_PATH,
     REASONING_LOG_PATH,
@@ -64,6 +65,16 @@ try:
     from cloud_janitor.agents.multi_account_orchestrator import MultiAccountOrchestrator
 except ImportError:
     MultiAccountOrchestrator: Optional[type] = None  # type: ignore[no-redef]
+
+try:
+    from cloud_janitor.agents.tagger import ResourceTagger
+except ImportError:
+    ResourceTagger: Optional[type] = None  # type: ignore[no-redef]
+
+try:
+    from cloud_janitor.agents.incident_policy_generator import IncidentPolicyGenerator
+except ImportError:
+    IncidentPolicyGenerator: Optional[type] = None  # type: ignore[no-redef]
 
 try:
     from scheduler import JanitorScheduler
@@ -539,6 +550,8 @@ if "policy_suggestions" not in st.session_state:
     st.session_state.policy_suggestions = None
 if "resource_tags_cache" not in st.session_state:
     st.session_state.resource_tags_cache = {}
+if "incident_policies" not in st.session_state:
+    st.session_state.incident_policies = None
 if "anomaly_results" not in st.session_state:
     st.session_state.anomaly_results = None
 if "drift_report" not in st.session_state:
@@ -601,7 +614,11 @@ def load_findings() -> list[dict]:
         return []
 
 
-def load_remediation_hcl() -> str:
+def load_remediation_hcl(resource_id: str | None = None) -> str:
+    if resource_id:
+        per_resource_path = REMEDIATIONS_DIR / f"{resource_id}.tf"
+        if per_resource_path.exists():
+            return per_resource_path.read_text(encoding="utf-8", errors="replace")
     if not REMEDIATION_PATH.exists():
         return ""
     return REMEDIATION_PATH.read_text(encoding="utf-8", errors="replace")
@@ -925,6 +942,13 @@ if st.button("▶  Run Audit", type="primary", use_container_width=False):
         st.stop()
 
     st.session_state.audit_result = result
+
+    # Populate anomaly and drift panels from the audit result
+    if hasattr(result, "anomalies") and result.anomalies:
+        st.session_state.anomaly_results = result.anomalies
+    if hasattr(result, "drift_report") and result.drift_report:
+        st.session_state.drift_report = result.drift_report
+
     st.success("Audit complete.")
     st.rerun()
 
@@ -964,12 +988,12 @@ with top_right:
 with bottom_left:
     st.markdown('<div class="cj-panel"><div class="cj-panel-title">Remediation vs Rollback</div>', unsafe_allow_html=True)
 
-    remediation_hcl = load_remediation_hcl()
     rollback_files = [f for f in ROLLBACKS_DIR.glob("*.tf") if f.stem != ".gitkeep"]
     resource_ids = [f.stem for f in rollback_files]
 
     if resource_ids:
         selected_diff_resource = st.selectbox("Resource", options=resource_ids, key="diff_resource_select", label_visibility="collapsed")
+        remediation_hcl = load_remediation_hcl(selected_diff_resource)
         rollback_hcl = load_rollback_hcl(selected_diff_resource)
         left_html, right_html, is_identical = render_diff_html(remediation_hcl, rollback_hcl)
 
@@ -984,7 +1008,8 @@ with bottom_left:
             with dc_right:
                 st.markdown('<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#58a6ff;margin-bottom:4px;">ROLLBACK</div>', unsafe_allow_html=True)
                 st.markdown(right_html, unsafe_allow_html=True)
-    elif remediation_hcl:
+    elif load_remediation_hcl():
+        remediation_hcl = load_remediation_hcl()
         st.markdown(f'<div class="cj-code">{_esc(remediation_hcl)}</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div style="color:#8b949e;font-family:\'IBM Plex Mono\',monospace;font-size:0.82rem;padding:8px 0;">No remediation plan yet.</div>', unsafe_allow_html=True)
@@ -1155,7 +1180,7 @@ if audit_result is not None and audit_result.plans and RemediationExplainer is n
                             finding = f
                             break
 
-                remediation_hcl = load_remediation_hcl()
+                remediation_hcl = load_remediation_hcl(rid)
                 rollback_hcl = load_rollback_hcl(rid)
 
                 if remediation_hcl.strip() and rollback_hcl.strip():
@@ -1232,6 +1257,161 @@ if audit_result is not None and PolicySuggester is not None:
                 )
         else:
             st.markdown("No policy suggestions available.")
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────
+# Resource Tagger Panel (shown post-scan)
+# ──────────────────────────────────────────────────────────────────────
+
+if audit_result is not None and ResourceTagger is not None:
+    with st.expander("🏷️ Resource Tags (AI-Inferred)", expanded=False):
+        if st.button("🔄 Re-infer Tags", key="btn_retry_tags"):
+            st.session_state.resource_tags_cache = {}
+            st.rerun()
+
+        if not st.session_state.resource_tags_cache:
+            try:
+                tagger = ResourceTagger()
+                findings = audit_result.findings or []
+                resources_to_tag = []
+                seen_ids: set[str] = set()
+                for f in findings:
+                    if not isinstance(f, dict):
+                        continue
+                    rid = f.get("resource_id", "")
+                    if rid and rid not in seen_ids:
+                        seen_ids.add(rid)
+                        meta = f.get("metadata", {})
+                        # Build a meaningful resource_name from available fields.
+                        # metadata.name is best; fall back to title or description
+                        # which often contains the human-readable name.
+                        name = meta.get("name", "")
+                        if not name:
+                            # Extract name from title like "Idle ElastiCache cluster (cache-prod-legacy-01)"
+                            # or description like "Security group sg-prod-redis (sg-xxx) allows..."
+                            title = f.get("title", "")
+                            desc = f.get("description", "")
+                            name = title or desc[:80] or rid
+                        resources_to_tag.append({
+                            "resource_id": rid,
+                            "resource_name": name,
+                        })
+                if resources_to_tag:
+                    results = tagger.infer_batch(resources_to_tag)
+                    for r in results:
+                        st.session_state.resource_tags_cache[r.get("resource_id", "")] = r
+            except Exception:
+                pass
+
+        tags_cache = st.session_state.resource_tags_cache
+        if tags_cache:
+            # Check if all results are safe defaults (LLM likely unavailable)
+            all_defaults = all(
+                tags.get("confidence", 0.0) == 0.0 and tags.get("env") == "unknown"
+                for tags in tags_cache.values()
+            )
+            if all_defaults:
+                st.warning(
+                    "All tags returned defaults — LLM is likely unavailable. "
+                    "Set `OPENROUTER_API_KEY` in `.env` to enable AI inference."
+                )
+            for rid, tags in tags_cache.items():
+                env = _esc(str(tags.get("env", "unknown")))
+                team = _esc(str(tags.get("team", "unknown")))
+                owner = _esc(str(tags.get("owner", "unknown")))
+                risk = _esc(str(tags.get("risk_level", "unknown")))
+                confidence = tags.get("confidence", 0.0)
+                conf_pct = f"{confidence * 100:.0f}%"
+
+                st.markdown(
+                    f'<div class="cj-finding">'
+                    f'<div class="cj-finding-body">'
+                    f'<div class="cj-finding-title">{_esc(rid)}</div>'
+                    f'<div class="cj-finding-meta">'
+                    f'env: <b>{env}</b> · team: <b>{team}</b> · owner: <b>{owner}</b> · '
+                    f'risk: <b>{risk}</b> · confidence: {conf_pct}'
+                    f'</div>'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown("No resources to tag, or inference unavailable.")
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────
+# Incident Policy Generator Panel
+# ──────────────────────────────────────────────────────────────────────
+
+if IncidentPolicyGenerator is not None:
+    with st.expander("🚨 Incident Policy Generator", expanded=False):
+        st.markdown(
+            '<div style="color:#8b949e;font-size:0.82rem;margin-bottom:8px;">'
+            'Describe a past incident or near-miss to generate preventive scan policies.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        incident_desc = st.text_area(
+            "Incident description",
+            placeholder="e.g. Redis cluster was publicly accessible for 3 days before detection...",
+            key="incident_description_input",
+            label_visibility="collapsed",
+        )
+
+        gen_col, list_col = st.columns(2)
+        with gen_col:
+            if st.button("Generate Policies", key="btn_gen_policies", use_container_width=True):
+                if incident_desc and incident_desc.strip():
+                    with st.spinner("Generating policies..."):
+                        try:
+                            gen = IncidentPolicyGenerator()
+                            policies = gen.generate(incident_desc.strip())
+                            st.session_state.incident_policies = policies
+                            if policies:
+                                st.success(f"Generated {len(policies)} policy/policies.")
+                            else:
+                                st.warning("No policies generated. Try a more detailed description.")
+                        except Exception:
+                            st.session_state.incident_policies = []
+                            st.error("Policy generation failed.")
+                    st.rerun()
+                else:
+                    st.warning("Enter an incident description first.")
+
+        with list_col:
+            if st.button("Load Saved Policies", key="btn_list_policies", use_container_width=True):
+                try:
+                    gen = IncidentPolicyGenerator()
+                    st.session_state.incident_policies = gen.list_policies()
+                except Exception:
+                    st.session_state.incident_policies = []
+                st.rerun()
+
+        policies: list[dict] | None = st.session_state.incident_policies  # type: ignore[no-redef]
+        if policies:
+            for p in policies:
+                severity = p.get("severity", "medium").upper()
+                title = _esc(p.get("title", p.get("policy_id", "Untitled")) or "Untitled")
+                description = _esc(p.get("description", ""))
+                check_type = _esc(p.get("check_type", ""))
+                resource_type = _esc(p.get("resource_type", ""))
+
+                badge_class = {"HIGH": "HIGH", "MEDIUM": "MEDIUM", "LOW": "LOW", "CRITICAL": "HIGH"}.get(severity, "MEDIUM")
+                st.markdown(
+                    f'<div class="cj-finding">'
+                    f'<div><span class="cj-badge {badge_class}">{severity}</span></div>'
+                    f'<div class="cj-finding-body">'
+                    f'<div class="cj-finding-title">{title}</div>'
+                    f'<div class="cj-finding-meta">{description}</div>'
+                    f'<div class="cj-finding-cost">{resource_type} · {check_type}</div>'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+        elif policies is not None:
+            st.markdown("No policies found.")
 
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
@@ -1383,9 +1563,9 @@ if MultiAccountOrchestrator is not None:
                 with st.spinner("Running audits across accounts..."):
                     try:
                         multi_orch = MultiAccountOrchestrator()
-                        results = multi_orch.run_all()
-                        st.session_state.multi_account_results = results
-                        st.success(f"Multi-account audit complete — {results.get('accounts_scanned', 0)} account(s) scanned.")
+                        ma_results = multi_orch.run_all()
+                        st.session_state.multi_account_results = ma_results
+                        st.success(f"Multi-account audit complete — {ma_results.get('accounts_scanned', 0)} account(s) scanned.")
                         st.rerun()
                     except Exception as e:
                         render_structured_error(f"Multi-account audit failed: {e}")
@@ -1417,12 +1597,12 @@ if MultiAccountOrchestrator is not None:
                     acct_id = _esc(acct.get("account_id", ""))
                     priority = acct.get("priority", "low").upper()
                     status = acct.get("status", "unknown")
-                    findings_count = len(acct.get("findings", []))
+                    findings_list = acct.get("findings", [])
+                    findings_count = len(findings_list)
                     waste = acct.get("waste", 0.0)
                     error = acct.get("error")
 
                     status_icon = "✓" if status == "success" else "✗"
-                    status_color = "green" if status == "success" else "red"
 
                     badge_class = {"HIGH": "HIGH", "MEDIUM": "MEDIUM", "LOW": "LOW"}.get(priority, "LOW")
 
@@ -1437,3 +1617,64 @@ if MultiAccountOrchestrator is not None:
                         entry_html += f'<div class="cj-finding-meta" style="color:#f85149;">Error: {_esc(error)}</div>'
                     entry_html += '</div></div>'
                     st.markdown(entry_html, unsafe_allow_html=True)
+
+                    # Show per-account findings detail
+                    if findings_list:
+                        with st.expander(f"  📄 {acct_name} — {findings_count} finding(s)", expanded=False):
+                            for f in findings_list:
+                                if not isinstance(f, dict):
+                                    continue
+                                f_severity = str(f.get("severity", "unknown")).upper()
+                                f_title = _esc(f.get("title", f.get("resource_id", "unknown")) or "unknown")
+                                f_resource = _esc(f.get("resource_id", ""))
+                                f_type = _esc(f.get("resource_type", ""))
+                                f_category = _esc(f.get("category", ""))
+                                f_cost = f.get("cost_estimate_monthly", 0.0)
+                                f_desc = _esc(f.get("description", ""))
+
+                                f_badge = {"CRITICAL": "HIGH", "HIGH": "HIGH", "MEDIUM": "MEDIUM", "LOW": "LOW"}.get(f_severity, "LOW")
+                                cost_str = f" · ${f_cost:.2f}/mo" if f_cost else ""
+
+                                st.markdown(
+                                    f'<div class="cj-finding" style="margin-left:12px;">'
+                                    f'<div><span class="cj-badge {f_badge}">{f_severity}</span></div>'
+                                    f'<div class="cj-finding-body">'
+                                    f'<div class="cj-finding-title">{f_title}</div>'
+                                    f'<div class="cj-finding-meta">{f_resource} · {f_type} · {f_category}{cost_str}</div>'
+                                    f'<div class="cj-finding-meta" style="color:#8b949e;">{f_desc}</div>'
+                                    f'</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True,
+                                )
+
+            # Aggregate cross-account findings
+            aggregate = ma.get("aggregate_findings", [])
+            if aggregate:
+                with st.expander(f"📊 All Findings Across Accounts ({len(aggregate)})", expanded=False):
+                    # Group by severity
+                    by_sev: dict[str, list] = {}
+                    for f in aggregate:
+                        if not isinstance(f, dict):
+                            continue
+                        sev = str(f.get("severity", "unknown")).upper()
+                        by_sev.setdefault(sev, []).append(f)
+
+                    for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
+                        items = by_sev.get(sev, [])
+                        if not items:
+                            continue
+                        st.markdown(f"**{sev}** ({len(items)})")
+                        for f in items:
+                            f_title = _esc(f.get("title", f.get("resource_id", "unknown")) or "unknown")
+                            f_acct = _esc(f.get("account_id", ""))
+                            f_resource = _esc(f.get("resource_id", ""))
+                            st.markdown(
+                                f'<div class="cj-finding" style="margin-left:12px;">'
+                                f'<div><span class="cj-badge {sev}">{sev}</span></div>'
+                                f'<div class="cj-finding-body">'
+                                f'<div class="cj-finding-title">{f_title}</div>'
+                                f'<div class="cj-finding-meta">{f_resource} · account: {f_acct}</div>'
+                                f'</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )

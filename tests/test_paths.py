@@ -17,6 +17,7 @@ from cloud_janitor.core.paths import (
     POLICIES_DIR,
     PROJECT_ROOT,
     REASONING_LOG_PATH,
+    REMEDIATIONS_DIR,
     REQUIRED_DIRS,
     ROLLBACKS_DIR,
     SAVINGS_LEDGER_PATH,
@@ -43,6 +44,10 @@ class TestPathConstants:
     def test_rollbacks_dir_is_under_output(self) -> None:
         """ROLLBACKS_DIR must be output/rollbacks."""
         assert ROLLBACKS_DIR == OUTPUT_DIR / "rollbacks"
+
+    def test_remediations_dir_is_under_output(self) -> None:
+        """REMEDIATIONS_DIR must be output/remediations."""
+        assert REMEDIATIONS_DIR == OUTPUT_DIR / "remediations"
 
     def test_logs_dir_is_under_output(self) -> None:
         """LOGS_DIR must be output/logs."""
@@ -72,17 +77,21 @@ class TestPathConstants:
         """SAVINGS_LEDGER_PATH must be output/savings_ledger.json."""
         assert SAVINGS_LEDGER_PATH == OUTPUT_DIR / "savings_ledger.json"
 
-    def test_hooks_dir_is_under_project_root(self) -> None:
-        """HOOKS_DIR must be hooks/ under PROJECT_ROOT."""
-        assert HOOKS_DIR == PROJECT_ROOT / "hooks"
+    def test_hooks_dir_is_package_relative(self) -> None:
+        """HOOKS_DIR must point to the cloud_janitor/hooks package directory."""
+        assert HOOKS_DIR.name == "hooks"
+        assert (HOOKS_DIR / "__init__.py").exists()
+        assert (HOOKS_DIR / "pre-remediation.sh").exists()
+        assert (HOOKS_DIR / "post-remediation.sh").exists()
 
     def test_required_dirs_contains_all_output_subdirs(self) -> None:
-        """REQUIRED_DIRS must include OUTPUT_DIR and its three subdirectories."""
+        """REQUIRED_DIRS must include OUTPUT_DIR and its subdirectories."""
         assert OUTPUT_DIR in REQUIRED_DIRS
         assert ROLLBACKS_DIR in REQUIRED_DIRS
+        assert REMEDIATIONS_DIR in REQUIRED_DIRS
         assert LOGS_DIR in REQUIRED_DIRS
         assert POLICIES_DIR in REQUIRED_DIRS
-        assert len(REQUIRED_DIRS) == 4
+        assert len(REQUIRED_DIRS) == 5
 
     def test_all_paths_are_path_objects(self) -> None:
         """All path constants must be pathlib.Path instances."""

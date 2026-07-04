@@ -230,6 +230,11 @@ class MultiAccountOrchestrator:
         output_dir.mkdir(parents=True, exist_ok=True)
         findings_store_path = output_dir / f"findings_store_{account_id}.json"
 
+        # Isolated audit log per account to avoid duplicate entries in the main log
+        logs_dir = output_dir / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        account_audit_log = logs_dir / f"audit_{account_id}.log"
+
         # Create an Orchestrator instance for this account
         orch = Orchestrator(
             project_root=self._project_root,
@@ -239,6 +244,10 @@ class MultiAccountOrchestrator:
         orch._finops.findings_store_path = findings_store_path  # type: ignore[attr-defined]
         orch._secops.findings_store_path = findings_store_path  # type: ignore[attr-defined]
         orch._architect.findings_store_path = findings_store_path  # type: ignore[attr-defined]
+
+        # Override audit log to avoid polluting the main audit trail
+        orch.audit_log_path = account_audit_log
+        orch._audit_logger = orch._audit_logger.__class__(account_audit_log)  # type: ignore[attr-defined]
 
         # Execute the audit
         result = orch.execute_audit()

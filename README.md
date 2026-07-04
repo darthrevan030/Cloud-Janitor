@@ -93,8 +93,8 @@ Cloud Janitor runs a multi-agent pipeline in strict sequence:
 
 1. **FinOps Auditor** scans for idle/orphaned resources and writes `findings_store.json`.
 2. **SecOps Guard** appends security findings to the same store.
-3. **Remediation Architect** reads all findings, checks dependencies, and generates `output/remediation.tf` + per-resource rollback HCL in `rollbacks/`.
-4. **AI agents** explain the findings, detect anomalies, suggest follow-up policies, and track drift.
+3. **Remediation Architect** reads all findings, checks dependencies, and generates `output/remediation.tf` + per-resource HCL in `remediations/` and `rollbacks/`.
+4. **AI agents** explain findings, detect anomalies, suggest follow-up policies, track drift, infer resource tags, and generate incident policies — all surfaced in the dashboard.
 5. **Approval Gate** requires exact typed approval (`APPROVE <resource-id>`) before any change executes. Three failed attempts lock the gate.
 6. On approval, `tflocal apply` executes against LocalStack. Rollback is a two-step process: `ROLLBACK <id>` then `CONFIRM ROLLBACK <id>`.
 
@@ -156,7 +156,8 @@ Generates Terraform HCL to fix findings, plus rollback HCL for every change.
 **Output files:**
 
 - `output/remediation.tf` — combined HCL for all unblocked findings (overwritten each run)
-- `rollbacks/<resource_id>.tf` — one file per resource
+- `remediations/<resource_id>.tf` — one remediation file per resource
+- `rollbacks/<resource_id>.tf` — one rollback file per resource
 
 ---
 
@@ -287,6 +288,8 @@ Supports single inference and batch mode (chunks of 10, one LLM call per chunk).
 
 **Model string:** `src/cloud_janitor/agents/tagger.py` — `ResourceTagger`
 
+**Dashboard panel:** 🏷️ Resource Tags — auto-runs `infer_batch()` on all unique resources after a scan. Shows env, team, owner, risk level, and confidence.
+
 ---
 
 ### Incident Policy Generator
@@ -296,6 +299,8 @@ Describe a past incident or breach in natural language — the agent generates 3
 Policies are written to `policies/<policy_id>.json` and are idempotent (same incident text returns same policies without a second LLM call).
 
 **Model string:** `src/cloud_janitor/agents/incident_policy_generator.py` — `IncidentPolicyGenerator`
+
+**Dashboard panel:** 🚨 Incident Policy Generator — text input for incident descriptions, generates policies on demand, and can load previously saved policies from disk.
 
 ---
 
@@ -670,19 +675,24 @@ cloud-janitor/
 │       │   ├── __init__.py
 │       │   ├── aws_cost_explorer.json # Fake cost/idle resource data
 │       │   └── aws_config_inspector.json # Fake security findings + dependency map
+│       ├── hooks/                   # Pipeline hook scripts (shipped as package data)
+│       │   ├── __init__.py          # HOOKS_DIR resolution
+│       │   ├── pre-remediation.sh   # HCL validation gate
+│       │   └── post-remediation.sh  # Audit log append
 │       └── orchestrator/            # Agent pipeline + approval flow
 │           ├── __init__.py          # Re-exports Orchestrator, AuditResult, etc.
 │           └── orchestrator.py      # Main orchestrator implementation
 ├── bin/
 │   └── tflocal                      # Repo-local wrapper (dry-run or delegates to real binary)
-├── hooks/
-│   ├── pre-remediation.sh           # HCL validation gate (runtime)
-│   └── post-remediation.sh          # Audit log append (runtime)
+├── hooks/                           # Dev convenience (canonical copies live in src/cloud_janitor/hooks/)
+│   ├── pre-remediation.sh
+│   └── post-remediation.sh
 ├── output/
 │   ├── logs/                        # audit.log, scheduler.log, agent_reasoning.log
 │   ├── policies/                    # Incident-generated policy JSON files
+│   ├── remediations/                # Per-resource remediation HCL
 │   ├── rollbacks/                   # Per-resource rollback HCL
-│   └── remediation.tf               # Auto-generated (overwritten each scan)
+│   └── remediation.tf               # Combined HCL (overwritten each scan)
 ├── scripts/
 │   ├── seed_localstack.py           # Pre-seed LocalStack with demo resources (boto3, no CLI needed)
 │   ├── seeds/                       # Legacy bash seed scenarios (optional)

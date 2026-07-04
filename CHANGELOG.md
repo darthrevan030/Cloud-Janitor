@@ -5,6 +5,34 @@ All notable changes to Cloud Janitor are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-05
+
+### Added
+
+- Multi-account concurrent auditing via `MultiAccountOrchestrator` with per-account
+  fault isolation, isolated findings stores, and isolated audit logs
+- Cross-account duplicate detection for repeated finding patterns across accounts
+- Per-account incident policy generation under `output/policies/`
+- `__main__.py` module entry point — package can now be invoked via `python -m cloud_janitor`
+- Pipeline hooks (`pre-remediation.sh`, `post-remediation.sh`) shipped as package data
+  via `src/cloud_janitor/hooks/` Python package with exported `HOOKS_DIR`
+- LLM availability warning in the Streamlit dashboard when OpenRouter is unreachable
+- Kiro agent hooks for automated doc/test sync on source file changes
+
+### Changed
+
+- **Migrated to src-layout** — all package code now lives under `src/cloud_janitor/`
+- Docker socket proxy replaces raw `/var/run/docker.sock` mount in `docker-compose.pro.yml`;
+  only container start/stop/restart, image pull, and network attach are allowed
+- `Makefile` cleanup targets now include per-account audit logs (`audit_*.log`)
+- Improved resource naming in the Streamlit dashboard
+- Regenerated `SPEC_COMPLIANCE.md`
+
+### Removed
+
+- Legacy `fixtures/` directory (data moved into src-layout or no longer needed)
+- `localstack_providers_override.tf` (obsolete after Terraform provider caching rework)
+
 ## [0.2.0] - 2026-07-04
 
 ### Added
@@ -87,6 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TF_CMD environment variable for binary selection
 - Docker Compose configuration for LocalStack (ec2/s3)
 
+[0.3.0]: https://github.com/darthrevan030/Cloud-Janitor/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/darthrevan030/Cloud-Janitor/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/darthrevan030/Cloud-Janitor/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/darthrevan030/Cloud-Janitor/releases/tag/v0.1.0

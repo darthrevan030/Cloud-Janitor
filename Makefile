@@ -20,7 +20,7 @@ demo:
 	@rm -f output/rollbacks/*.tf
 	@rm -f output/remediations/*.tf
 	@rm -f output/policies/*.json
-	@rm -f output/logs/audit.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
+	@rm -f output/logs/audit.log output/logs/audit_*.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
 	@rm -f findings_store.json findings_store_*.json
 	uv run python scripts/seed_localstack.py
 	uv run cloud-janitor dashboard
@@ -47,7 +47,7 @@ demo-live: tf-init
 	@rm -f output/rollbacks/*.tf
 	@rm -f output/remediations/*.tf
 	@rm -f output/policies/*.json
-	@rm -f output/logs/audit.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
+	@rm -f output/logs/audit.log output/logs/audit_*.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
 	@rm -f findings_store.json findings_store_*.json
 	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 JANITOR_DRY_RUN=1 uv run python scripts/seed_localstack.py
 	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 JANITOR_DRY_RUN=1 uv run cloud-janitor dashboard
@@ -67,5 +67,5 @@ clean:
 	@rm -f output/rollbacks/*.tf
 	@rm -f output/remediations/*.tf
 	@rm -f output/policies/*.json
-	@rm -f output/logs/audit.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
+	@rm -f output/logs/audit.log output/logs/audit_*.log output/logs/agent_reasoning.log output/logs/scheduler.log output/logs/scheduler.log.*
 	@rm -f findings_store.json findings_store_*.json

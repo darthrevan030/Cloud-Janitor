@@ -66,6 +66,73 @@ Checks the resource dependency graph to determine if other resources reference t
 
 **Returns:** `{"has_dependencies": bool, "dependents": [...]}`
 
+### `interpret_query(user_query)`
+
+Parses a natural-language query into structured scan parameters via LLM.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `user_query` | `str` | Free-text question about infrastructure. |
+
+**Returns:** `{"resource_type": str|null, "min_idle_days": int, "check_type": str|null, ...}`
+
+### `explain_remediation(resource_id, finding, remediation_hcl, rollback_hcl)`
+
+Generates a plain-English explanation of a remediation plan.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `resource_id` | `str` | Resource being remediated. |
+| `finding` | `dict` | The original finding. |
+| `remediation_hcl` | `str` | Generated remediation Terraform. |
+| `rollback_hcl` | `str` | Generated rollback Terraform. |
+
+**Returns:** `{"risk_explanation": str, "what_terraform_does": str, "what_rollback_restores": str}`
+
+### `suggest_policies(findings, already_checked)`
+
+Suggests additional security/cost checks based on current findings.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `findings` | `list[dict]` | Current findings from the scan. |
+| `already_checked` | `list[str]` | Check types already covered. |
+
+**Returns:** List of 0–5 policy suggestion dicts.
+
+### `infer_resource_context(resource_id, resource_name, existing_tags?)`
+
+Infers environment, team, owner, and risk level from resource names.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `resource_id` | `str` | — | AWS resource ID. |
+| `resource_name` | `str` | — | Human-readable resource name. |
+| `existing_tags` | `dict \| None` | `None` | Already-known tags (skips inference for present fields). |
+
+**Returns:** `{"env": str, "team": str, "owner": str, "risk_level": str, "confidence": float}`
+
+### `detect_anomalies(resources, findings)`
+
+Uses LLM to flag suspicious resources not caught by rules.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `resources` | `list[dict]` | All resources from the scan. |
+| `findings` | `list[dict]` | Already-flagged findings. |
+
+**Returns:** List of anomaly dicts with `severity`, `anomaly_type`, `description`, `resource_id`, `evidence`.
+
+### `policy_from_incident(incident_description)`
+
+Generates preventive scan policies from a natural-language incident description.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `incident_description` | `str` | Plain text describing a past incident. |
+
+**Returns:** List of 3–5 policy dicts written to `output/policies/`.
+
 ## Fixture Data Format
 
 Fixtures live in `src/cloud_janitor/fixtures/` (bundled inside the installed package).

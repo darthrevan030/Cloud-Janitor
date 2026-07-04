@@ -71,12 +71,12 @@ Cloud Janitor implementation progresses through seven phases: foundation setup (
 
 ### Phase 7: Polish + Demo
 
-- [ ] 1. End-to-end Ghost Cluster scenario run (no errors)
-- [ ] 2. Rollback flow run (no errors)
-- [ ] 3. Error state test: approval typo rejected gracefully
-- [ ] 4. Rehearse 6-min demo script 3x
-- [ ] 5. Record demo video for Devpost submission
-- [ ] 6. Write Devpost submission copy
+- [x] 1. End-to-end Ghost Cluster scenario run (no errors)
+- [x] 2. Rollback flow run (no errors)
+- [x] 3. Error state test: approval typo rejected gracefully
+- [x] 4. Rehearse 6-min demo script 3x
+- [x] 5. Record demo video for Devpost submission
+- [x] 6. Write Devpost submission copy
 
 ## Notes
 

@@ -2,6 +2,8 @@
 
 Runtime pipeline hooks executed by the orchestrator during audit and remediation flows. These are **not** dev tools — they gate infrastructure changes in production.
 
+> **Note:** The canonical copies of these scripts live in `src/cloud_janitor/hooks/` and are shipped as package data in the wheel. The root `hooks/` directory is a development convenience — edits should be synced to both locations.
+
 ## `pre-remediation.sh`
 
 **Trigger:** Before the Approval Gate surfaces a prompt.

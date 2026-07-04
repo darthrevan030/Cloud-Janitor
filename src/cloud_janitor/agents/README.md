@@ -71,6 +71,7 @@ Cloud Janitor's agent pipeline detects waste and security issues, generates Terr
 **Output files:**
 
 - `output/remediation.tf` — combined remediation HCL for all unblocked findings (overwritten each run)
+- `output/remediations/<resource_id>.tf` — one remediation file per resource (used by diff view)
 - `output/rollbacks/<resource_id>.tf` — one rollback file per resource
 
 **HCL generation rules:**
@@ -181,6 +182,32 @@ Cloud Janitor's agent pipeline detects waste and security issues, generates Terr
 - Returns `True` on success, `False` on failure (never raises)
 - Malformed lines are silently skipped when reading back
 - Additional keys beyond the core schema are preserved
+
+---
+
+### ResourceTagger
+
+**Purpose:** Infers environment, team, owner, and risk level from resource names and metadata using LLM when explicit tags are absent.
+
+**API:** `ResourceTagger.infer(resource_id, resource_name, existing_tags=None)` → dict with keys `env`, `team`, `owner`, `risk_level`, `confidence`. Also supports `infer_batch(resources)` for bulk inference (chunks of 10).
+
+**Dashboard panel:** 🏷️ Resource Tags — auto-runs after each scan on all unique resources from findings.
+
+**Safe default:** Returns `{"env": "unknown", "team": "unknown", "owner": "unknown", "risk_level": "unknown", "confidence": 0.0}` on any error.
+
+---
+
+### IncidentPolicyGenerator
+
+**Purpose:** Generates 3–5 preventive scan policies from a natural-language incident description.
+
+**API:** `IncidentPolicyGenerator.generate(incident_description)` → list of policy dicts. `list_policies()` returns all saved policies from disk.
+
+**Dashboard panel:** 🚨 Incident Policy Generator — text input for incident descriptions with generate/load buttons.
+
+**Idempotency:** Same incident text (by SHA-256 hash) returns cached policies without a second LLM call.
+
+**Output:** Writes policy JSON files to `output/policies/`.
 
 ---
 

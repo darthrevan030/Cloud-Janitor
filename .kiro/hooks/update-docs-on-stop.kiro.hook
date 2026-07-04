@@ -1,13 +1,13 @@
 {
   "enabled": true,
   "name": "Update Docs on Session End",
-  "description": "After each agent session, checks if any files were moved, renamed, or created and updates the relevant README.md files to reflect the current project structure.",
+  "description": "After each agent session, reviews the git diff for structural and behavioral changes and updates README.md accordingly.",
   "version": "1",
   "when": {
     "type": "agentStop"
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Review the git diff (staged and unstaged) for this session. If any files were moved, renamed, deleted, or created in a way that would make existing README.md files inaccurate, update the affected READMEs to reflect the current state. Focus on: directory trees, file path references, import paths mentioned in docs. If no structural changes occurred (only code edits within existing files), do nothing."
+    "prompt": "Review the git diff (staged and unstaged) for this session and update README.md if needed. Check for:\n\n1. **Structural changes** — If files were moved, renamed, deleted, or created, update directory trees, file path references, and import paths mentioned in the README.\n\n2. **Behavioral changes** — If source code changes altered features, configuration, CLI usage, setup steps, or public APIs, update the relevant README sections (usage instructions, configuration docs, feature descriptions, architecture notes).\n\nIf nothing in the diff affects what the README describes, do nothing. Keep edits minimal — only fix what's now inaccurate."
   }
 }

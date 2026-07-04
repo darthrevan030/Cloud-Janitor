@@ -92,6 +92,7 @@ from cloud_janitor.agents.savings_tracker import SavingsTracker  # noqa: E402
 from cloud_janitor.core.paths import (  # noqa: E402
     PROJECT_ROOT as _CORE_PROJECT_ROOT,
     OUTPUT_DIR as _CORE_OUTPUT_DIR,
+    REMEDIATIONS_DIR as _CORE_REMEDIATIONS_DIR,
     ROLLBACKS_DIR as _CORE_ROLLBACKS_DIR,
     FINDINGS_STORE_PATH as _CORE_FINDINGS_STORE_PATH,
     AUDIT_LOG_PATH as _CORE_AUDIT_LOG_PATH,
@@ -252,6 +253,7 @@ PROJECT_ROOT = _CORE_PROJECT_ROOT
 FINDINGS_STORE_PATH = _CORE_FINDINGS_STORE_PATH
 HOOKS_DIR = _CORE_HOOKS_DIR
 OUTPUT_DIR = _CORE_OUTPUT_DIR
+REMEDIATIONS_DIR = _CORE_REMEDIATIONS_DIR
 ROLLBACKS_DIR = _CORE_ROLLBACKS_DIR
 AUDIT_LOG_PATH = _CORE_AUDIT_LOG_PATH
 
@@ -358,18 +360,20 @@ class Orchestrator:
             self.findings_store_path = FINDINGS_STORE_PATH
             self.hooks_dir = HOOKS_DIR
             self.output_dir = OUTPUT_DIR
+            self.remediations_dir = REMEDIATIONS_DIR
             self.rollbacks_dir = ROLLBACKS_DIR
             self.audit_log_path = AUDIT_LOG_PATH
         else:
             # Custom project root (tests) — construct paths relative to it
             self.output_dir = self.project_root / "output"
+            self.remediations_dir = self.output_dir / "remediations"
             self.rollbacks_dir = self.output_dir / "rollbacks"
             self.findings_store_path = self.output_dir / "findings_store.json"
             self.hooks_dir = self.project_root / "hooks"
             self.audit_log_path = self.output_dir / "logs" / "audit.log"
             # Create required directories for custom root
             try:
-                for d in [self.output_dir, self.rollbacks_dir,
+                for d in [self.output_dir, self.remediations_dir, self.rollbacks_dir,
                           self.output_dir / "logs", self.output_dir / "policies"]:
                     os.makedirs(d, exist_ok=True)
             except OSError as e:
@@ -404,6 +408,7 @@ class Orchestrator:
             findings_store_path=self.findings_store_path,
             output_dir=self.output_dir,
             rollbacks_dir=self.rollbacks_dir,
+            remediations_dir=self.remediations_dir,
             reasoning_logger=self._reasoning_logger,
         )
 
