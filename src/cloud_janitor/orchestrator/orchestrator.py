@@ -190,6 +190,7 @@ def _build_subprocess_env(kind: str) -> dict[str, str]:
             "AWS_ENDPOINT_URL",
             "LOCALSTACK_AUTH_TOKEN",
             "TF_CMD",
+            "JANITOR_DRY_RUN",
         ):
             if var in os.environ:
                 env[var] = os.environ[var]

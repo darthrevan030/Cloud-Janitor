@@ -44,8 +44,8 @@ demo-live:
 	@rm -f output/rollbacks/*.tf
 	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
 	@rm -f findings_store.json findings_store_*.json
-	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 uv run python scripts/seed_localstack.py
-	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 uv run cloud-janitor dashboard
+	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 JANITOR_DRY_RUN=1 uv run python scripts/seed_localstack.py
+	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=us-east-1 JANITOR_DRY_RUN=1 uv run cloud-janitor dashboard
 
 # Seed LocalStack with demo resources (run after container is healthy)
 seed:

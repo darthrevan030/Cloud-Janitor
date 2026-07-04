@@ -13,10 +13,13 @@ Required IAM permissions are documented per-method below.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Optional
 
 from cloud_janitor.mcp_server.backends import CloudProvider
+
+logger = logging.getLogger(__name__)
 
 
 def _make_client(service: str, region: Optional[str]):
@@ -90,7 +93,19 @@ class AWSProvider(CloudProvider):
         resources: list[dict] = []
 
         def _cw_idle_days(namespace: str, metric: str, dimensions: list[dict]) -> int:
-            """Return days since the metric last had non-zero datapoints."""
+            """Return days since the metric last had non-zero datapoints.
+
+            When AWS_ENDPOINT_URL is set (LocalStack), skips CloudWatch entirely
+            and returns 90 (max idle) since LocalStack doesn't emit real metrics.
+            This avoids ~5s timeout per resource that makes the scan unusably slow.
+            """
+            # LocalStack shortcut: no real CloudWatch metrics available.
+            # Detect LocalStack by checking if endpoint is localhost/4566.
+            endpoint_url = os.environ.get("AWS_ENDPOINT_URL", "")
+            is_localstack = "localhost" in endpoint_url or "127.0.0.1" in endpoint_url
+            if is_localstack:
+                return 90  # treat all resources as idle in LocalStack
+
             cw = _make_client("cloudwatch", self._region)
             end = datetime.now(timezone.utc)
             start = end - timedelta(days=90)
@@ -118,6 +133,7 @@ class AWSProvider(CloudProvider):
 
         # ---- EBS volumes ------------------------------------------------
         if resource_type in (None, "ebs"):
+            logger.info("[AWSProvider] Scanning EBS volumes...")
             try:
                 ec2 = _make_client("ec2", self._region)
                 paginator = ec2.get_paginator("describe_volumes")
@@ -178,6 +194,7 @@ class AWSProvider(CloudProvider):
 
         # ---- ElastiCache clusters ----------------------------------------
         if resource_type in (None, "elasticache"):
+            logger.info("[AWSProvider] Scanning ElastiCache clusters...")
             try:
                 ec = _make_client("elasticache", self._region)
                 paginator = ec.get_paginator("describe_cache_clusters")
@@ -351,6 +368,7 @@ class AWSProvider(CloudProvider):
 
         # ---- Security groups ---------------------------------------------
         if check_type in (None, "security_group"):
+            logger.info("[AWSProvider] Scanning security groups...")
             try:
                 ec2 = _make_client("ec2", self._region)
                 paginator = ec2.get_paginator("describe_security_groups")
@@ -420,6 +438,7 @@ class AWSProvider(CloudProvider):
 
         # ---- EBS encryption ---------------------------------------------
         if check_type in (None, "encryption"):
+            logger.info("[AWSProvider] Scanning EBS encryption...")
             try:
                 ec2 = _make_client("ec2", self._region)
                 paginator = ec2.get_paginator("describe_volumes")
@@ -465,6 +484,7 @@ class AWSProvider(CloudProvider):
 
         # ---- ElastiCache encryption --------------------------------------
         if check_type in (None, "encryption"):
+            logger.info("[AWSProvider] Scanning ElastiCache encryption...")
             try:
                 ec = _make_client("elasticache", self._region)
                 paginator = ec.get_paginator("describe_cache_clusters")
@@ -528,13 +548,26 @@ class AWSProvider(CloudProvider):
             {"has_dependencies": bool, "dependents": [...]}
         """
         import botocore.exceptions
+        from botocore.config import Config
 
+        logger.info("[AWSProvider] Checking dependencies for %s...", resource_id)
+
+        # Use shorter timeouts for dependency checks (non-critical path)
+        dep_config = Config(connect_timeout=5, read_timeout=10, retries={"max_attempts": 1})
         dependents: list[str] = []
+
+        def _dep_client(service: str):
+            import boto3
+            kwargs: dict = {"region_name": self._region, "config": dep_config}
+            endpoint = os.environ.get("AWS_ENDPOINT_URL")
+            if endpoint:
+                kwargs["endpoint_url"] = endpoint
+            return boto3.client(service, **kwargs)
 
         # ---- Security group dependency check ----------------------------
         if resource_id.startswith("sg-"):
             try:
-                ec2 = _make_client("ec2", self._region)
+                ec2 = _dep_client("ec2")
                 paginator = ec2.get_paginator("describe_network_interfaces")
                 for page in paginator.paginate(
                     Filters=[{"Name": "group-id", "Values": [resource_id]}]
@@ -546,31 +579,34 @@ class AWSProvider(CloudProvider):
                             dependents.append(instance_id)
                         else:
                             dependents.append(eni["NetworkInterfaceId"])
-            except botocore.exceptions.ClientError:
+            except (botocore.exceptions.ClientError, botocore.exceptions.ReadTimeoutError,
+                    botocore.exceptions.ConnectTimeoutError):
                 pass
 
         # ---- EBS volume dependency check --------------------------------
         elif resource_id.startswith("vol-"):
             try:
-                ec2 = _make_client("ec2", self._region)
+                ec2 = _dep_client("ec2")
                 resp = ec2.describe_volumes(VolumeIds=[resource_id])
                 for vol in resp.get("Volumes", []):
                     for attachment in vol.get("Attachments", []):
                         iid = attachment.get("InstanceId")
                         if iid:
                             dependents.append(iid)
-            except botocore.exceptions.ClientError:
+            except (botocore.exceptions.ClientError, botocore.exceptions.ReadTimeoutError,
+                    botocore.exceptions.ConnectTimeoutError):
                 pass
 
         # ---- ElastiCache cluster dependency check -----------------------
         elif resource_id.startswith("cache-") or resource_id.startswith("cluster-"):
             try:
-                ec = _make_client("elasticache", self._region)
+                ec = _dep_client("elasticache")
                 resp = ec.describe_replication_groups()
                 for rg in resp.get("ReplicationGroups", []):
                     if resource_id in rg.get("MemberClusters", []):
                         dependents.append(rg["ReplicationGroupId"])
-            except botocore.exceptions.ClientError:
+            except (botocore.exceptions.ClientError, botocore.exceptions.ReadTimeoutError,
+                    botocore.exceptions.ConnectTimeoutError):
                 pass
 
         return {
