@@ -56,7 +56,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Ensure providers remain instantiable after warning (no exception on init)
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-- [ ] 2. Checkpoint — Verify Batch 1
+- [x] 2. Checkpoint — Verify Batch 1
   - Ensure all tests pass, ask the user if questions arise.
   - Verify `pip install -e .` works and `cloud-janitor --help` exits 0
   - Verify retry logic unit tests pass
@@ -159,7 +159,7 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
 - [x] 6. Checkpoint — Verify Batch 2
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Batch 3 — Package structure migration and CI
+- [x] 7. Batch 3 — Package structure migration and CI
   - [x] 7.1 Create `src/cloud_janitor/` directory structure and move modules
     - Create `src/cloud_janitor/` with `__init__.py` (importlib.metadata version)
     - Create `src/cloud_janitor/py.typed` marker file (0 bytes)

@@ -15,22 +15,23 @@ from pathlib import Path
 
 
 # Keyword-to-file mapping table (Requirement 8.3)
+# Paths updated for src-layout (src/cloud_janitor/*)
 KEYWORD_MAPPING = [
     (["requirements"], ".kiro/specs/requirements.md"),
     (["design"], ".kiro/specs/design.md"),
-    (["fixture"], "fixtures/"),
-    (["mcp", "MCP"], "mcp_server/aws_janitor_mcp.py"),
-    (["FinOps", "finops"], "agents/finops_auditor.py"),
-    (["SecOps", "secops"], "agents/secops_guard.py"),
-    (["Remediation", "remediation"], "agents/remediation_architect.py"),
+    (["fixture"], "src/cloud_janitor/fixtures/"),
+    (["mcp", "MCP"], "src/cloud_janitor/mcp_server/aws_janitor_mcp.py"),
+    (["FinOps", "finops"], "src/cloud_janitor/agents/finops_auditor.py"),
+    (["SecOps", "secops"], "src/cloud_janitor/agents/secops_guard.py"),
+    (["Remediation", "remediation"], "src/cloud_janitor/agents/remediation_architect.py"),
     (["rollback"], "output/rollbacks/"),
     (["findings_store"], "output/findings_store.json"),
-    (["pre-remediation"], "hooks/pre-remediation.sh"),
-    (["post-remediation"], "hooks/post-remediation.sh"),
+    (["pre-remediation"], "src/cloud_janitor/hooks/pre-remediation.sh"),
+    (["post-remediation"], "src/cloud_janitor/hooks/post-remediation.sh"),
     (["approval"], "__APPROVE_STRING_CHECK__"),
     (["audit log"], "__AUDIT_LOG_CHECK__"),
-    (["Streamlit", "UI", "app.py"], "app.py"),
-    (["savings"], "agents/savings_tracker.py"),
+    (["Streamlit", "UI", "app.py"], "src/cloud_janitor/app.py"),
+    (["savings"], "src/cloud_janitor/agents/savings_tracker.py"),
 ]
 
 
@@ -80,15 +81,15 @@ def parse_tasks(content: str) -> list[dict]:
 
 def check_approve_string(project_root: Path) -> bool:
     """Check if 'APPROVE' string exists in agents/ files or orchestrator.py."""
-    # Check orchestrator.py
-    orchestrator = project_root / "orchestrator.py"
+    # Check orchestrator.py (src-layout)
+    orchestrator = project_root / "src" / "cloud_janitor" / "orchestrator" / "orchestrator.py"
     if orchestrator.exists():
         content = orchestrator.read_text(encoding="utf-8", errors="ignore")
         if "APPROVE" in content:
             return True
 
-    # Check agents/ directory
-    agents_dir = project_root / "agents"
+    # Check agents/ directory (src-layout)
+    agents_dir = project_root / "src" / "cloud_janitor" / "agents"
     if agents_dir.exists():
         for py_file in agents_dir.glob("*.py"):
             content = py_file.read_text(encoding="utf-8", errors="ignore")
@@ -101,19 +102,19 @@ def check_approve_string(project_root: Path) -> bool:
 def check_audit_log(project_root: Path) -> bool:
     """Check if audit.log exists or an audit log writer is in the codebase."""
     # Check audit.log file
-    if (project_root / "audit.log").exists():
+    if (project_root / "output" / "logs" / "audit.log").exists():
         return True
 
-    # Check for audit log writer in codebase (agents/ directory)
-    agents_dir = project_root / "agents"
+    # Check for audit log writer in codebase (src-layout agents/ directory)
+    agents_dir = project_root / "src" / "cloud_janitor" / "agents"
     if agents_dir.exists():
         for py_file in agents_dir.glob("*.py"):
             content = py_file.read_text(encoding="utf-8", errors="ignore")
             if "audit" in content.lower() and ("log" in content.lower() or "logger" in content.lower()):
                 return True
 
-    # Check orchestrator.py
-    orchestrator = project_root / "orchestrator.py"
+    # Check orchestrator (src-layout)
+    orchestrator = project_root / "src" / "cloud_janitor" / "orchestrator" / "orchestrator.py"
     if orchestrator.exists():
         content = orchestrator.read_text(encoding="utf-8", errors="ignore")
         if "audit" in content.lower() and ("log" in content.lower() or "logger" in content.lower()):
@@ -211,6 +212,10 @@ def _verify_task_statuses(
                         # Only check source files, not arbitrary references
                         if (filepath.endswith(".py") or filepath.endswith(".sh")) and \
                            not (project_root / filepath).exists():
+                            # Check src-layout path as well
+                            src_path = project_root / "src" / "cloud_janitor" / filepath
+                            if src_path.exists():
+                                continue
                             # Could be a nested path reference — skip common false positives
                             if "/" in filepath and not filepath.startswith("."):
                                 anomalies.append((
@@ -270,35 +275,35 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
     # --- Core Pipeline ---
     statuses.append((
         "FinOps Auditor",
-        "Complete" if _file_has_real_code(project_root / "agents/finops_auditor.py", 30) else "Pending",
+        "Complete" if _file_has_real_code(project_root / "src/cloud_janitor/agents/finops_auditor.py", 30) else "Pending",
         "Multi-agent FinOps scanner detecting idle resources, classifying severity, writing findings"
     ))
     statuses.append((
         "SecOps Guard",
-        "Complete" if _file_has_real_code(project_root / "agents/secops_guard.py", 30) else "Pending",
+        "Complete" if _file_has_real_code(project_root / "src/cloud_janitor/agents/secops_guard.py", 30) else "Pending",
         "Security vulnerability scanner — SG rules, encryption, auth checks"
     ))
     statuses.append((
         "Remediation Architect",
-        "Complete" if _file_has_real_code(project_root / "agents/remediation_architect.py", 30) else "Pending",
+        "Complete" if _file_has_real_code(project_root / "src/cloud_janitor/agents/remediation_architect.py", 30) else "Pending",
         "HCL generation with dependency checks, rollback HCL alongside remediation"
     ))
     statuses.append((
         "Agent Orchestrator",
-        "Complete" if _file_has(project_root / "orchestrator.py", "execute_audit") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/orchestrator/orchestrator.py", "execute_audit") else "Pending",
         "Pipeline sequencing: FinOps → SecOps → Remediation with hooks and approval"
     ))
 
     # Approval gate
     statuses.append((
         "Approval Gate (persistent, rate-limited)",
-        "Complete" if _file_has(project_root / "agents/approval_gate.py", "ApprovalGateStore") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/agents/approval_gate.py", "ApprovalGateStore") else "Pending",
         "3-attempt lockout, atomic persistence, survives process restarts"
     ))
 
     # Rollback with TF execution
-    has_rollback = _file_has(project_root / "orchestrator.py", "execute_rollback") or \
-                   _file_has(project_root / "orchestrator.py", "def rollback")
+    has_rollback = _file_has(project_root / "src/cloud_janitor/orchestrator/orchestrator.py", "execute_rollback") or \
+                   _file_has(project_root / "src/cloud_janitor/orchestrator/orchestrator.py", "def rollback")
     statuses.append((
         "Rollback with Terraform Execution",
         "Complete" if has_rollback else "Pending",
@@ -308,46 +313,46 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
     # TF_CMD validation
     statuses.append((
         "TF_CMD Allowlist Validation",
-        "Complete" if _file_has(project_root / "orchestrator.py", "_validate_tf_cmd") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/orchestrator/orchestrator.py", "_validate_tf_cmd") else "Pending",
         "Binary allowlist, path separator rejection, PATH resolution"
     ))
 
     # Pre-remediation hook
     statuses.append((
         "Pre-Remediation Hook Validation",
-        "Complete" if _file_has(project_root / "orchestrator.py", "_run_pre_remediation_hook") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/orchestrator/orchestrator.py", "_run_pre_remediation_hook") else "Pending",
         "Validates rollback files for all active plans with 60s timeout"
     ))
 
     # --- Data Integrity ---
     statuses.append((
         "Findings Store Schema Versioning",
-        "Complete" if _file_has(project_root / "orchestrator.py", "schema_version") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/orchestrator/orchestrator.py", "schema_version") else "Pending",
         "Semantic version field in findings_store.json, major version validation"
     ))
 
     statuses.append((
         "Path Convention Alignment (`core/paths.py`)",
-        "Complete" if _file_has_real_code(project_root / "core/paths.py", 10) else "Pending",
+        "Complete" if _file_has_real_code(project_root / "src/cloud_janitor/core/paths.py", 10) else "Pending",
         "Single source of truth for all artifact paths, used by Orchestrator and UI"
     ))
 
     statuses.append((
         "Structured Error Telemetry",
-        "Complete" if _file_has_real_code(project_root / "core/error_telemetry.py", 10) else "Pending",
+        "Complete" if _file_has_real_code(project_root / "src/cloud_janitor/core/error_telemetry.py", 10) else "Pending",
         "JSONL error records with category, agent_name, traceback (max 4096 chars)"
     ))
 
     statuses.append((
         "Reasoning Log (append-mode, rotation)",
-        "Complete" if _file_has(project_root / "agents/reasoning_logger.py", "start_run") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/agents/reasoning_logger.py", "start_run") else "Pending",
         "Append-mode with JSONL separator per run, 10MB rotation, 5 file max"
     ))
 
     # --- Savings & Scheduling ---
     statuses.append((
         "Savings Tracker",
-        "Complete" if _file_has_real_code(project_root / "agents/savings_tracker.py", 30) else "Pending",
+        "Complete" if _file_has_real_code(project_root / "src/cloud_janitor/agents/savings_tracker.py", 30) else "Pending",
         "Ledger lifecycle, duplicate prevention, broad exception handling in orchestrator"
     ))
 
@@ -359,14 +364,14 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
 
     # --- Phase B/C AI Agents ---
     phase_bc_agents = [
-        ("QueryInterpreter", "agents/query_interpreter.py"),
-        ("RemediationExplainer", "agents/explainer.py"),
-        ("PolicySuggester", "agents/policy_suggester.py"),
-        ("ResourceTagger", "agents/tagger.py"),
-        ("AnomalyDetector", "agents/anomaly_detector.py"),
-        ("IncidentPolicyGenerator", "agents/incident_policy_generator.py"),
-        ("DriftDetector", "agents/drift_detector.py"),
-        ("MultiAccountOrchestrator", "agents/multi_account_orchestrator.py"),
+        ("QueryInterpreter", "src/cloud_janitor/agents/query_interpreter.py"),
+        ("RemediationExplainer", "src/cloud_janitor/agents/explainer.py"),
+        ("PolicySuggester", "src/cloud_janitor/agents/policy_suggester.py"),
+        ("ResourceTagger", "src/cloud_janitor/agents/tagger.py"),
+        ("AnomalyDetector", "src/cloud_janitor/agents/anomaly_detector.py"),
+        ("IncidentPolicyGenerator", "src/cloud_janitor/agents/incident_policy_generator.py"),
+        ("DriftDetector", "src/cloud_janitor/agents/drift_detector.py"),
+        ("MultiAccountOrchestrator", "src/cloud_janitor/agents/multi_account_orchestrator.py"),
     ]
     for agent_name, agent_path in phase_bc_agents:
         full_path = project_root / agent_path
@@ -374,8 +379,8 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
         statuses.append((agent_name, status, f"`{agent_path}` — LLM-powered agent with safe defaults"))
 
     # --- NL Audit (Req 10) ---
-    nl_backend = _file_has(project_root / "orchestrator.py", "execute_natural_language_audit")
-    nl_ui = _file_has(project_root / "app.py", "execute_natural_language_audit")
+    nl_backend = _file_has(project_root / "src/cloud_janitor/orchestrator/orchestrator.py", "execute_natural_language_audit")
+    nl_ui = _file_has(project_root / "src/cloud_janitor/app.py", "execute_natural_language_audit")
     if nl_backend and nl_ui:
         nl_status = "Complete"
         nl_just = "UI with `hasattr` guard + backend method implemented on Orchestrator"
@@ -390,18 +395,18 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
     # --- MCP Server ---
     statuses.append((
         "MCP Server (core tools)",
-        "Complete" if _file_has(project_root / "mcp_server/aws_janitor_mcp.py", "@mcp.tool") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/mcp_server/aws_janitor_mcp.py", "@mcp.tool") else "Pending",
         "4 core + 6 AI tools via FastMCP, provider-agnostic backend"
     ))
 
     # --- Provider Backends ---
     statuses.append((
         "FixtureProvider",
-        "Complete" if _file_has_real_code(project_root / "mcp_server/backends/fixture_provider.py", 20) else "Pending",
+        "Complete" if _file_has_real_code(project_root / "src/cloud_janitor/mcp_server/backends/fixture_provider.py", 20) else "Pending",
         "Reads fixture JSONs, filters resources, computes cost totals"
     ))
     # AWSProvider — check if it has real implementations beyond just NotImplementedError
-    aws_path = project_root / "mcp_server/backends/aws_provider.py"
+    aws_path = project_root / "src/cloud_janitor/mcp_server/backends/aws_provider.py"
     if _file_has(aws_path, "def get_cost_data") and _file_has_real_code(aws_path, 50):
         aws_status = "Complete"
         aws_just = "Full boto3 implementation querying live AWS/LocalStack infrastructure"
@@ -414,19 +419,19 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
     statuses.append(("AWSProvider", aws_status, aws_just))
     statuses.append((
         "GCPProvider",
-        "Stub" if _file_has(project_root / "mcp_server/backends/gcp_provider.py", "NotImplementedError") else "Pending",
+        "Stub" if _file_has(project_root / "src/cloud_janitor/mcp_server/backends/gcp_provider.py", "NotImplementedError") else "Pending",
         "Raises NotImplementedError with WARNING on init (intentional stub)"
     ))
     statuses.append((
         "AzureProvider",
-        "Stub" if _file_has(project_root / "mcp_server/backends/azure_provider.py", "NotImplementedError") else "Pending",
+        "Stub" if _file_has(project_root / "src/cloud_janitor/mcp_server/backends/azure_provider.py", "NotImplementedError") else "Pending",
         "Raises NotImplementedError with WARNING on init (intentional stub)"
     ))
 
     # --- Streamlit Dashboard ---
     statuses.append((
         "Streamlit Dashboard",
-        "Complete" if _file_has(project_root / "app.py", "st.button") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/app.py", "st.button") else "Pending",
         "Agent feed, findings, diff view, approval input, savings counter, reasoning panel"
     ))
 
@@ -439,24 +444,24 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
 
     statuses.append((
         "Structured Logging (`logging_config.py`)",
-        "Complete" if _file_has(project_root / "core/logging_config.py", "configure_logging") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/core/logging_config.py", "configure_logging") else "Pending",
         "Env-var driven level, ISO 8601 timestamps, stderr output"
     ))
 
     statuses.append((
         "LLM Retry Logic",
-        "Complete" if _file_has(project_root / "core/llm_client.py", "LLMRetryExhausted") else "Pending",
+        "Complete" if _file_has(project_root / "src/cloud_janitor/core/llm_client.py", "LLMRetryExhausted") else "Pending",
         "Exponential backoff, Retry-After respect, max 3 retries"
     ))
 
     # CLI
-    cli_path = project_root / "cli.py"
+    cli_path = project_root / "src" / "cloud_janitor" / "cli.py"
     if _file_has(cli_path, "@click") or _file_has(cli_path, "click.group"):
         cli_status = "Complete"
         cli_just = "Click-based CLI with scan, approve, rollback, dashboard, mcp commands"
-    elif _file_exists("cli.py"):
+    elif cli_path.exists():
         cli_status = "Stub"
-        cli_just = "Entry point file exists but only raises SystemExit (task 1.4 pending)"
+        cli_just = "Entry point file exists but incomplete"
     else:
         cli_status = "Pending"
         cli_just = "No CLI file exists"
@@ -466,7 +471,7 @@ def _audit_feature_statuses(project_root: Path) -> list[tuple[str, str, str]]:
     statuses.append((
         "src-layout Package Structure",
         "Complete" if _file_exists("src/cloud_janitor/__init__.py") else "Pending",
-        "Flat layout currently — src-layout migration deferred to production-readiness Batch 3"
+        "src-layout with hatchling build system"
     ))
 
     # CI Pipeline

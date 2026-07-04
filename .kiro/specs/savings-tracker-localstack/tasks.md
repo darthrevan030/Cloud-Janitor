@@ -292,7 +292,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Run: `git check-ignore -v savings_ledger.json agent_reasoning.log`
     - Both files must be ignored
 
-  - [-] 10.5 Run scripts/generate_spec_compliance.py and commit output
+  - [x] 10.5 Run scripts/generate_spec_compliance.py and commit output
     - Run: `python3 scripts/generate_spec_compliance.py`
     - Verify SPEC_COMPLIANCE.md is generated without errors
     - Commit SPEC_COMPLIANCE.md

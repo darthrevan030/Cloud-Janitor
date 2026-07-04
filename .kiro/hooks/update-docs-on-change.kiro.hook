@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "name": "Update Dependents and Tests on Change",
+  "description": "When Python source files or config files are edited, update dependent modules and related tests to stay in sync.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.py",
+      "pyproject.toml",
+      "docker-compose.yml",
+      "docker-compose.pro.yml",
+      "Makefile",
+      "scheduler.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file was just edited. Review the change and determine what else needs updating:\n\n1. **Dependent modules** — Identify any other source files that import from or depend on the changed file. If the change altered a public interface (function signature, class API, config key, return type), update those dependents so they remain compatible.\n\n2. **Tests** — If the change affects behavior covered by existing tests in tests/, update those tests to match the new expected behavior. If new functionality was added that has no test coverage, add a focused test.\n\nKeep all edits minimal and surgical — don't rewrite code that is still correct. When updating tests, follow the project's hostile-reviewer standard (no tautological or pass-by-default assertions)."
+  }
+}
