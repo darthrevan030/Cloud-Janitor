@@ -7,7 +7,7 @@ relevant security and cost checks the user may have missed.
 import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 import logging
 
@@ -162,7 +162,8 @@ class PolicySuggester:
             already_checked=", ".join(already_checked) if already_checked else "none",
         )
 
-        response = client.chat.completions.create(
+        response = call_llm(
+            client,
             model=self._model,
             max_tokens=512,
             messages=[
@@ -198,7 +199,8 @@ class PolicySuggester:
         try:
             client = get_client()
 
-            response = client.chat.completions.create(
+            response = call_llm(
+                client,
                 model=self._model,
                 max_tokens=512,
                 messages=[
