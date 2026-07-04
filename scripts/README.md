@@ -16,7 +16,7 @@ bash scripts/seed-localstack.sh
 bash scripts/seed-localstack.sh scripts/seeds/my-scenario.sh
 ```
 
-Called automatically by `make demo`, `make demo-pro`, and `make demo-live` after LocalStack is healthy. Can also be run standalone via `make seed`.
+Called automatically by `make demo` and `make demo-live` after LocalStack is healthy. Can also be run standalone via `make seed`.
 
 ## `seeds/`
 
@@ -24,7 +24,7 @@ Modular seed scenario files. Each file creates AWS resources in LocalStack for a
 
 | File | Scenario | Description |
 |------|----------|-------------|
-| `ghost-cluster.sh` | Ghost Cluster (default) | Idle ElastiCache + orphaned EBS + open Redis SG |
+| `ghost-cluster.sh` | Ghost Cluster (default) | Multi-account: ElastiCache + EBS + open SGs across 3 simulated accounts |
 | `example-custom.sh` | Template | Copy this to create your own scenarios |
 
 ### Creating a Custom Seed

@@ -438,6 +438,15 @@ AWS_SECRET_ACCESS_KEY=...
 AWS_DEFAULT_REGION=us-east-1
 ```
 
+### LocalStack live mode
+
+Uses `JANITOR_BACKEND=aws` pointed at LocalStack. The `make demo-live` target sets this up automatically — seeds resources, sets environment variables, and launches the dashboard. Full end-to-end without real AWS credentials.
+
+```bash
+# Equivalent of what `make demo-live` does:
+JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test
+```
+
 ### GCP / Azure
 
 Interface stubs exist. Setting `JANITOR_BACKEND=gcp` or `JANITOR_BACKEND=azure` instantiates the provider class but raises `NotImplementedError` on all calls.
@@ -524,14 +533,11 @@ which tflocal terraform
 ### Start LocalStack
 
 ```bash
-# Community edition (free — no auth token needed)
+# Community edition (free — no auth token needed, fixture-based scan)
 make demo
 
-# Pro edition (requires LOCALSTACK_AUTH_TOKEN in .env — enables ElastiCache)
-make demo-pro
-
 # Live mode (Pro required) — full end-to-end against LocalStack, no fixtures
-# Scan uses boto3 against seeded LocalStack resources
+# Seeds multi-account resources, scans via boto3, applies via tflocal
 make demo-live
 
 # Manually (community)
@@ -539,6 +545,12 @@ docker-compose up -d
 
 # Manually (pro)
 docker-compose -f docker-compose.yml -f docker-compose.pro.yml up -d
+
+# Just seed resources (after container is healthy)
+make seed
+
+# Clear all runtime output
+make clean
 ```
 
 ### Custom Seed Scenarios
@@ -685,7 +697,7 @@ cloud-janitor/
 ├── .env.example                     # Environment variable template
 ├── docker-compose.yml               # LocalStack Community config (free tier)
 ├── docker-compose.pro.yml           # LocalStack Pro override (ElastiCache, auth token)
-├── Makefile                         # make demo / make demo-pro entry points
+├── Makefile                         # make demo / make demo-live entry points
 └── pyproject.toml                   # Project metadata
 ```
 
