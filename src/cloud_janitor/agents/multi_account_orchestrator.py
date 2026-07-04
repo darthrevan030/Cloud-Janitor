@@ -225,8 +225,10 @@ class MultiAccountOrchestrator:
 
         account_id = account["account_id"]
 
-        # Isolated findings store per account (Req 9.7)
-        findings_store_path = self._project_root / f"findings_store_{account_id}.json"
+        # Isolated findings store per account — stored under output/ not project root
+        output_dir = self._project_root / "output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        findings_store_path = output_dir / f"findings_store_{account_id}.json"
 
         # Create an Orchestrator instance for this account
         orch = Orchestrator(
