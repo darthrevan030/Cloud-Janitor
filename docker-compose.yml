@@ -1,12 +1,12 @@
+# Base config — works with LocalStack Community (free, no auth token needed for basic services)
+# For Pro features (ElastiCache, etc.), use: docker-compose -f docker-compose.yml -f docker-compose.pro.yml up -d
 services:
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:4.4.0
     ports:
-      - "4566:4566"
+      - "127.0.0.1:4566:4566"
     environment:
-      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
-      - SERVICES=ec2,elasticache,s3,ebs
-      - DEFAULT_REGION=us-east-1
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      - SERVICES=ec2,s3
+      - AWS_DEFAULT_REGION=us-east-1
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
