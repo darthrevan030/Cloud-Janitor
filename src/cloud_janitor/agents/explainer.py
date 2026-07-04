@@ -89,7 +89,7 @@ class RemediationExplainer:
             response = call_llm(
                 client,
                 model=self._model,
-                max_tokens=400,  # Requirement 3.5
+                max_tokens=1024,  # Requirement 3.5
                 messages=[
                     {
                         "role": "system",
@@ -100,7 +100,21 @@ class RemediationExplainer:
             )
 
             raw_content = response.choices[0].message.content
-            parsed = json.loads(raw_content)  # type: ignore[arg-type]
+            if not raw_content or not raw_content.strip():
+                return dict(SAFE_DEFAULT)
+
+            # Strip markdown code fences that models often wrap JSON in
+            text = raw_content.strip()
+            if text.startswith("```"):
+                # Remove ```json\n...\n``` wrapper
+                lines = text.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                text = "\n".join(lines)
+
+            parsed = json.loads(text)
 
             return self._validate(parsed)
 

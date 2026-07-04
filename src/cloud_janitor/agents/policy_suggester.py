@@ -165,7 +165,7 @@ class PolicySuggester:
         response = call_llm(
             client,
             model=self._model,
-            max_tokens=512,
+            max_tokens=1024,
             messages=[
                 {
                     "role": "system",
@@ -202,7 +202,7 @@ class PolicySuggester:
             response = call_llm(
                 client,
                 model=self._model,
-                max_tokens=512,
+                max_tokens=1024,
                 messages=[
                     {
                         "role": "system",
