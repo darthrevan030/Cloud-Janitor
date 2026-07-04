@@ -80,6 +80,9 @@ This specification covers the remediation of 14 confirmed audit findings from th
 3. IF any active plan lacks a corresponding Rollback_File or the file fails validation, THEN THE Orchestrator SHALL block the entire remediation run and return an error listing each resource_id that is missing rollback coverage.
 4. WHEN all Rollback_Files pass validation, THE Pre_Remediation_Hook SHALL return a validation result containing the list of validated file paths (one per plan) and an empty failures list.
 5. IF the Pre_Remediation_Hook exceeds 60 seconds of total execution time, THEN THE Orchestrator SHALL abort validation, block remediation, and report a timeout error.
+6. IF the pre-remediation hook script (`hooks/pre-remediation.sh`) does not exist, THE Orchestrator SHALL fail closed — blocking remediation and returning an error indicating the hook is missing. (Deviation: originally the hook was optional/fail-open. Changed to fail-closed per security audit finding D4/E7 to prevent bypassing HCL validation by simply deleting the hook.)
+7. ALL subprocess calls (terraform and hooks) SHALL receive a minimal, explicitly constructed environment via `_build_subprocess_env()`. Terraform children receive PATH + AWS credentials only. Hook children receive PATH + AWS credentials + TF_CMD + JANITOR_DRY_RUN. Neither receives OPENROUTER_API_KEY or JANITOR_LLM_API_KEY. (Added per security audit finding L2 — subprocess env isolation.)
+8. ALL terraform/hook error output SHALL be passed through `_redact()` before logging or returning to the UI. Redacted patterns: AWS account IDs, ARNs, access keys, API keys, VPC/subnet IDs, ANSI escape codes. (Added per security audit finding L1 — raw terraform output scrubbing.)
 
 ### Requirement 6: Persistent Approval Gates
 
