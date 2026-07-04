@@ -16,7 +16,10 @@ demo:
 	if [ $$i -eq 30 ]; then \
 		echo "\nERROR: LocalStack failed to start within 60 seconds"; exit 1; \
 	fi
-	$(MAKE) clean
+	@rm -f output/findings_store.json output/findings_store_*.json output/remediation.tf output/scan_history.json output/savings_ledger.json
+	@rm -f output/rollbacks/*.tf
+	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
+	@rm -f findings_store.json findings_store_*.json
 	bash scripts/seed-localstack.sh
 	uv run cloud-janitor dashboard
 
@@ -37,7 +40,10 @@ demo-live:
 	if [ $$i -eq 30 ]; then \
 		echo "\nERROR: LocalStack Pro failed to start within 60 seconds"; exit 1; \
 	fi
-	$(MAKE) clean
+	@rm -f output/findings_store.json output/findings_store_*.json output/remediation.tf output/scan_history.json output/savings_ledger.json
+	@rm -f output/rollbacks/*.tf
+	@rm -f output/logs/audit.log output/logs/agent_reasoning.log
+	@rm -f findings_store.json findings_store_*.json
 	bash scripts/seed-localstack.sh
 	JANITOR_BACKEND=aws AWS_ENDPOINT_URL=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test uv run cloud-janitor dashboard
 
