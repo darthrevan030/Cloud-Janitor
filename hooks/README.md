@@ -37,4 +37,19 @@ Where:
 
 The orchestrator calls these hooks via `subprocess.run(["bash", ...])`. On Windows, paths are converted to Git Bash format (`/d/...`) automatically by the `_to_bash_path()` helper in `orchestrator.py`.
 
-Hook failures in `pre-remediation.sh` **block** the pipeline. Failures in `post-remediation.sh` are **non-blocking** (logged but don't halt execution).
+### Environment Isolation
+
+Hooks receive a **minimal environment** containing only `PATH` and essential system variables (`SYSTEMROOT`, `TEMP`, etc. on Windows). They do **not** receive:
+
+- `OPENROUTER_API_KEY` or `JANITOR_LLM_API_KEY`
+- `AWS_SECRET_ACCESS_KEY` or `AWS_SESSION_TOKEN`
+- `LOCALSTACK_AUTH_TOKEN`
+
+This prevents accidental secret leakage via hook scripts that might log their environment.
+
+### Failure Behavior
+
+- **`pre-remediation.sh` missing**: Pipeline **blocks** (fails closed). Remediation cannot proceed without validation.
+- **`pre-remediation.sh` exits non-zero**: Pipeline blocks with the hook's stderr displayed.
+- **`post-remediation.sh` missing**: Silently skipped (non-blocking).
+- **`post-remediation.sh` exits non-zero**: Logged but does not halt execution.
