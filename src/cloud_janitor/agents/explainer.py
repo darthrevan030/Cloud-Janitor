@@ -10,7 +10,7 @@ Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 1.2, 1.8, 1.9, 1.11
 import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
 
 import logging
 
@@ -86,7 +86,8 @@ class RemediationExplainer:
                 rollback_hcl=rollback_hcl.strip(),
             )
 
-            response = client.chat.completions.create(
+            response = call_llm(
+                client,
                 model=self._model,
                 max_tokens=400,  # Requirement 3.5
                 messages=[
