@@ -43,6 +43,10 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/cloud_janitor"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"src/cloud_janitor/hooks/pre-remediation.sh" = "cloud_janitor/hooks/pre-remediation.sh"
+"src/cloud_janitor/hooks/post-remediation.sh" = "cloud_janitor/hooks/post-remediation.sh"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

@@ -671,14 +671,18 @@ cloud-janitor/
 │       │   ├── __init__.py
 │       │   ├── aws_cost_explorer.json # Fake cost/idle resource data
 │       │   └── aws_config_inspector.json # Fake security findings + dependency map
+│       ├── hooks/                   # Pipeline hook scripts (shipped as package data)
+│       │   ├── __init__.py          # HOOKS_DIR resolution
+│       │   ├── pre-remediation.sh   # HCL validation gate
+│       │   └── post-remediation.sh  # Audit log append
 │       └── orchestrator/            # Agent pipeline + approval flow
 │           ├── __init__.py          # Re-exports Orchestrator, AuditResult, etc.
 │           └── orchestrator.py      # Main orchestrator implementation
 ├── bin/
 │   └── tflocal                      # Repo-local wrapper (dry-run or delegates to real binary)
-├── hooks/
-│   ├── pre-remediation.sh           # HCL validation gate (runtime)
-│   └── post-remediation.sh          # Audit log append (runtime)
+├── hooks/                           # Dev convenience (canonical copies live in src/cloud_janitor/hooks/)
+│   ├── pre-remediation.sh
+│   └── post-remediation.sh
 ├── output/
 │   ├── logs/                        # audit.log, scheduler.log, agent_reasoning.log
 │   ├── policies/                    # Incident-generated policy JSON files

@@ -77,9 +77,12 @@ class TestPathConstants:
         """SAVINGS_LEDGER_PATH must be output/savings_ledger.json."""
         assert SAVINGS_LEDGER_PATH == OUTPUT_DIR / "savings_ledger.json"
 
-    def test_hooks_dir_is_under_project_root(self) -> None:
-        """HOOKS_DIR must be hooks/ under PROJECT_ROOT."""
-        assert HOOKS_DIR == PROJECT_ROOT / "hooks"
+    def test_hooks_dir_is_package_relative(self) -> None:
+        """HOOKS_DIR must point to the cloud_janitor/hooks package directory."""
+        assert HOOKS_DIR.name == "hooks"
+        assert (HOOKS_DIR / "__init__.py").exists()
+        assert (HOOKS_DIR / "pre-remediation.sh").exists()
+        assert (HOOKS_DIR / "post-remediation.sh").exists()
 
     def test_required_dirs_contains_all_output_subdirs(self) -> None:
         """REQUIRED_DIRS must include OUTPUT_DIR and its subdirectories."""
