@@ -288,8 +288,8 @@ class Orchestrator:
 
         self.approver = approver
 
-        # Validate and resolve TF_CMD binary
-        self._tf_cmd = _validate_tf_cmd()
+        # Validate and resolve TF_CMD binary lazily (only when actually needed)
+        self._tf_cmd: str | None = None
 
         # Reasoning logger (shared across all agents)
         reasoning_log_path = (
@@ -357,6 +357,21 @@ class Orchestrator:
 
         # Track rollback state (resource_id → awaiting confirmation)
         self._pending_rollbacks: set[str] = set()
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Properties
+    # ──────────────────────────────────────────────────────────────────────
+
+    @property
+    def tf_cmd(self) -> str:
+        """Lazily validate and resolve TF_CMD binary.
+
+        Only called when terraform operations are actually needed (approve/rollback),
+        not during scan-only usage.
+        """
+        if self._tf_cmd is None:
+            self._tf_cmd = _validate_tf_cmd()
+        return self._tf_cmd
 
     # ──────────────────────────────────────────────────────────────────────
     # Public API
@@ -474,8 +489,9 @@ class Orchestrator:
         all_findings = finops_findings + secops_findings
 
         # Step 6: Anomaly Detection (post-scan, before drift) — Req 6.4
-        resources = self._gather_resources()
-        anomalies = self._run_anomaly_detection(resources, all_findings)
+        # Use findings as the resource pool for anomaly detection to avoid
+        # redundant API/fixture calls (agents already fetched the data).
+        anomalies = self._run_anomaly_detection(all_findings, all_findings)
 
         # Step 7: Drift Detection — save snapshot then detect
         total_waste = sum(
@@ -548,7 +564,22 @@ class Orchestrator:
             else:
                 cost_data = get_cost_data(min_idle_days=min_idle_days)
                 all_resources.extend(cost_data.get("resources", []))
-            cost_findings = list(all_resources)
+            # Transform raw resources into finding-like dicts for downstream compatibility
+            for r in all_resources:
+                cost_findings.append({
+                    "id": r.get("id", ""),
+                    "resource_id": r.get("id", ""),
+                    "resource_type": r.get("type", "unknown"),
+                    "agent": "finops",
+                    "category": "waste",
+                    "severity": "MEDIUM" if r.get("type") == "ebs" else "HIGH" if r.get("type") == "elasticache" else "LOW",
+                    "title": r.get("description", f"Idle {r.get('type', 'resource')}"),
+                    "description": r.get("description", ""),
+                    "cost_estimate_monthly": r.get("monthly_cost", 0.0),
+                    "idle_days": r.get("idle_days", 0),
+                    "metadata": {k: v for k, v in r.items() if k not in ("id", "type", "idle_days", "monthly_cost", "description")},
+                    "detected_at": r.get("created_at", ""),
+                })
         except Exception as exc:
             print(
                 f"[Orchestrator] get_cost_data error: {type(exc).__name__}: {exc}",
@@ -692,45 +723,63 @@ class Orchestrator:
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
 
-        # Initialize the working directory before apply. Without this, terraform
-        # has no provider plugin selected and no lock file, causing apply to fail
-        # with "inconsistent dependency lock file" or similar init-required errors.
-        init_result = subprocess.run(
-            [self._tf_cmd, "init", "-input=false"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(self.output_dir),
-        )
-        if init_result.returncode != 0:
-            error = init_result.stderr.strip() or init_result.stdout.strip()
-            self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
-            tf_exc = RuntimeError(f"{self._tf_cmd} init failed: {error}")
-            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
-            return ApprovalResult(
-                success=False,
-                error=f"{self._tf_cmd} init failed: {error}",
-                resource_id=resource_id,
-            )
+        # Isolate the approved resource's HCL into a temporary working directory
+        # so terraform apply only affects the approved resource, not all resources.
+        import tempfile
+        apply_dir = Path(tempfile.mkdtemp(prefix="janitor_apply_"))
+        try:
+            # Write only this resource's remediation HCL
+            if plan.remediation_hcl:
+                (apply_dir / "main.tf").write_text(plan.remediation_hcl, encoding="utf-8")
+            else:
+                self._log_action("execution", resource_id, "failure", "No remediation HCL for resource")
+                return ApprovalResult(
+                    success=False,
+                    error="No remediation HCL available for this resource",
+                    resource_id=resource_id,
+                )
 
-        # Execute terraform apply against LocalStack
-        apply_result = subprocess.run(
-            [self._tf_cmd, "apply", "-auto-approve"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(self.output_dir),
-        )
-        if apply_result.returncode != 0:
-            error = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
-            tf_exc = RuntimeError(f"{self._tf_cmd} apply failed: {error}")
-            self._record_error(tf_exc, "Orchestrator", context="tf_apply")
-            return ApprovalResult(
-                success=False,
-                error=f"{self._tf_cmd} apply failed: {error}",
-                resource_id=resource_id,
+            # Initialize the working directory before apply.
+            init_result = subprocess.run(
+                [self.tf_cmd, "init", "-input=false"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(apply_dir),
             )
+            if init_result.returncode != 0:
+                error = init_result.stderr.strip() or init_result.stdout.strip()
+                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
+                tf_exc = RuntimeError(f"{self.tf_cmd} init failed: {error}")
+                self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+                return ApprovalResult(
+                    success=False,
+                    error=f"{self.tf_cmd} init failed: {error}",
+                    resource_id=resource_id,
+                )
+
+            # Execute terraform apply only for the approved resource
+            apply_result = subprocess.run(
+                [self.tf_cmd, "apply", "-auto-approve"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(apply_dir),
+            )
+            if apply_result.returncode != 0:
+                error = apply_result.stderr.strip() or apply_result.stdout.strip()
+                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
+                tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
+                self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+                return ApprovalResult(
+                    success=False,
+                    error=f"{self.tf_cmd} apply failed: {error}",
+                    resource_id=resource_id,
+                )
+        finally:
+            # Clean up temp directory
+            import shutil as _shutil
+            _shutil.rmtree(apply_dir, ignore_errors=True)
 
         self._log_action("execution", resource_id, "success", "Remediation executed")
 
@@ -972,7 +1021,7 @@ class Orchestrator:
             remaining = timeout - (time.monotonic() - start)
             try:
                 result = subprocess.run(
-                    ["bash", _to_bash_path(hook_path), _to_bash_path(rollback_path)],
+                    [BASH_CMD, _to_bash_path(hook_path), _to_bash_path(rollback_path)],
                     capture_output=True,
                     text=True,
                     timeout=max(remaining, 1),
@@ -1202,6 +1251,13 @@ class Orchestrator:
                 error="Missing resource ID in confirm rollback command",
             )
 
+        # Validate resource_id format (defense-in-depth)
+        if not _RESOURCE_ID_PATTERN.match(resource_id):
+            return RollbackResult(
+                success=False,
+                error="Invalid resource ID format in confirm rollback command",
+            )
+
         # Guard: reject if gate store is corrupted
         if self._gate_store.is_corrupted:
             return RollbackResult(
@@ -1281,7 +1337,7 @@ class Orchestrator:
             )
 
         init_result = subprocess.run(
-            [self._tf_cmd, "init", "-input=false"],
+            [self.tf_cmd, "init", "-input=false"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -1289,20 +1345,20 @@ class Orchestrator:
         )
         if init_result.returncode != 0:
             error = init_result.stderr.strip() or init_result.stdout.strip()
-            self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} init failed: {error}")
-            tf_exc = RuntimeError(f"{self._tf_cmd} init failed: {error}")
+            self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
+            tf_exc = RuntimeError(f"{self.tf_cmd} init failed: {error}")
             self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
-                error=f"{self._tf_cmd} init failed: {error}",
+                error=f"{self.tf_cmd} init failed: {error}",
                 error_category="terraform_failure",
                 error_agent="Orchestrator",
                 exit_code=init_result.returncode,
             )
 
         apply_result = subprocess.run(
-            [self._tf_cmd, "apply", "-auto-approve"],
+            [self.tf_cmd, "apply", "-auto-approve"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -1310,14 +1366,14 @@ class Orchestrator:
         )
         if apply_result.returncode != 0:
             error = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action("rollback", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
-            tf_exc = RuntimeError(f"{self._tf_cmd} apply failed: {error}")
+            self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
+            tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
             self._record_error(tf_exc, "Orchestrator", context="tf_apply")
             # Leave the resource pending so the caller can retry CONFIRM ROLLBACK
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
-                error=f"{self._tf_cmd} apply failed: {error}",
+                error=f"{self.tf_cmd} apply failed: {error}",
                 error_category="terraform_failure",
                 error_agent="Orchestrator",
                 exit_code=apply_result.returncode,
