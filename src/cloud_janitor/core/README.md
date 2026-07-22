@@ -21,6 +21,7 @@ Centralised path configuration — every module that reads or writes runtime art
 | `REASONING_LOG_PATH` | `Path` | Reasoning log (`output/logs/agent_reasoning.log`) |
 | `APPROVAL_GATES_PATH` | `Path` | Gate store (`output/approval_gates.json`) |
 | `SAVINGS_LEDGER_PATH` | `Path` | Savings ledger (`output/savings_ledger.json`) |
+| `STATE_STORE_PATH` | `Path` | SQLite state store (`output/state.db`) |
 | `HOOKS_DIR` | `Path` | Hooks directory (resolved from `cloud_janitor.hooks` package) |
 | `REQUIRED_DIRS` | `list[Path]` | Directories created at startup |
 | `ensure_output_dirs()` | `function` | Creates all `REQUIRED_DIRS`, raises `RuntimeError` on failure |
