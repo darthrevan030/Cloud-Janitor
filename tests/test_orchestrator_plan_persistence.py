@@ -104,6 +104,34 @@ def _make_orchestrator(tmp_path: Path) -> Orchestrator:
 
 def _mock_agents_for_audit(orch: Orchestrator, plans: list[RemediationPlan]) -> None:
     """Mock FinOps, SecOps, Architect, and pre-hook so execute_audit() succeeds."""
+    # Build a valid findings store content inline for the secops side_effect
+    _store_content = json.dumps({
+        "schema_version": "1.0.0",
+        "scan_id": "test-scan-001",
+        "started_at": "2025-01-15T10:00:00Z",
+        "completed_at": "2025-01-15T10:01:00Z",
+        "agents_completed": ["finops", "secops"],
+        "findings": [
+            {
+                "id": "f1", "resource_id": "vol-abc123", "resource_type": "ebs",
+                "agent": "finops", "category": "waste", "severity": "MEDIUM",
+                "title": "Unattached EBS volume", "description": "Idle for 45 days",
+                "cost_estimate_monthly": 12.50, "idle_days": 45, "metadata": {},
+                "detected_at": "2025-01-15T10:00:00Z",
+            },
+            {
+                "id": "f2", "resource_id": "sg-web-servers", "resource_type": "security_group",
+                "agent": "secops", "category": "security", "severity": "CRITICAL",
+                "title": "Open security group", "description": "0.0.0.0/0 on Redis port",
+                "cost_estimate_monthly": 0.0, "idle_days": 0,
+                "metadata": {"port": 6379, "cidr": "0.0.0.0/0"},
+                "detected_at": "2025-01-15T10:00:30Z",
+            },
+        ],
+        "summary": {"total": 2, "by_severity": {"LOW": 0, "MEDIUM": 1, "HIGH": 0, "CRITICAL": 1},
+                    "by_agent": {"finops": 1, "secops": 1}, "total_monthly_waste": 12.50},
+    }, indent=2)
+
     orch._finops.scan = MagicMock(return_value=[
         {
             "id": "f1",
@@ -120,22 +148,28 @@ def _mock_agents_for_audit(orch: Orchestrator, plans: list[RemediationPlan]) -> 
             "detected_at": "2025-01-15T10:00:00Z",
         }
     ])
-    orch._secops.scan = MagicMock(return_value=[
-        {
-            "id": "f2",
-            "resource_id": "sg-web-servers",
-            "resource_type": "security_group",
-            "agent": "secops",
-            "category": "security",
-            "severity": "CRITICAL",
-            "title": "Open security group",
-            "description": "0.0.0.0/0 on Redis port",
-            "cost_estimate_monthly": 0.0,
-            "idle_days": 0,
-            "metadata": {"port": 6379, "cidr": "0.0.0.0/0"},
-            "detected_at": "2025-01-15T10:00:30Z",
-        }
-    ])
+
+    def _secops_scan():
+        orch._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+        orch._secops.findings_store_path.write_text(_store_content)
+        return [
+            {
+                "id": "f2",
+                "resource_id": "sg-web-servers",
+                "resource_type": "security_group",
+                "agent": "secops",
+                "category": "security",
+                "severity": "CRITICAL",
+                "title": "Open security group",
+                "description": "0.0.0.0/0 on Redis port",
+                "cost_estimate_monthly": 0.0,
+                "idle_days": 0,
+                "metadata": {"port": 6379, "cidr": "0.0.0.0/0"},
+                "detected_at": "2025-01-15T10:00:30Z",
+            }
+        ]
+
+    orch._secops.scan = MagicMock(side_effect=_secops_scan)
     orch._architect.plan = MagicMock(return_value=plans)
     # Mock the pre-remediation hook to always pass (we're testing plan
     # persistence wiring, not hook validation)

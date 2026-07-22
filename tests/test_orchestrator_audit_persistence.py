@@ -211,12 +211,20 @@ class TestAuditPersistenceWiring:
             "title": "Test", "description": "test", "cost_estimate_monthly": 1.0,
             "idle_days": 45, "metadata": {}, "detected_at": "2025-01-15T10:00:00Z",
         }])
-        orch._secops.scan = MagicMock(return_value=[{
-            "id": "f2", "resource_id": "sg-audit-test", "resource_type": "security_group",
-            "agent": "secops", "category": "security", "severity": "CRITICAL",
-            "title": "Test", "description": "test", "cost_estimate_monthly": 0.0,
-            "idle_days": 0, "metadata": {"port": 6379}, "detected_at": "2025-01-15T10:00:30Z",
-        }])
+
+        _store_content = (tmp_path / "output" / "findings_store.json").read_text()
+
+        def _secops_scan():
+            orch._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+            orch._secops.findings_store_path.write_text(_store_content)
+            return [{
+                "id": "f2", "resource_id": "sg-audit-test", "resource_type": "security_group",
+                "agent": "secops", "category": "security", "severity": "CRITICAL",
+                "title": "Test", "description": "test", "cost_estimate_monthly": 0.0,
+                "idle_days": 0, "metadata": {"port": 6379}, "detected_at": "2025-01-15T10:00:30Z",
+            }]
+
+        orch._secops.scan = MagicMock(side_effect=_secops_scan)
         orch._architect.plan = MagicMock(return_value=plans)
 
         # Mock append_audit_entry to always return False

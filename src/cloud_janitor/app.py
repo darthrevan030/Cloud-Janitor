@@ -28,6 +28,7 @@ from cloud_janitor.core.paths import (
     REASONING_LOG_PATH,
     OUTPUT_DIR,
     PROJECT_ROOT,
+    resolve_latest_findings_store,
 )
 
 configure_logging()
@@ -604,12 +605,25 @@ def render_structured_error(
 
 
 def load_findings() -> list[dict]:
-    if not FINDINGS_STORE_PATH.exists():
+    path = resolve_latest_findings_store()
+    if path is None:
         return []
     try:
-        with open(FINDINGS_STORE_PATH) as f:
+        with open(path) as f:
             data = json.load(f)
         return data.get("findings", [])  # type: ignore[no-any-return]
+    except FileNotFoundError:
+        # Narrow TOCTOU race: pointed-to file pruned between resolve and open.
+        # Retry resolution once.
+        path = resolve_latest_findings_store()
+        if path is None:
+            return []
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            return data.get("findings", [])  # type: ignore[no-any-return]
+        except (json.JSONDecodeError, IOError):
+            return []
     except (json.JSONDecodeError, IOError):
         return []
 
@@ -1041,6 +1055,33 @@ with bottom_right:
         f'</div>',
         unsafe_allow_html=True,
     )
+
+    # ── Run-Scoped Reasoning Logs ─────────────────────────────────────
+    _reasoning_run_dir = OUTPUT_DIR / "logs" / "agent_reasoning"
+    if _reasoning_run_dir.exists():
+        _run_logs = sorted(_reasoning_run_dir.glob("*.log"), reverse=True)[:20]
+        if _run_logs:
+            st.markdown(
+                '<div class="cj-panel">'
+                '<div class="cj-panel-title">Run-Scoped Reasoning Logs</div>',
+                unsafe_allow_html=True,
+            )
+            _selected_log = st.selectbox(
+                "Select run log",
+                options=[p.name for p in _run_logs],
+                key="reasoning_run_log_select",
+                label_visibility="collapsed",
+            )
+            if _selected_log:
+                _selected_log_path = _reasoning_run_dir / _selected_log
+                _run_events = parse_reasoning_events(_selected_log_path)
+                st.markdown(
+                    f'<div class="cj-reasoning-container">'
+                    f'{render_reasoning_html(_run_events)}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 

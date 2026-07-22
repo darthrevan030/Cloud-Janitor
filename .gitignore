@@ -46,6 +46,8 @@ output/approval_gates.json
 output/state.db
 output/state.db-wal
 output/state.db-shm
+output/findings_store/
+output/logs/agent_reasoning/
 audit.log
 
 # Runtime outputs accidentally written inside src if any

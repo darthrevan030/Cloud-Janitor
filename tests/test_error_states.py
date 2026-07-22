@@ -99,6 +99,8 @@ def _make_orchestrator(tmp_project, findings_store):
     """Build an Orchestrator with mocked agent scan methods."""
     orch = Orchestrator(project_root=tmp_project, approver="error-test-user")
 
+    _fixture_content = findings_store.read_text()
+
     orch._finops.scan = MagicMock(
         return_value=[
             {
@@ -111,8 +113,11 @@ def _make_orchestrator(tmp_project, findings_store):
             }
         ]
     )
-    orch._secops.scan = MagicMock(
-        return_value=[
+
+    def _secops_scan():
+        orch._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+        orch._secops.findings_store_path.write_text(_fixture_content)
+        return [
             {
                 "id": "f2",
                 "resource_id": "sg-err002",
@@ -122,7 +127,8 @@ def _make_orchestrator(tmp_project, findings_store):
                 "severity": "CRITICAL",
             }
         ]
-    )
+
+    orch._secops.scan = MagicMock(side_effect=_secops_scan)
 
     return orch
 

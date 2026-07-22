@@ -365,6 +365,8 @@ cp .env.example .env
 | `JANITOR_HOME` | cwd | No | Base directory for all output files |
 | `LOCALSTACK_AUTH_TOKEN` | — | Yes (for demo) | LocalStack auth token for container usage |
 | `JANITOR_SKIP_HEALTH_CHECK` | — | No | Set to `1` to bypass the backend reachability preflight (proceeds with a warning) |
+| `JANITOR_RUN_RETENTION` | `20` | No | Number of run-scoped reasoning log files to keep before pruning oldest |
+| `JANITOR_FINDINGS_RETENTION` | `20` | No | Number of run-scoped findings store files to keep before pruning oldest |
 
 ### Timeouts
 
@@ -683,6 +685,7 @@ cloud-janitor/
 │       │   ├── state_store.py       # SQLite persistence (plans, rollbacks, audit trail)
 │       │   ├── health.py            # Backend reachability preflight
 │       │   ├── timeouts.py          # Configurable subprocess/LLM timeouts
+│       │   ├── run_context.py       # Run ID generation, retention pruning
 │       │   ├── logging_config.py    # Logging configuration
 │       │   ├── paths.py             # Centralized path constants
 │       │   └── error_telemetry.py   # Structured error recording
@@ -712,7 +715,11 @@ cloud-janitor/
 │   └── post-remediation.sh
 ├── output/
 │   ├── state.db                     # SQLite state store (plans, pending rollbacks, audit trail)
-│   ├── logs/                        # audit.log, scheduler.log, agent_reasoning.log
+│   ├── findings_store/              # Run-scoped findings (one JSON per audit run)
+│   │   ├── <run_id>.json            # Per-run findings store
+│   │   └── latest.json              # Pointer to the current run's store
+│   ├── logs/                        # audit.log, scheduler.log
+│   │   └── agent_reasoning/         # Run-scoped reasoning logs (one per audit run)
 │   ├── policies/                    # Incident-generated policy JSON files
 │   ├── remediations/                # Per-resource remediation HCL
 │   ├── rollbacks/                   # Per-resource rollback HCL

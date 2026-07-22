@@ -95,6 +95,7 @@ from cloud_janitor.core.paths import (  # noqa: E402
     REMEDIATIONS_DIR as _CORE_REMEDIATIONS_DIR,
     ROLLBACKS_DIR as _CORE_ROLLBACKS_DIR,
     FINDINGS_STORE_PATH as _CORE_FINDINGS_STORE_PATH,
+    FINDINGS_STORE_DIR as _CORE_FINDINGS_STORE_DIR,
     AUDIT_LOG_PATH as _CORE_AUDIT_LOG_PATH,
     REASONING_LOG_PATH as _CORE_REASONING_LOG_PATH,
     APPROVAL_GATES_PATH as _CORE_APPROVAL_GATES_PATH,
@@ -102,6 +103,7 @@ from cloud_janitor.core.paths import (  # noqa: E402
     STATE_STORE_PATH as _CORE_STATE_STORE_PATH,
     HOOKS_DIR as _CORE_HOOKS_DIR,
     ensure_output_dirs,
+    update_findings_store_pointer,
 )
 from cloud_janitor.core.state_store import (  # noqa: E402
     StateStore,
@@ -111,6 +113,7 @@ from cloud_janitor.core.state_store import (  # noqa: E402
 from cloud_janitor.core.error_telemetry import build_error_record, write_error_record  # noqa: E402
 from cloud_janitor.core.health import check_backend_health  # noqa: E402
 from cloud_janitor.core.identity import IdentityResolutionError, resolve_actor  # noqa: E402
+from cloud_janitor.core.run_context import generate_run_id, get_retention, prune_run_scoped_files  # noqa: E402
 from cloud_janitor.core.timeouts import get_timeout  # noqa: E402
 
 
@@ -306,6 +309,7 @@ class AuditResult:
     anomalies: list[dict] = field(default_factory=list)
     drift_report: dict | None = None
     warnings: list[str] = field(default_factory=list)
+    run_id: str = ""
 
 
 @dataclass
@@ -707,10 +711,18 @@ class Orchestrator:
                 status_callback(agent, status)
 
         # Assign a unique run identifier FIRST (before any pipeline work)
-        self.current_run_id = uuid.uuid4().hex
+        self.current_run_id = generate_run_id()
+        run_id = self.current_run_id
 
-        # Truncate reasoning log at the start of each new audit run
-        self._reasoning_logger.truncate()
+        # Point reasoning logger at a fresh run-scoped file
+        self._reasoning_logger.start_new_run(run_id)
+
+        # Wire run-scoped findings store path for all agents
+        run_findings_path = _CORE_FINDINGS_STORE_DIR / f"{run_id}.json"
+        self._finops.findings_store_path = run_findings_path
+        self._secops.findings_store_path = run_findings_path
+        self._architect.findings_store_path = run_findings_path
+        self.findings_store_path = run_findings_path
 
         # Preflight: verify backend is reachable before doing any real work
         health = check_backend_health()
@@ -728,6 +740,7 @@ class Orchestrator:
                     error=f"Backend {health.mode} ({health.environment}): {health.detail}",
                     error_category=error_category,
                     error_agent="Orchestrator",
+                    run_id=self.current_run_id or "",
                 )
 
         # Warnings accumulator for non-fatal issues surfaced in AuditResult
@@ -742,7 +755,7 @@ class Orchestrator:
         except Exception as e:
             _emit("finops", "failure")
             self._record_error(e, "FinOpsAuditor", context="")
-            return AuditResult(success=False, error=f"FinOps Auditor failed: {e}", error_category="agent_failure", error_agent="FinOpsAuditor")
+            return AuditResult(success=False, error=f"FinOps Auditor failed: {e}", error_category="agent_failure", error_agent="FinOpsAuditor", run_id=self.current_run_id or "")
         logger.info("[Orchestrator] Step 1 complete: FinOps found %d finding(s)", len(finops_findings))
         self._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
         _emit("finops", "success")
@@ -762,6 +775,7 @@ class Orchestrator:
                 error=f"SecOps Guard failed: {e}",
                 error_category="agent_failure",
                 error_agent="SecOpsGuard",
+                run_id=self.current_run_id or "",
             )
         logger.info("[Orchestrator] Step 2 complete: SecOps found %d finding(s)", len(secops_findings))
         self._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
@@ -777,7 +791,7 @@ class Orchestrator:
             _emit("remediation", "failure")
             val_exc = RuntimeError(validation_error)
             self._record_error(val_exc, "Orchestrator", context="schema_check")
-            return AuditResult(success=False, error=validation_error, error_category="validation_failure", error_agent="Orchestrator")
+            return AuditResult(success=False, error=validation_error, error_category="validation_failure", error_agent="Orchestrator", run_id=self.current_run_id or "")
         logger.info("[Orchestrator] Step 3 complete: Findings store valid")
 
         # Step 4: Remediation Architect plans
@@ -794,6 +808,7 @@ class Orchestrator:
                 error=f"Remediation Architect failed: {e}",
                 error_category="agent_failure",
                 error_agent="RemediationArchitect",
+                run_id=self.current_run_id or "",
             )
         self._last_plans = plans
 
@@ -819,6 +834,13 @@ class Orchestrator:
             f"Generated {len(active_plans)} plan(s), {len(blocked_plans)} blocked"
         )
 
+        # Update findings store pointer and prune old run-scoped files
+        update_findings_store_pointer(run_id, run_findings_path)
+        prune_run_scoped_files(
+            _CORE_FINDINGS_STORE_DIR, ".json", get_retention("JANITOR_FINDINGS_RETENTION"),
+            protect={run_findings_path.name, "latest.json"},
+        )
+
         # Step 5: Run pre-remediation hook on active plans
         if active_plans:
             logger.info("[Orchestrator] Step 5: Running pre-remediation hook (terraform validate)...")
@@ -837,6 +859,7 @@ class Orchestrator:
                     hook_error=hook_error,
                     error_category="validation_failure",
                     error_agent="Orchestrator",
+                    run_id=self.current_run_id or "",
                 )
             logger.info("[Orchestrator] Step 5 complete: Hook validation passed")
 
@@ -869,6 +892,7 @@ class Orchestrator:
             anomalies=anomalies,
             drift_report=drift_report,
             warnings=audit_warnings,
+            run_id=self.current_run_id or "",
         )
 
     def execute_natural_language_audit(self, query: str) -> AuditResult:
@@ -905,6 +929,7 @@ class Orchestrator:
             return self.execute_audit()
 
         # Step 3: Use interpreted parameters to gather filtered data
+        self.current_run_id = generate_run_id()
         resource_types = params.get("resource_types", [])
         check_types = params.get("check_types", [])
         min_idle_days = params.get("min_idle_days", 7)
@@ -1005,6 +1030,7 @@ class Orchestrator:
             blocked_plans=blocked_plans,
             anomalies=anomalies,
             drift_report=drift_report,
+            run_id=self.current_run_id or "",
         )
 
     def approve(self, command: str, resource_id: str | None = None) -> ApprovalResult:

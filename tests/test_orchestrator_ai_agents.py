@@ -96,9 +96,16 @@ class TestExecuteAuditWithAIAgents:
         anomalies = [{"anomaly_id": "a1", "resource_id": "vol-2", "anomaly_type": "cost_outlier",
                       "description": "Unusual cost", "severity": "medium", "evidence": "high cost"}]
 
+        _min_store = '{"schema_version":"1.0.0","agents_completed":["finops","secops"],"findings":[]}'
+
+        def _secops_scan():
+            tmp_orchestrator._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_orchestrator._secops.findings_store_path.write_text(_min_store)
+            return []
+
         with patch.object(tmp_orchestrator._anomaly_detector, "detect", return_value=anomalies):
             with patch.object(tmp_orchestrator._finops, "scan", return_value=[]):
-                with patch.object(tmp_orchestrator._secops, "scan", return_value=[]):
+                with patch.object(tmp_orchestrator._secops, "scan", side_effect=_secops_scan):
                     with patch.object(tmp_orchestrator._architect, "plan", return_value=[]):
                         result = tmp_orchestrator.execute_audit()
 
@@ -113,11 +120,18 @@ class TestExecuteAuditWithAIAgents:
 
         drift_report = {"drift": None, "reason": "insufficient history"}
 
+        _min_store = '{"schema_version":"1.0.0","agents_completed":["finops","secops"],"findings":[]}'
+
+        def _secops_scan():
+            tmp_orchestrator._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_orchestrator._secops.findings_store_path.write_text(_min_store)
+            return []
+
         with patch.object(tmp_orchestrator._anomaly_detector, "detect", return_value=[]):
             with patch.object(tmp_orchestrator._drift_detector, "detect", return_value=drift_report):
                 with patch.object(tmp_orchestrator._drift_detector, "save_snapshot"):
                     with patch.object(tmp_orchestrator._finops, "scan", return_value=[]):
-                        with patch.object(tmp_orchestrator._secops, "scan", return_value=[]):
+                        with patch.object(tmp_orchestrator._secops, "scan", side_effect=_secops_scan):
                             with patch.object(tmp_orchestrator._architect, "plan", return_value=[]):
                                 result = tmp_orchestrator.execute_audit()
 
@@ -131,11 +145,18 @@ class TestExecuteAuditWithAIAgents:
         mock_cost.return_value = {"resources": [], "total_monthly_waste": 0.0}
         mock_sec.return_value = {"findings": [], "critical_count": 0}
 
+        _min_store = '{"schema_version":"1.0.0","agents_completed":["finops","secops"],"findings":[]}'
+
+        def _secops_scan():
+            tmp_orchestrator._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_orchestrator._secops.findings_store_path.write_text(_min_store)
+            return []
+
         with patch.object(tmp_orchestrator._anomaly_detector, "detect", side_effect=RuntimeError("LLM down")):
             with patch.object(tmp_orchestrator._drift_detector, "detect", return_value={"drift": None, "reason": "insufficient history"}):
                 with patch.object(tmp_orchestrator._drift_detector, "save_snapshot"):
                     with patch.object(tmp_orchestrator._finops, "scan", return_value=[]):
-                        with patch.object(tmp_orchestrator._secops, "scan", return_value=[]):
+                        with patch.object(tmp_orchestrator._secops, "scan", side_effect=_secops_scan):
                             with patch.object(tmp_orchestrator._architect, "plan", return_value=[]):
                                 result = tmp_orchestrator.execute_audit()
 
@@ -149,12 +170,18 @@ class TestExecuteAuditWithAIAgents:
         mock_sec.return_value = {"findings": [], "critical_count": 0}
 
         findings = [{"resource_id": "vol-1", "cost_estimate_monthly": 15.0}]
+        _min_store = '{"schema_version":"1.0.0","agents_completed":["finops","secops"],"findings":[]}'
+
+        def _secops_scan():
+            tmp_orchestrator._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_orchestrator._secops.findings_store_path.write_text(_min_store)
+            return []
 
         with patch.object(tmp_orchestrator._anomaly_detector, "detect", return_value=[]):
             with patch.object(tmp_orchestrator._drift_detector, "save_snapshot") as mock_save:
                 with patch.object(tmp_orchestrator._drift_detector, "detect", return_value={"drift": None, "reason": "insufficient history"}):
                     with patch.object(tmp_orchestrator._finops, "scan", return_value=findings):
-                        with patch.object(tmp_orchestrator._secops, "scan", return_value=[]):
+                        with patch.object(tmp_orchestrator._secops, "scan", side_effect=_secops_scan):
                             with patch.object(tmp_orchestrator._architect, "plan", return_value=[]):
                                 tmp_orchestrator.execute_audit()
 

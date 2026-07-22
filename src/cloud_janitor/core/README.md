@@ -22,6 +22,8 @@ Centralised path configuration — every module that reads or writes runtime art
 | `APPROVAL_GATES_PATH` | `Path` | Gate store (`output/approval_gates.json`) |
 | `SAVINGS_LEDGER_PATH` | `Path` | Savings ledger (`output/savings_ledger.json`) |
 | `STATE_STORE_PATH` | `Path` | SQLite state store (`output/state.db`) |
+| `FINDINGS_STORE_DIR` | `Path` | Run-scoped findings directory (`output/findings_store/`) |
+| `FINDINGS_STORE_LATEST_POINTER` | `Path` | Latest findings pointer (`output/findings_store/latest.json`) |
 | `HOOKS_DIR` | `Path` | Hooks directory (resolved from `cloud_janitor.hooks` package) |
 | `REQUIRED_DIRS` | `list[Path]` | Directories created at startup |
 | `ensure_output_dirs()` | `function` | Creates all `REQUIRED_DIRS`, raises `RuntimeError` on failure |

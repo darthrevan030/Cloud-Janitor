@@ -154,8 +154,17 @@ def _make_orchestrator_with_mocked_agents(tmp_project, findings_store_both_agent
         }
     ]
 
+    # Read the fixture store content for side_effect writing
+    _fixture_store_content = findings_store_both_agents.read_text()
+
+    def _secops_scan_side_effect():
+        """Write the fixture findings store to the run-scoped path (mimics real agent)."""
+        orch._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+        orch._secops.findings_store_path.write_text(_fixture_store_content)
+        return secops_findings
+
     orch._finops.scan = MagicMock(return_value=finops_findings)
-    orch._secops.scan = MagicMock(return_value=secops_findings)
+    orch._secops.scan = MagicMock(side_effect=_secops_scan_side_effect)
 
     return orch
 
@@ -622,12 +631,19 @@ class TestAgentSequencing:
         )
 
         call_order = []
+        _fixture_content = findings_store_both_agents.read_text()
+
         orch._finops.scan = MagicMock(
             side_effect=lambda: (call_order.append("finops"), [])[1]
         )
-        orch._secops.scan = MagicMock(
-            side_effect=lambda: (call_order.append("secops"), [])[1]
-        )
+
+        def _secops_with_order():
+            call_order.append("secops")
+            orch._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+            orch._secops.findings_store_path.write_text(_fixture_content)
+            return []
+
+        orch._secops.scan = MagicMock(side_effect=_secops_with_order)
 
 
         orch._architect.plan = MagicMock(
@@ -655,14 +671,20 @@ class TestAgentSequencing:
             ],
             "summary": {"by_agent": {"finops": 1, "secops": 0}},
         }
-        (tmp_project / "output" / "findings_store.json").write_text(json.dumps(store))
+        _store_content = json.dumps(store, indent=2)
 
         # Mock FinOps to return findings (store already written above)
         orch._finops.scan = MagicMock(
             return_value=[{"id": "f1", "agent": "finops"}]
         )
-        # Mock SecOps to return empty (doesn't write secops entries to store)
-        orch._secops.scan = MagicMock(return_value=[])
+
+        # Mock SecOps to return empty but write the store with only finops entries
+        def _secops_scan():
+            orch._secops.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
+            orch._secops.findings_store_path.write_text(_store_content)
+            return []
+
+        orch._secops.scan = MagicMock(side_effect=_secops_scan)
         orch._architect.plan = MagicMock(return_value=[])
 
         result = orch.execute_audit()

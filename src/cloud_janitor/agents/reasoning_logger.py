@@ -47,6 +47,8 @@ class ReasoningLogger:
         else:
             from cloud_janitor.core.paths import REASONING_LOG_PATH
             self._log_path = REASONING_LOG_PATH
+        # Stable base directory for run-scoped files (never mutated)
+        self._base_log_dir = self._log_path.parent
 
     @property
     def log_path(self) -> Path:
@@ -61,6 +63,10 @@ class ReasoningLogger:
 
     def truncate(self) -> None:
         """Rotate the log file if it exceeds the size threshold, then start fresh.
+
+        .. deprecated::
+            Use :meth:`start_new_run` instead. This method is retained for
+            backward compatibility but is no longer called from execute_audit().
 
         Called at audit start. Rotates (renames with timestamp suffix) only when
         the current log exceeds LOG_ROTATION_THRESHOLD bytes. Keeps at most
@@ -99,6 +105,32 @@ class ReasoningLogger:
                 oldest.unlink(missing_ok=True)
         except OSError:
             pass
+
+    def start_new_run(self, run_id: str) -> None:
+        """Point this logger at a fresh run-scoped file and prune old runs.
+
+        Unlike truncate(), this never deletes or overwrites another run's
+        file — it only creates the new one and prunes beyond the configured
+        retention (JANITOR_RUN_RETENTION, default 20).
+
+        Args:
+            run_id: The unique run identifier to use for the filename.
+
+        On filesystem error: prints to stderr, does NOT raise.
+        """
+        from cloud_janitor.core.run_context import get_retention, prune_run_scoped_files
+
+        run_dir = self._base_log_dir / "agent_reasoning"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        self._log_path = run_dir / f"{run_id}.log"
+        try:
+            self._log_path.touch(exist_ok=True)
+        except OSError as exc:
+            print(
+                f"ReasoningLogger: failed to create {self._log_path}: {exc}",
+                file=sys.stderr,
+            )
+        prune_run_scoped_files(run_dir, ".log", get_retention("JANITOR_RUN_RETENTION"))
 
     def start_run(self) -> None:
         """Write a run separator entry in append mode.
