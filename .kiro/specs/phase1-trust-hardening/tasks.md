@@ -7,7 +7,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
 ## Tasks
 
 - [ ] 1. Create foundational modules
-  - [ ] 1.1 Create `core/identity.py`
+  - [x] 1.1 Create `core/identity.py`
     - Implement `ActorResolution` dataclass, `IdentityResolutionError` exception, `resolve_actor(fallback: str) -> ActorResolution`
     - Extend `aws_provider._make_client(service, region, config=None)` with an optional `config: botocore.config.Config | None` keyword (default `None`, backward compatible) and reuse it for the STS client so LocalStack (`AWS_ENDPOINT_URL`) works unmodified
     - Pass a short-timeout `Config(connect_timeout=5, read_timeout=10, retries={"max_attempts": 1})` on the STS call, matching `aws_provider.py`'s own `_dep_client` precedent (aws_provider.py:556) for non-critical-path calls
@@ -32,7 +32,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - `JANITOR_ACTOR` env var respected as fallback when set
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-  - [ ] 1.4 Create `core/redaction.py`
+  - [x] 1.4 Create `core/redaction.py`
     - Implement `redact(obj) -> tuple[Any, dict[str, str]]`: recursive walk of dict/list/str, placeholder substitution for ARNs (`arn:aws:...`), 12-digit account IDs, and known resource IDs; excludes `resource_type`, `region`, `tags` keys
     - Implement `rehydrate(text: str, mapping: dict[str, str]) -> str`
     - _Requirements: 4.1, 4.2, 4.3_

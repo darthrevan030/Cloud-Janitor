@@ -22,14 +22,24 @@ from cloud_janitor.mcp_server.backends import CloudProvider
 logger = logging.getLogger(__name__)
 
 
-def _make_client(service: str, region: Optional[str]):
-    """Return a boto3 client, wiring in AWS_ENDPOINT_URL when present."""
+def _make_client(
+    service: str, region: Optional[str], config: "botocore.config.Config | None" = None
+):
+    """Return a boto3 client, wiring in AWS_ENDPOINT_URL when present.
+
+    Args:
+        service: AWS service name (e.g. "sts", "ec2").
+        region: AWS region name, or None for default resolution.
+        config: Optional botocore.config.Config for timeout/retry overrides.
+    """
     import boto3
 
     kwargs: dict = {"region_name": region}
     endpoint = os.environ.get("AWS_ENDPOINT_URL")
     if endpoint:
         kwargs["endpoint_url"] = endpoint
+    if config is not None:
+        kwargs["config"] = config
     return boto3.client(service, **kwargs)
 
 
