@@ -221,3 +221,143 @@ def test_default_paths_resolve_under_repo_root():
     assert not str(tracker._findings_store_path).startswith(str(agents_dir)), (
         "findings_store_path incorrectly under agents/ directory"
     )
+
+
+# --- record_rollback tests ---
+
+
+@pytest.fixture
+def tracker_with_run(tmp_path):
+    """Create a tracker with one recorded run (res-1: $10, res-2: $20)."""
+    findings = {
+        "scan_id": "run-001",
+        "completed_at": "2026-07-08T10:00:00+00:00",
+        "findings": [
+            {"resource_id": "res-1", "cost_estimate_monthly": 10.0},
+            {"resource_id": "res-2", "cost_estimate_monthly": 20.0},
+        ],
+    }
+    findings_path = tmp_path / "findings_store.json"
+    ledger_path = tmp_path / "savings_ledger.json"
+    findings_path.write_text(json.dumps(findings))
+
+    tracker = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+    tracker.record_run(["res-1", "res-2"])
+    return tracker, ledger_path, findings_path
+
+
+def test_record_rollback_reverses_correct_amount(tracker_with_run):
+    """Rollback negates the matched run's stored monthly_savings_added, not a recomputed value."""
+    tracker, ledger_path, findings_path = tracker_with_run
+
+    # Overwrite findings_store to simulate a subsequent scan that no longer has res-1
+    # This proves rollback uses the ledger's stored amount, not the live findings store
+    new_findings = {
+        "scan_id": "run-002",
+        "completed_at": "2026-07-08T12:00:00+00:00",
+        "findings": [{"resource_id": "res-99", "cost_estimate_monthly": 999.0}],
+    }
+    findings_path.write_text(json.dumps(new_findings))
+
+    result = tracker.record_rollback("res-1")
+    assert result is True
+
+    ledger = json.loads(ledger_path.read_text())
+    # The original run had monthly_savings_added=30.0 (res-1 + res-2)
+    # Rollback should negate that full amount (the matched run's stored value)
+    rollback_entry = next(r for r in ledger["runs"] if r.get("type") == "rollback")
+    assert rollback_entry["monthly_savings_added"] == -30.0
+    assert rollback_entry["rolled_back_run_id"] == "run-001"
+    assert ledger["total_lifetime_savings"] == 0.0
+
+
+def test_record_rollback_no_prior_run(tracker_env):
+    """Rollback with no prior record_run() for that resource returns False (no-op)."""
+    tracker, ledger_path, _ = tracker_env
+    result = tracker.record_rollback("nonexistent-resource")
+    assert result is False
+    # Ledger should not exist (no writes happened)
+    assert not ledger_path.exists()
+
+
+def test_record_rollback_double_does_not_double_reverse(tracker_with_run):
+    """Second rollback of the same resource+run pair is a no-op."""
+    tracker, ledger_path, _ = tracker_with_run
+
+    first = tracker.record_rollback("res-1")
+    assert first is True
+
+    second = tracker.record_rollback("res-1")
+    assert second is False
+
+    ledger = json.loads(ledger_path.read_text())
+    rollback_entries = [r for r in ledger["runs"] if r.get("type") == "rollback"]
+    assert len(rollback_entries) == 1
+    assert ledger["total_lifetime_savings"] == 0.0
+
+
+def test_record_rollback_multiple_runs_independent(tmp_path):
+    """Same resource remediated in two runs: each can be reversed independently."""
+    findings_path = tmp_path / "findings_store.json"
+    ledger_path = tmp_path / "savings_ledger.json"
+
+    # First run
+    findings = {
+        "scan_id": "run-A",
+        "completed_at": "2026-07-08T01:00:00+00:00",
+        "findings": [{"resource_id": "vol-1", "cost_estimate_monthly": 10.0}],
+    }
+    findings_path.write_text(json.dumps(findings))
+    tracker = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+    tracker.record_run(["vol-1"])
+
+    # Second run with same resource but different scan_id
+    findings["scan_id"] = "run-B"
+    findings["findings"] = [{"resource_id": "vol-1", "cost_estimate_monthly": 15.0}]
+    findings_path.write_text(json.dumps(findings))
+    tracker.record_run(["vol-1"])
+
+    ledger = json.loads(ledger_path.read_text())
+    assert ledger["total_lifetime_savings"] == 25.0  # 10 + 15
+
+    # Reverse first run's remediation
+    result1 = tracker.record_rollback("vol-1")
+    assert result1 is True
+    ledger = json.loads(ledger_path.read_text())
+    assert ledger["total_lifetime_savings"] == 15.0  # 25 - 10
+
+    # Reverse second run's remediation
+    result2 = tracker.record_rollback("vol-1")
+    assert result2 is True
+    ledger = json.loads(ledger_path.read_text())
+    assert ledger["total_lifetime_savings"] == 0.0  # 15 - 15
+
+    # Third call — nothing left to reverse
+    result3 = tracker.record_rollback("vol-1")
+    assert result3 is False
+
+
+def test_record_rollback_entry_schema(tracker_with_run):
+    """Rollback entry has all required fields with correct types and values."""
+    tracker, ledger_path, _ = tracker_with_run
+    tracker.record_rollback("res-1")
+
+    ledger = json.loads(ledger_path.read_text())
+    rollback_entry = next(r for r in ledger["runs"] if r.get("type") == "rollback")
+
+    # Required fields
+    assert "run_id" in rollback_entry
+    assert "type" in rollback_entry
+    assert "timestamp" in rollback_entry
+    assert "resources_remediated" in rollback_entry
+    assert "rolled_back_run_id" in rollback_entry
+    assert "monthly_savings_added" in rollback_entry
+    assert "cumulative_at_time" in rollback_entry
+
+    # Type/value checks
+    assert rollback_entry["type"] == "rollback"
+    assert rollback_entry["rolled_back_run_id"] == "run-001"
+    assert rollback_entry["resources_remediated"] == ["res-1"]
+    assert isinstance(rollback_entry["monthly_savings_added"], float)
+    assert rollback_entry["monthly_savings_added"] < 0
+    assert isinstance(rollback_entry["cumulative_at_time"], float)

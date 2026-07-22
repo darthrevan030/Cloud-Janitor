@@ -103,6 +103,7 @@ from cloud_janitor.core.paths import (  # noqa: E402
     ensure_output_dirs,
 )
 from cloud_janitor.core.error_telemetry import build_error_record, write_error_record  # noqa: E402
+from cloud_janitor.core.identity import IdentityResolutionError, resolve_actor  # noqa: E402
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
@@ -268,6 +269,7 @@ class AuditEntry:
     actor: str
     result: str
     details: str = ""
+    actor_verified: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -277,6 +279,7 @@ class AuditEntry:
             "actor": self.actor,
             "result": self.result,
             "details": self.details,
+            "actor_verified": self.actor_verified,
         }
 
 
@@ -340,7 +343,7 @@ class Orchestrator:
     def __init__(
         self,
         project_root: Path | None = None,
-        approver: str = "system",
+        approver: str | None = None,
     ):
         self.project_root = project_root or PROJECT_ROOT
 
@@ -381,7 +384,11 @@ class Orchestrator:
                     f"Orchestrator initialization failed: could not create directory: {e}"
                 ) from e
 
-        self.approver = approver
+        # Track explicit-vs-default approver by `is not None`, NOT by comparing
+        # against the literal "system" string. An operator who explicitly passes
+        # approver="system" is distinguishable from a caller who omitted it.
+        self._explicit_approver = approver
+        self.approver = approver if approver is not None else "system"
 
         # Validate and resolve TF_CMD binary lazily (only when actually needed)
         self._tf_cmd: str | None = None
@@ -468,6 +475,32 @@ class Orchestrator:
         if self._tf_cmd is None:
             self._tf_cmd = _validate_tf_cmd()
         return self._tf_cmd
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Identity Resolution
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _resolve_actor_or_block(self, resource_id: str) -> tuple[str, bool] | None:
+        """Resolve the caller's identity, or log a block and return None.
+
+        Returns (actor, actor_verified) on success.  Returns None if identity
+        cannot be verified — the caller must abort with a blocked result.
+
+        Resolution happens into the return value only — nothing is written
+        to ``self``.  Concurrent callers sharing one Orchestrator instance
+        each get their own local (actor, verified) tuple.
+        """
+        if self._explicit_approver is not None:
+            return (self._explicit_approver, True)
+        try:
+            resolution = resolve_actor("system")
+            return (resolution.actor, resolution.verified)
+        except IdentityResolutionError as exc:
+            self._log_action(
+                "identity_verification_failed", resource_id, "blocked", str(exc),
+                actor="system", actor_verified=False,
+            )
+            return None
 
     # ──────────────────────────────────────────────────────────────────────
     # Public API
@@ -1139,7 +1172,7 @@ class Orchestrator:
         return None
 
     def _run_post_remediation_hook(
-        self, resource_id: str, action: str, result: str
+        self, resource_id: str, action: str, result: str, *, actor: str | None = None, actor_verified: bool = False
     ) -> None:
         """
         Run the post-remediation hook (audit.log append).
@@ -1148,7 +1181,10 @@ class Orchestrator:
             resource_id: The resource that was acted upon.
             action: "remediate" or "rollback".
             result: "success" or "failed".
+            actor: Explicit actor identity; falls back to self.approver if None.
+            actor_verified: Whether the actor identity was verified via STS.
         """
+        resolved_actor = actor if actor is not None else self.approver
         hook_path = self.hooks_dir / "post-remediation.sh"
         if not hook_path.exists():
             return  # Hook not present, skip silently
@@ -1161,7 +1197,7 @@ class Orchestrator:
                     resource_id,
                     action,
                     result,
-                    self.approver,
+                    resolved_actor,
                 ],
                 capture_output=True,
                 text=True,
@@ -1599,15 +1635,17 @@ class Orchestrator:
 
         return RollbackResult(success=True, resource_id=resource_id)
 
-    def _log_action(self, action: str, resource_id: str, result: str, details: str = "") -> None:
+    def _log_action(self, action: str, resource_id: str, result: str, details: str = "", *, actor: str | None = None, actor_verified: bool = False) -> None:
         """Append an entry to the internal audit trail and the persistent audit log."""
+        resolved_actor = actor if actor is not None else self.approver
         entry = AuditEntry(
             timestamp=datetime.now(timezone.utc).isoformat(),
             action=action,
             resource_id=resource_id,
-            actor=self.approver,
+            actor=resolved_actor,
             result=result,
             details=details,
+            actor_verified=actor_verified,
         )
         self._audit_trail.append(entry)
         # Persist to append-only file log (failures are non-blocking)

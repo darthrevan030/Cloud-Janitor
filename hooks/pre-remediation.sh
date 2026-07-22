@@ -90,6 +90,20 @@ EOF
         fi
     fi
 
+    # tfsec policy gate: fail on HIGH/CRITICAL findings when tfsec is available
+    if command -v tfsec &>/dev/null; then
+        echo "[pre-remediation] Running tfsec policy check on $label..."
+        if ! tfsec "$tmp_dir" --minimum-severity HIGH >/dev/null 2>&1; then
+            echo "[pre-remediation] BLOCKED: $label failed tfsec policy check (HIGH/CRITICAL finding)"
+            return 1
+        fi
+    elif [ "${JANITOR_REQUIRE_TFSEC:-0}" = "1" ]; then
+        echo "[pre-remediation] BLOCKED: tfsec required (JANITOR_REQUIRE_TFSEC=1) but not installed"
+        return 1
+    else
+        echo "[pre-remediation] tfsec not installed — skipping policy check (set JANITOR_REQUIRE_TFSEC=1 to enforce)"
+    fi
+
     return 0
 }
 

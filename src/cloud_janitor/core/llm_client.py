@@ -46,6 +46,9 @@ _AI_ENABLED = os.environ.get("JANITOR_AI_ENABLED", "true").lower() not in ("fals
 # Privacy mode — "strict" requires no-training provider policies
 _PRIVACY_MODE = os.environ.get("JANITOR_PRIVACY_MODE", "").lower()
 
+# Retention policy attestation — must be "none" in strict mode
+_RETENTION_POLICY = os.environ.get("JANITOR_LLM_RETENTION_POLICY", "unknown").lower()
+
 # Free-tier router patterns that should be blocked in strict mode
 _FREE_ROUTER_PATTERNS = (":free", "/free", "openrouter/auto")
 
@@ -215,8 +218,14 @@ def get_client() -> openai.OpenAI:
             "or OPENROUTER_API_KEY."
         )
 
-    # Strict privacy mode: refuse to start if using the free router
+    # Strict privacy mode: refuse to start if retention policy is not "none"
     if _PRIVACY_MODE == "strict":
+        if _RETENTION_POLICY != "none":
+            raise RuntimeError(
+                "JANITOR_PRIVACY_MODE=strict requires JANITOR_LLM_RETENTION_POLICY=none "
+                "(explicit attestation that the configured endpoint retains/trains on no "
+                f"data). Currently: {_RETENTION_POLICY!r}."
+            )
         model = DEFAULT_MODEL
         if any(pattern in model for pattern in _FREE_ROUTER_PATTERNS):
             raise RuntimeError(
@@ -238,3 +247,20 @@ DEFAULT_MODEL: str = os.environ.get("JANITOR_LLM_MODEL", "anthropic/claude-haiku
 def is_ai_enabled() -> bool:
     """Check if AI features are enabled. Useful for agents to short-circuit."""
     return _AI_ENABLED
+
+
+def get_privacy_posture() -> dict:
+    """Return current privacy configuration as a dict.
+
+    Keys:
+        mode: The privacy mode ("strict" or "disabled").
+        retention_policy: The LLM retention policy attestation.
+        model: The configured default model identifier.
+        base_url: The configured LLM API base URL.
+    """
+    return {
+        "mode": _PRIVACY_MODE or "disabled",
+        "retention_policy": _RETENTION_POLICY,
+        "model": DEFAULT_MODEL,
+        "base_url": os.environ.get("JANITOR_LLM_BASE_URL", "https://openrouter.ai/api/v1"),
+    }

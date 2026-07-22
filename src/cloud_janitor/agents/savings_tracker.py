@@ -66,6 +66,48 @@ class SavingsTracker:
         self._write_ledger(ledger)
         return True
 
+    def record_rollback(self, resource_id: str) -> bool:
+        """
+        Record a rollback in the ledger, negating the savings from the earliest
+        non-reversed run that remediated this resource.
+
+        Args:
+            resource_id: The resource whose remediation is being rolled back.
+
+        Returns:
+            True if a rollback entry was recorded, False if no matching run found.
+        """
+        ledger = self._load_ledger()
+        already_reversed = {
+            (r["resources_remediated"][0], r["rolled_back_run_id"])
+            for r in ledger["runs"] if r.get("type") == "rollback"
+        }
+        matching_run = next(
+            (r for r in ledger["runs"]
+             if r.get("type") != "rollback"
+             and resource_id in r["resources_remediated"]
+             and (resource_id, r["run_id"]) not in already_reversed),
+            None,
+        )
+        if matching_run is None:
+            return False
+
+        reversed_amount = matching_run["monthly_savings_added"]
+        ledger["runs"].append({
+            "run_id": f"rollback-{resource_id}-{matching_run['run_id']}",
+            "type": "rollback",
+            "timestamp": matching_run["timestamp"],
+            "resources_remediated": [resource_id],
+            "rolled_back_run_id": matching_run["run_id"],
+            "monthly_savings_added": -reversed_amount,
+            "cumulative_at_time": 0.0,
+        })
+        total = self._recalculate_total(ledger["runs"])
+        ledger["total_lifetime_savings"] = total
+        ledger["runs"][-1]["cumulative_at_time"] = total
+        self._write_ledger(ledger)
+        return True
+
     def get_savings_summary(self) -> dict:
         """
         Return savings summary.

@@ -6,7 +6,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
 
 ## Tasks
 
-- [ ] 1. Create foundational modules
+- [x] 1. Create foundational modules
   - [x] 1.1 Create `core/identity.py`
     - Implement `ActorResolution` dataclass, `IdentityResolutionError` exception, `resolve_actor(fallback: str) -> ActorResolution`
     - Extend `aws_provider._make_client(service, region, config=None)` with an optional `config: botocore.config.Config | None` keyword (default `None`, backward compatible) and reuse it for the STS client so LocalStack (`AWS_ENDPOINT_URL`) works unmodified
@@ -17,12 +17,12 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - LocalStack-account defense-in-depth check (`account == "000000000000"` while in real-AWS mode raises)
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-  - [ ] 1.2 Write property tests for identity resolution
+  - [x] 1.2 Write property tests for identity resolution
     - **Property 1: `resolve_actor()` Real-AWS Raising Contract**
     - **Property 2: Sandbox Identity Fallback Invariant**
     - **Validates: Requirements 1.3, 1.4, 1.5**
 
-  - [ ] 1.3 Write unit tests for `core/identity.py` (`tests/test_identity.py`)
+  - [x] 1.3 Write unit tests for `core/identity.py` (`tests/test_identity.py`)
     - Mocked STS success in real-AWS mode → verified ARN returned
     - Mocked STS failure (NoCredentialsError, ClientError, timeout) in real-AWS mode → `IdentityResolutionError` raised
     - Mocked STS returning account `000000000000` in real-AWS mode → `IdentityResolutionError` raised
@@ -37,22 +37,22 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Implement `rehydrate(text: str, mapping: dict[str, str]) -> str`
     - _Requirements: 4.1, 4.2, 4.3_
 
-  - [ ] 1.5 Write property tests for redaction
+  - [x] 1.5 Write property tests for redaction
     - **Property 5: Redaction Round-Trip Fidelity**
     - **Property 6: Redaction Field Exclusion**
     - **Validates: Requirements 4.1, 4.2, 4.3**
 
-  - [ ] 1.6 Write unit tests for `core/redaction.py` (`tests/test_redaction.py`)
+  - [x] 1.6 Write unit tests for `core/redaction.py` (`tests/test_redaction.py`)
     - Round-trip test: finding with resource_id, ARN, account_id → scrubbed text contains no original values → rehydrated response matches original
     - Field exclusion test: `resource_type`, `region`, `tags` unchanged after `redact()`
     - Nested structure test (dict containing list containing dict)
     - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 2. Checkpoint — Ensure all tests pass
+- [x] 2. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 3. Wire fail-closed identity into the Orchestrator
-  - [ ] 3.1 Add explicit-approver tracking and `_resolve_actor_or_block()` to `Orchestrator`
+  - [x] 3.1 Add explicit-approver tracking and `_resolve_actor_or_block()` to `Orchestrator`
     - Change the constructor signature to `approver: str | None = None`; store `self._explicit_approver = approver` and track explicit-vs-default by `is not None`, NOT by comparing the value against the literal string `"system"` (that sentinel is ambiguous: a caller who explicitly passes `approver="system"` is indistinguishable from a caller who omitted it)
     - Implement `_resolve_actor_or_block(resource_id) -> tuple[str, bool] | None` returning `(actor, actor_verified)`, calling `resolve_actor()` unless `self._explicit_approver is not None`, logging `"identity_verification_failed"` and returning `None` on `IdentityResolutionError`
     - _Requirements: 1.1, 1.6_
@@ -75,7 +75,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6, 1.7, 1.8_
 
 - [ ] 4. Implement savings ledger reversal
-  - [ ] 4.1 Add `SavingsTracker.record_rollback()`
+  - [x] 4.1 Add `SavingsTracker.record_rollback()`
     - Track "already reversed" state keyed by the (`resource_id`, `run_id`) PAIR — not bare `resource_id` — by recording a `rolled_back_run_id` field on each rollback ledger entry
     - Find the earliest matching non-reversed `record_run()` entry containing `resource_id` whose (`resource_id`, `run_id`) pair is not already in the reversed set; no-op + return `False` if none found
     - Negate the matched entry's OWN already-stored `monthly_savings_added` value directly — do NOT recompute via `_compute_monthly_savings()`/the live `findings_store.json`, which is overwritten by every subsequent `execute_audit()` scan and may no longer contain `resource_id`
@@ -100,7 +100,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
 - [ ] 5. Implement explicit LLM privacy attestation
-  - [ ] 5.1 Add `JANITOR_LLM_RETENTION_POLICY` check to `core/llm_client.py`
+  - [x] 5.1 Add `JANITOR_LLM_RETENTION_POLICY` check to `core/llm_client.py`
     - Read env var, default `"unknown"`
     - In `get_client()`, strict mode raises `RuntimeError` unless value is exactly `"none"`, before the existing free-router check
     - Implement `get_privacy_posture() -> dict`
@@ -142,7 +142,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - _Requirements: 4.4, 4.5, 5.1, 5.2_
 
 - [ ] 8. Implement tfsec policy check in the pre-remediation hook
-  - [ ] 8.1 Add tfsec step to `hooks/pre-remediation.sh`'s `validate_hcl()`
+  - [x] 8.1 Add tfsec step to `hooks/pre-remediation.sh`'s `validate_hcl()`
     - Run after existing validate/fmt check; fail on HIGH/CRITICAL when tfsec present
     - Fail-open with warning when absent and `JANITOR_REQUIRE_TFSEC` unset/`0`; fail-closed when `JANITOR_REQUIRE_TFSEC=1`
     - _Requirements: 6.1, 6.2, 6.3_

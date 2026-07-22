@@ -56,8 +56,12 @@ boto_exception_strategy = st.sampled_from(_BOTO_EXCEPTION_FACTORIES).map(
     lambda factory: factory()
 )
 
-# Strategy for fallback strings (any non-empty text)
-fallback_strategy = st.text(min_size=1, max_size=100)
+# Strategy for fallback strings (any non-empty text without null bytes,
+# since the value may end up compared against env vars on Windows).
+fallback_strategy = st.text(
+    min_size=1, max_size=100,
+    alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\x00"),
+)
 
 # Strategy for sandbox-mode environment configurations.
 # Sandbox mode is: JANITOR_BACKEND != "aws" OR AWS_ENDPOINT_URL contains localhost/127.0.0.1
@@ -84,10 +88,17 @@ sandbox_env_strategy = st.one_of(
     }),
 )
 
-# Strategy for JANITOR_ACTOR env var (may or may not be set)
+# Strategy for JANITOR_ACTOR env var (may or may not be set).
+# Environment variables on Windows cannot contain null bytes, so we restrict
+# the alphabet to printable characters (which also avoids OS-level ValueError).
+_env_safe_alphabet = st.characters(
+    blacklist_categories=("Cs",),  # exclude surrogates/null
+    blacklist_characters="\x00",
+)
+
 janitor_actor_strategy = st.one_of(
     st.just(None),  # not set
-    st.text(min_size=1, max_size=80),  # set to some value
+    st.text(min_size=1, max_size=80, alphabet=_env_safe_alphabet),  # set to some value
 )
 
 
