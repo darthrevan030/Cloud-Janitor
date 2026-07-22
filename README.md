@@ -745,6 +745,31 @@ The fixture data ships with a pre-built scenario that exercises every agent and 
 
 ---
 
+## Secret Scanning
+
+This repo runs [`gitleaks`](https://github.com/gitleaks/gitleaks) locally (pre-commit) and in CI to catch committed credentials before they reach a shared branch.
+
+**Install the pre-commit hook once per clone:**
+
+```bash
+pip install pre-commit   # or: uv add --dev pre-commit
+pre-commit install
+```
+
+After this, every `git commit` will scan staged changes for secrets. If gitleaks blocks a commit, either remove the secret or (if it's a confirmed false positive) add the fingerprint to `.gitleaksignore`.
+
+**Regenerating the baseline after triaging a false positive:**
+
+```bash
+gitleaks detect --report-path /tmp/report.json
+# Inspect the report, copy the "Fingerprint" field for confirmed FPs
+# Append each fingerprint (one per line) to .gitleaksignore
+```
+
+Never widen or disable a gitleaks rule to silence a false positive — allowlist the specific fingerprint in `.gitleaksignore` instead.
+
+---
+
 ## Running Tests
 
 ```bash

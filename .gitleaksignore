@@ -1,0 +1,8 @@
+# Gitleaks false-positive allowlist.
+# Each line is a finding fingerprint produced by `gitleaks detect`.
+# Add fingerprints here only for CONFIRMED false positives (e.g. placeholder
+# values in example files). Never add fingerprints to silence genuine secrets.
+#
+# To regenerate after triaging a new false positive:
+#   gitleaks detect --report-path /tmp/report.json
+#   # Copy the "Fingerprint" field from confirmed-FP entries below.
