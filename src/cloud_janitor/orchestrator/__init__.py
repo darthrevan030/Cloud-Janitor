@@ -7,6 +7,7 @@ from cloud_janitor.orchestrator.orchestrator import (
     Orchestrator,
     PlanPreviewResult,
     PREVIEW_TTL_SECONDS,
+    RemediationRoleAssumptionError,
     RollbackResult,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "Orchestrator",
     "PlanPreviewResult",
     "PREVIEW_TTL_SECONDS",
+    "RemediationRoleAssumptionError",
     "RollbackResult",
 ]

@@ -1,0 +1,258 @@
+# Cloud Janitor — Enterprise Deployment Guide
+
+This guide covers standing up Cloud Janitor on a shared EC2 instance with
+production-grade IAM, identity, and privacy controls. It consolidates the
+credential-sourcing decisions from Phase 4 (SEC-5, INF-2) with the identity
+and privacy posture implemented in Phase 1 (SEC-3, SEC-1).
+
+---
+
+## Reference Architecture
+
+Cloud Janitor deploys as a **single shared EC2 instance** running the
+orchestrator process, audit agents, and the optional Streamlit dashboard.
+
+**Why not autoscaling / multi-node?** No autoscaling infrastructure exists
+anywhere in the codebase today. This is the same YAGNI reasoning applied in
+`.kiro/specs/phase2-persistent-state/requirements.md` when choosing a
+single-shared-host SQLite `StateStore` over Postgres/Redis — designing
+deployment documentation for infrastructure that does not exist yet would be
+speculative and likely wrong once autoscaling is actually built. When that
+work happens, this guide will be revised to cover the new topology.
+
+**Scope:** one EC2 instance, one instance profile, two IAM roles (read + write),
+one process. Kubernetes, ECS, Lambda, and multi-account hub-spoke topologies
+are out of scope for this version of the guide.
+
+---
+
+## EC2 Setup
+
+### Instance Profile & Role Attachment
+
+Cloud Janitor's read-path credentials come from an **EC2 instance profile**
+attached to the instance at launch. This is the production-grade member of
+boto3's default credential chain — no code change to `AWSProvider._make_client()`
+is needed, and no `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` values should be
+set in `.env`, `accounts.json`, or any committed configuration file for
+production use.
+
+> **Static keys are non-recommended.** Long-lived access keys in environment
+> files are permitted only for local development against LocalStack
+> (`AWS_ENDPOINT_URL` set to a localhost endpoint). Production deployments
+> MUST use instance roles.
+
+### Minimum EC2 Trust Policy for the Read_Role
+
+The IAM role attached to the instance profile requires a trust policy allowing
+the EC2 service principal to assume it:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "ec2.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+```
+
+### Launch Checklist
+
+1. Create an IAM role (e.g. `janitor-read-role`) with the trust policy above.
+2. Attach the permission policy from [`iam/janitor-read-policy.json`](../iam/janitor-read-policy.json).
+3. Create an instance profile and add the role to it.
+4. Launch the EC2 instance with this instance profile attached (or attach it
+   to an existing instance via `aws ec2 associate-iam-instance-profile`).
+5. Verify: `aws sts get-caller-identity` on the instance should return the
+   role's ARN.
+
+---
+
+## Identity & Auth
+
+Cloud Janitor MUST run under an EC2 instance role — not developer credentials
+or static access keys. The instance role is what makes identity verification
+operationally meaningful.
+
+### Phase 1 SEC-3: Fail-Closed Identity Resolution
+
+The `core/identity.py` module implements a fail-closed `resolve_actor()`
+function that calls `sts:GetCallerIdentity` before any approval or rollback
+operation proceeds. In Real-AWS mode (`JANITOR_BACKEND=aws` without a
+LocalStack endpoint), if STS cannot confirm the caller's identity, no
+terraform operation is allowed to execute.
+
+This means the instance role is not merely a credential source — it is the
+identity that gets stamped into every audit-log entry and approval record.
+Without a verifiable role identity, the orchestrator refuses to proceed.
+
+This is implemented in `core/identity.py` (shipped in Phase 1
+`phase1-trust-hardening`).
+
+---
+
+## Least-Privilege IAM
+
+Cloud Janitor uses a **two-role architecture** to separate read-only audit
+permissions from infrastructure-mutating remediation permissions.
+
+### Read_Role (attached to the instance profile)
+
+Permission policy: [`iam/janitor-read-policy.json`](../iam/janitor-read-policy.json)
+
+Grants exactly the AWS API actions called by `AWSProvider`'s scan methods:
+
+| Action | Purpose |
+|--------|---------|
+| `ec2:DescribeVolumes` | EBS waste + encryption scan |
+| `ec2:DescribeInstances` | EC2 idle-instance scan |
+| `ec2:DescribeSecurityGroups` | Security-group audit |
+| `ec2:DescribeNetworkInterfaces` | Dependency check for SGs |
+| `elasticache:DescribeCacheClusters` | ElastiCache cost + encryption scan |
+| `elasticache:DescribeReplicationGroups` | Dependency check |
+| `cloudwatch:GetMetricStatistics` | Idle-days calculation |
+| `sts:GetCallerIdentity` | Identity resolution (Phase 1 SEC-3) |
+| `sts:AssumeRole` | Assume the Remediation_Role (scoped to its ARN) |
+
+No `Create*`, `Delete*`, `Modify*`, `Authorize*`, or `Revoke*` actions are
+granted to the Read_Role. A compromised audit process cannot mutate
+infrastructure.
+
+### Remediation_Role (assumed via STS per-invocation)
+
+Permission policy: [`iam/janitor-remediation-policy.json`](../iam/janitor-remediation-policy.json)
+
+Grants the minimum actions needed by the Terraform HCL generated by
+`RemediationArchitect`'s six live-mutation template methods. Covers both
+Terraform-provider API calls and `null_resource` local-exec AWS CLI commands
+(IAM cannot distinguish the caller).
+
+### The `JANITOR_REMEDIATION_ROLE_ARN` Environment Variable
+
+Set this to the ARN of the Remediation_Role:
+
+```bash
+JANITOR_REMEDIATION_ROLE_ARN=arn:aws:iam::123456789012:role/janitor-remediation-role
+```
+
+When set, the orchestrator calls `sts:AssumeRole` against this ARN before
+every `terraform init`/`plan`/`apply` sequence, injecting the temporary
+credentials into the subprocess environment. The ambient Read_Role credentials
+are never passed to terraform when the Remediation_Role is configured.
+
+When unset, the orchestrator logs a one-time WARNING and falls back to ambient
+credentials for the terraform subprocess (today's behavior, suitable for
+LocalStack/demo use).
+
+### Remediation_Role Trust Policy
+
+The Remediation_Role must trust the Read_Role as its principal — this is what
+allows the `sts:AssumeRole` call to succeed:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::ACCOUNT_ID:role/janitor-read-role" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+```
+
+Replace `ACCOUNT_ID` with your 12-digit AWS account ID.
+
+### IAM Setup Checklist
+
+1. Create `janitor-read-role` — attach `iam/janitor-read-policy.json`.
+2. Create `janitor-remediation-role` — attach `iam/janitor-remediation-policy.json`
+   and the trust policy above.
+3. Update the `sts:AssumeRole` Resource in the read policy to reference the
+   exact ARN of your Remediation_Role.
+4. Set `JANITOR_REMEDIATION_ROLE_ARN` in the instance's environment.
+5. Verify: from the instance, `aws sts assume-role --role-arn <remediation-role-arn> --role-session-name test` should succeed.
+
+---
+
+## BYO-Endpoint & Privacy Posture
+
+### LLM Egress Control (Phase 1 SEC-1)
+
+The `core/llm_client.py` module implements the privacy posture attestation
+mechanism:
+
+- `JANITOR_LLM_RETENTION_POLICY` — declares whether the configured LLM
+  endpoint retains prompt data (`none`, `transient`, `persistent`).
+- `get_privacy_posture()` — runtime function that returns the current
+  retention/endpoint configuration for audit logging.
+- `JANITOR_PRIVACY_MODE=strict` requires `JANITOR_LLM_RETENTION_POLICY=none`.
+
+For BYO-endpoint deployments (e.g. self-hosted models, Amazon Bedrock proxies,
+or Azure OpenAI behind a VPN), configure `JANITOR_LLM_BASE_URL` and set the
+retention policy to match your endpoint's actual data handling.
+
+This is implemented in `core/llm_client.py` (shipped in Phase 1
+`phase1-trust-hardening`).
+
+### Operational Security Hardening
+
+For subprocess isolation, output redaction, hook validation, dashboard binding,
+and Docker socket guidance, see the
+[Security Hardening section in README.md](../README.md#security-hardening).
+That content is not restated here to avoid drift between the two documents.
+
+---
+
+## Operational Notes
+
+### Backend Modes
+
+| `JANITOR_BACKEND` | Credential Source | IAM Enforced? | Use Case |
+|-------------------|-------------------|---------------|----------|
+| `fixture` | None (bundled JSON) | No | Development, demos |
+| `aws` + `AWS_ENDPOINT_URL=localhost` | Static test keys | No (LocalStack) | Integration testing |
+| `aws` (no endpoint override) | Instance role | **Yes** | Production |
+
+### The One-Time Warning
+
+When `JANITOR_REMEDIATION_ROLE_ARN` is **not set** and the orchestrator
+receives an approval or rollback request, it logs a single WARNING:
+
+> `JANITOR_REMEDIATION_ROLE_ARN is not set — the terraform apply subprocess
+> will use the same ambient credentials as the read-only audit path. Set
+> JANITOR_REMEDIATION_ROLE_ARN to enforce the read/write credential boundary.`
+
+This fires once per process lifetime. In production, this warning indicates
+the two-role boundary is not active — set the variable per the IAM section
+above.
+
+### Real-AWS / `iam:SimulateCustomPolicy` Validation Gate
+
+Before merging changes to `iam/janitor-remediation-policy.json`, the policy
+MUST be validated against real AWS IAM enforcement — not just LocalStack,
+which does not enforce IAM at all. Two options:
+
+1. **Real-account test:** Run `RemediationArchitect`'s generated HCL under a
+   role scoped to exactly this policy in a minimal test account.
+2. **Dry-run simulation:** Use `iam:SimulateCustomPolicy` to check every
+   action/resource pair in the policy.
+
+This gate exists because LocalStack structurally cannot detect missing resource
+types (e.g. an `ec2:AuthorizeSecurityGroupIngress` call that requires both
+`security-group` and `security-group-rule` ARN patterns). CI tests (Properties
+4–8 in the test suite) are necessary but not sufficient. See Task 1.7 in this
+phase's implementation plan.
+
+### Identity Verification at Runtime
+
+When running in production (`JANITOR_BACKEND=aws`, no LocalStack endpoint),
+the orchestrator calls `GetCallerIdentity` via `core/identity.py`'s
+`resolve_actor()` before any terraform operation. If identity cannot be
+confirmed, the operation is blocked. This is the fail-closed pattern from
+Phase 1 SEC-3, implemented in `core/identity.py`.

@@ -354,6 +354,7 @@ cp .env.example .env
 | Variable | Default | Required | Description |
 | --- | --- | --- | --- |
 | `JANITOR_ACTOR` | `system` | No | Fallback actor identity for sandbox/fixture mode audit stamps |
+| `JANITOR_REMEDIATION_ROLE_ARN` | — | No | ARN of the Remediation_Role to assume for terraform apply. When set, enforces the read/write credential boundary. See `docs/deployment.md` |
 
 ### Infrastructure & Runtime
 
@@ -713,6 +714,11 @@ cloud-janitor/
 │       └── orchestrator/            # Agent pipeline + approval flow
 │           ├── __init__.py          # Re-exports Orchestrator, AuditResult, etc.
 │           └── orchestrator.py      # Main orchestrator implementation
+├── iam/                             # Least-privilege IAM policy artifacts
+│   ├── janitor-read-policy.json     # Read-only audit role permissions
+│   └── janitor-remediation-policy.json # Remediation role permissions (assumed via STS)
+├── docs/
+│   └── deployment.md                # Enterprise deployment guide (EC2, IAM, identity)
 ├── bin/
 │   └── tflocal                      # Repo-local wrapper (dry-run or delegates to real binary)
 ├── hooks/                           # Dev convenience (canonical copies live in src/cloud_janitor/hooks/)

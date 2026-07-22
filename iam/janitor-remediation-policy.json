@@ -1,0 +1,85 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "JanitorRemediationEBSSnapshotAndTagLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateSnapshot",
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:*:*:volume/*",
+        "arn:aws:ec2:*:*:snapshot/*"
+      ]
+    },
+    {
+      "Sid": "JanitorRemediationEBSVolumeLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVolume",
+        "ec2:DeleteVolume"
+      ],
+      "Resource": "arn:aws:ec2:*:*:volume/*"
+    },
+    {
+      "Sid": "JanitorRemediationSecurityGroupRuleLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupIngress"
+      ],
+      "Resource": [
+        "arn:aws:ec2:*:*:security-group/*",
+        "arn:aws:ec2:*:*:security-group-rule/*"
+      ]
+    },
+    {
+      "Sid": "JanitorRemediationEC2ReadForStateRefresh",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVolumes",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSecurityGroupRules",
+        "ec2:DescribeVpcs"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "JanitorRemediationElastiCacheClusterAndSnapshotLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "elasticache:CreateCacheCluster",
+        "elasticache:DeleteCacheCluster",
+        "elasticache:CreateSnapshot"
+      ],
+      "Resource": [
+        "arn:aws:elasticache:*:*:cluster:*",
+        "arn:aws:elasticache:*:*:snapshot:*"
+      ]
+    },
+    {
+      "Sid": "JanitorRemediationElastiCacheTagging",
+      "Effect": "Allow",
+      "Action": "elasticache:AddTagsToResource",
+      "Resource": "arn:aws:elasticache:*:*:cluster:*"
+    },
+    {
+      "Sid": "JanitorRemediationElastiCacheReadForStateRefresh",
+      "Effect": "Allow",
+      "Action": [
+        "elasticache:DescribeCacheClusters",
+        "elasticache:DescribeSnapshots",
+        "elasticache:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "JanitorRemediationProviderInitCheck",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    }
+  ]
+}

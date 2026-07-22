@@ -392,8 +392,6 @@ class RemediationArchitect:
             f'  cidr_blocks       = ["0.0.0.0/0"]\n'
             f'  security_group_id = "{resource_id}"\n'
             f'  description       = "Kiro-Janitor: Rollback — restored original open rule"\n'
-            f'\n'
-            f'{self._tags_block(resource_id)}\n'
             f'}}'
         )
 

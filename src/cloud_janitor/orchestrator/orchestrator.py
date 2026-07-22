@@ -225,6 +225,63 @@ def _build_subprocess_env(kind: str) -> dict[str, str]:
 FINDINGS_STORE_SCHEMA_VERSION = "1.0.0"
 
 
+# ── Remediation-role credential assumption ─────────────────────────────
+_REMEDIATION_ROLE_WARNED = False  # module-level, once-per-process warning latch
+
+
+class RemediationRoleAssumptionError(Exception):
+    """Raised when the Remediation_Role cannot be assumed.
+    Callers MUST treat this as a hard stop — no terraform subprocess may run."""
+
+
+def _assume_remediation_role() -> dict[str, str] | None:
+    """Assume the configured Remediation_Role and return temp AWS_* env vars.
+
+    Returns:
+        A dict with AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
+        if JANITOR_REMEDIATION_ROLE_ARN is set and assumption succeeds.
+        None if JANITOR_REMEDIATION_ROLE_ARN is unset (caller falls back to
+        ambient credentials for the terraform subprocess).
+
+    Raises:
+        RemediationRoleAssumptionError: If the role ARN is set but AssumeRole fails.
+    """
+    global _REMEDIATION_ROLE_WARNED
+    role_arn = os.environ.get("JANITOR_REMEDIATION_ROLE_ARN")
+
+    if not role_arn:
+        if not _REMEDIATION_ROLE_WARNED:
+            logger.warning(
+                "JANITOR_REMEDIATION_ROLE_ARN is not set — the terraform apply "
+                "subprocess will use the same ambient credentials as the read-only "
+                "audit path. Set JANITOR_REMEDIATION_ROLE_ARN to enforce the "
+                "read/write credential boundary (see docs/deployment.md)."
+            )
+            _REMEDIATION_ROLE_WARNED = True
+        return None
+
+    from cloud_janitor.mcp_server.backends.aws_provider import _make_client
+
+    try:
+        sts = _make_client("sts", region=None)
+        resp = sts.assume_role(
+            RoleArn=role_arn,
+            RoleSessionName=f"janitor-remediation-{int(time.time())}",
+            DurationSeconds=900,  # 15 minutes — covers init+plan+apply, not reused
+        )
+        creds = resp["Credentials"]
+        return {
+            "AWS_ACCESS_KEY_ID": creds["AccessKeyId"],
+            "AWS_SECRET_ACCESS_KEY": creds["SecretAccessKey"],
+            "AWS_SESSION_TOKEN": creds["SessionToken"],
+        }
+    except Exception as exc:
+        raise RemediationRoleAssumptionError(
+            f"Could not assume Remediation_Role '{role_arn}': {exc}. "
+            "Refusing to run terraform against this resource."
+        ) from exc
+
+
 def _validate_tf_cmd() -> str:
     """Validate and resolve TF_CMD from environment.
 
@@ -720,6 +777,28 @@ class Orchestrator:
                 actor="system", actor_verified=False,
             )
             return None
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Terraform Environment
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _terraform_env_for_apply(self, resource_id: str) -> dict[str, str] | None:
+        """Build the env for the init/plan/apply subprocess sequence.
+
+        Returns None if the Remediation_Role is configured but could not be assumed —
+        callers MUST treat None as "abort, do not run terraform".
+        """
+        env = _build_subprocess_env("terraform")
+        try:
+            write_creds = _assume_remediation_role()
+        except RemediationRoleAssumptionError as exc:
+            self._log_action(
+                "remediation_role_assumption_failed", resource_id, "blocked", str(exc)
+            )
+            return None
+        if write_creds is not None:
+            env.update(write_creds)  # overrides ambient AWS_* for this call only
+        return env
 
     # ──────────────────────────────────────────────────────────────────────
     # Public API
@@ -1323,6 +1402,16 @@ class Orchestrator:
                 pass
             return ApprovalResult(success=True, resource_id=resource_id)
 
+        # Build terraform env with remediation-role credentials (if configured).
+        # Computed once and reused for ALL subprocess calls in this approval.
+        tf_env = self._terraform_env_for_apply(resource_id)
+        if tf_env is None:
+            return ApprovalResult(
+                success=False,
+                resource_id=resource_id,
+                error="Remediation role assumption failed",
+            )
+
         # Check for a cached preview (from preview_plan()) to avoid re-running init+plan
         self._evict_expired_previews()
         cached = self._plan_previews.pop(resource_id, None)
@@ -1347,7 +1436,7 @@ class Orchestrator:
                     text=True,
                     timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                     cwd=str(apply_dir),
-                    env=_build_subprocess_env("terraform"),
+                    env=tf_env,
                 )
                 if apply_result.returncode != 0:
                     error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
@@ -1397,7 +1486,7 @@ class Orchestrator:
                     text=True,
                     timeout=get_timeout("JANITOR_TF_INIT_TIMEOUT"),
                     cwd=str(apply_dir),
-                    env=_build_subprocess_env("terraform"),
+                    env=tf_env,
                 )
                 if init_result.returncode != 0:
                     error = _redact(init_result.stderr.strip() or init_result.stdout.strip())
@@ -1418,7 +1507,7 @@ class Orchestrator:
                     text=True,
                     timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                     cwd=str(apply_dir),
-                    env=_build_subprocess_env("terraform"),
+                    env=tf_env,
                 )
                 if plan_result.returncode != 0:
                     error = _redact(plan_result.stderr.strip() or plan_result.stdout.strip())
@@ -1432,7 +1521,7 @@ class Orchestrator:
                     text=True,
                     timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                     cwd=str(apply_dir),
-                    env=_build_subprocess_env("terraform"),
+                    env=tf_env,
                 )
                 if show_result.returncode != 0:
                     error = _redact(show_result.stderr.strip() or show_result.stdout.strip())
@@ -1460,7 +1549,7 @@ class Orchestrator:
                     text=True,
                     timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                     cwd=str(apply_dir),
-                    env=_build_subprocess_env("terraform"),
+                    env=tf_env,
                 )
                 if apply_result.returncode != 0:
                     error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
@@ -2092,6 +2181,17 @@ class Orchestrator:
             )
 
         logger.info("[Orchestrator] Running terraform init for rollback %s...", resource_id)
+
+        # Build terraform env with remediation-role credentials (if configured).
+        # Computed once and reused for ALL subprocess calls in this rollback.
+        tf_env = self._terraform_env_for_apply(resource_id)
+        if tf_env is None:
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Remediation role assumption failed",
+            )
+
         try:
             init_result = subprocess.run(
                 [self.tf_cmd, "init", "-input=false"],
@@ -2099,7 +2199,7 @@ class Orchestrator:
                 text=True,
                 timeout=get_timeout("JANITOR_TF_INIT_TIMEOUT"),
                 cwd=str(self.output_dir),
-                env=_build_subprocess_env("terraform"),
+                env=tf_env,
             )
         except subprocess.TimeoutExpired as exc:
             logger.warning("Terraform init timed out for rollback %s: %s", resource_id, exc)
@@ -2135,7 +2235,7 @@ class Orchestrator:
                 text=True,
                 timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                 cwd=str(self.output_dir),
-                env=_build_subprocess_env("terraform"),
+                env=tf_env,
             )
         except subprocess.TimeoutExpired as exc:
             logger.warning("Terraform plan timed out for rollback %s: %s", resource_id, exc)
@@ -2165,7 +2265,7 @@ class Orchestrator:
                 text=True,
                 timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                 cwd=str(self.output_dir),
-                env=_build_subprocess_env("terraform"),
+                env=tf_env,
             )
         except subprocess.TimeoutExpired as exc:
             logger.warning("Terraform show timed out for rollback %s: %s", resource_id, exc)
@@ -2215,7 +2315,7 @@ class Orchestrator:
                 text=True,
                 timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                 cwd=str(self.output_dir),
-                env=_build_subprocess_env("terraform"),
+                env=tf_env,
             )
         except subprocess.TimeoutExpired as exc:
             logger.warning("Terraform apply timed out for rollback %s: %s", resource_id, exc)

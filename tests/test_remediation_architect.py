@@ -195,7 +195,11 @@ class TestRollbackTags:
     def test_sg_rollback_has_required_tags(self):
         finding = _sg_finding()
         hcl = self.architect.generate_rollback(finding)
-        self._assert_required_tags(hcl, finding["resource_id"])
+        # aws_security_group_rule does not support tags — verify the rollback
+        # generates valid HCL with the correct resource type and description
+        assert 'aws_security_group_rule' in hcl
+        assert 'Kiro-Janitor' in hcl
+        assert finding["resource_id"] in hcl
 
     def test_elasticache_rollback_has_required_tags(self):
         finding = _elasticache_finding()
@@ -252,7 +256,7 @@ class TestPlanGeneratesBoth:
 
     @patch("cloud_janitor.agents.remediation_architect.check_dependencies", side_effect=_mock_no_dependencies)
     def test_plan_rollback_file_contains_tags(self, mock_deps):
-        finding = _sg_finding()
+        finding = _ebs_finding()
         self.architect.plan([finding])
         rollback_path = self.rollbacks_dir / f"{finding['resource_id']}.tf"
         content = rollback_path.read_text()
