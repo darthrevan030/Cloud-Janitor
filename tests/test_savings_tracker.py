@@ -361,3 +361,206 @@ def test_record_rollback_entry_schema(tracker_with_run):
     assert isinstance(rollback_entry["monthly_savings_added"], float)
     assert rollback_entry["monthly_savings_added"] < 0
     assert isinstance(rollback_entry["cumulative_at_time"], float)
+
+
+# --- Test case 5: Exception during record_rollback non-propagation ---
+
+
+class TestRecordRollbackExceptionNonPropagation:
+    """Exception during record_rollback() must not propagate and must not flip RollbackResult.success.
+
+    Tests at two levels:
+    1. Direct SavingsTracker level: corrupted ledger file → record_rollback raises
+    2. Orchestrator level: mocked record_rollback raises → _handle_confirm_rollback still returns success=True
+    """
+
+    def test_corrupted_ledger_during_rollback_raises(self, tmp_path):
+        """Verify that a corrupted ledger file causes record_rollback to raise.
+
+        This establishes the precondition: if the ledger is corrupt mid-operation,
+        an exception WILL be raised. The orchestrator test below verifies it's swallowed.
+        """
+        findings_path = tmp_path / "findings_store.json"
+        ledger_path = tmp_path / "savings_ledger.json"
+
+        findings = {
+            "scan_id": "run-corrupt",
+            "completed_at": "2026-07-08T10:00:00+00:00",
+            "findings": [{"resource_id": "res-x", "cost_estimate_monthly": 50.0}],
+        }
+        findings_path.write_text(json.dumps(findings))
+
+        tracker = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+        tracker.record_run(["res-x"])
+
+        # Now corrupt the ledger so _load_ledger returns empty (no matching run → False)
+        # A more targeted corruption: make it valid JSON but with wrong structure
+        ledger_path.write_text('{"total_lifetime_savings": 50.0, "runs": "NOT_A_LIST"}')
+
+        # This should raise because code iterates over runs which is now a string
+        with pytest.raises((TypeError, AttributeError)):
+            tracker.record_rollback("res-x")
+
+    def test_orchestrator_swallows_record_rollback_exception(self, tmp_path):
+        """At orchestrator level: record_rollback raising does NOT propagate,
+        and RollbackResult.success remains True.
+
+        This is the key test for task 4.4 case 5: the try/except in
+        _handle_confirm_rollback() catches the exception and logs a warning
+        without flipping the result.
+        """
+        import subprocess as sp
+        from unittest.mock import patch, MagicMock
+        from cloud_janitor.orchestrator import Orchestrator, RollbackResult
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
+
+        # Set up project structure
+        (tmp_path / "hooks").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "output" / "rollbacks").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "output" / "logs").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "output" / "policies").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "hooks" / "pre-remediation.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+        (tmp_path / "hooks" / "post-remediation.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+
+        resource_id = "vol-rollback-exc"
+
+        with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="tflocal"):
+            orch = Orchestrator(project_root=tmp_path, approver="test-user")
+
+        # Inject plan and rollback artifact
+        orch._last_plans = [
+            RemediationPlan(
+                resource_id=resource_id,
+                finding={"resource_id": resource_id, "resource_type": "ebs"},
+                blocked=False,
+                remediation_hcl='resource "null_resource" "test" {}',
+                rollback_hcl='resource "null_resource" "rollback" {}',
+            ),
+        ]
+        rollback_file = tmp_path / "output" / "rollbacks" / f"{resource_id}.tf"
+        rollback_file.write_text('resource "null_resource" "rollback" {}')
+
+        # Initiate pending rollback
+        result = orch.rollback(f"ROLLBACK {resource_id}")
+        assert result.needs_confirmation is True
+
+        # Mock subprocess (init + apply succeed) and savings_tracker.record_rollback raises
+        success_result = sp.CompletedProcess(args=[], returncode=0, stdout="OK", stderr="")
+
+        with patch("subprocess.run", return_value=success_result), \
+             patch.object(
+                 orch._savings_tracker, "record_rollback",
+                 side_effect=RuntimeError("Simulated corrupted ledger"),
+             ):
+            result = orch.rollback(f"CONFIRM ROLLBACK {resource_id}")
+
+        # The rollback itself succeeded — exception must NOT flip success
+        assert isinstance(result, RollbackResult)
+        assert result.success is True, (
+            f"RollbackResult.success must be True even when record_rollback raises, "
+            f"got success={result.success}, error={result.error}"
+        )
+        assert result.resource_id == resource_id
+        assert result.error is None
+
+    def test_orchestrator_swallows_diverse_exceptions(self, tmp_path):
+        """Various exception types raised by record_rollback are all swallowed."""
+        import subprocess as sp
+        from unittest.mock import patch
+        from cloud_janitor.orchestrator import Orchestrator, RollbackResult
+        from cloud_janitor.agents.remediation_architect import RemediationPlan
+
+        (tmp_path / "hooks").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "output" / "rollbacks").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "output" / "logs").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "output" / "policies").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "hooks" / "pre-remediation.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+        (tmp_path / "hooks" / "post-remediation.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+
+        exceptions_to_test = [
+            OSError("disk full"),
+            PermissionError("read-only filesystem"),
+            json.JSONDecodeError("bad json", doc="", pos=0),
+            KeyError("missing_key"),
+            ValueError("unexpected value"),
+        ]
+
+        for exc in exceptions_to_test:
+            # Fresh orchestrator for each exception (gate state resets)
+            sub_dir = tmp_path / f"run-{type(exc).__name__}"
+            (sub_dir / "hooks").mkdir(parents=True, exist_ok=True)
+            (sub_dir / "output" / "rollbacks").mkdir(parents=True, exist_ok=True)
+            (sub_dir / "output" / "logs").mkdir(parents=True, exist_ok=True)
+            (sub_dir / "output" / "policies").mkdir(parents=True, exist_ok=True)
+            (sub_dir / "hooks" / "pre-remediation.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+            (sub_dir / "hooks" / "post-remediation.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+
+            resource_id = "vol-diverse-exc"
+
+            with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="tflocal"):
+                orch = Orchestrator(project_root=sub_dir, approver="test-user")
+
+            orch._last_plans = [
+                RemediationPlan(
+                    resource_id=resource_id,
+                    finding={"resource_id": resource_id, "resource_type": "ebs"},
+                    blocked=False,
+                    remediation_hcl='resource "null_resource" "test" {}',
+                    rollback_hcl='resource "null_resource" "rollback" {}',
+                ),
+            ]
+            rollback_file = sub_dir / "output" / "rollbacks" / f"{resource_id}.tf"
+            rollback_file.write_text('resource "null_resource" "rollback" {}')
+
+            # Initiate pending rollback
+            init_result = orch.rollback(f"ROLLBACK {resource_id}")
+            assert init_result.needs_confirmation is True, (
+                f"Failed to initiate rollback for {type(exc).__name__}"
+            )
+
+            success_result = sp.CompletedProcess(args=[], returncode=0, stdout="OK", stderr="")
+
+            with patch("subprocess.run", return_value=success_result), \
+                 patch.object(orch._savings_tracker, "record_rollback", side_effect=exc):
+                result = orch.rollback(f"CONFIRM ROLLBACK {resource_id}")
+
+            assert result.success is True, (
+                f"RollbackResult.success must be True when record_rollback raises "
+                f"{type(exc).__name__}('{exc}'), got success={result.success}, error={result.error}"
+            )
+
+    def test_record_rollback_exception_does_not_alter_ledger_total(self, tmp_path):
+        """When record_rollback raises mid-operation, the ledger total must not be
+        partially modified (atomic write ensures all-or-nothing)."""
+        findings_path = tmp_path / "findings_store.json"
+        ledger_path = tmp_path / "savings_ledger.json"
+
+        findings = {
+            "scan_id": "run-atomic",
+            "completed_at": "2026-07-08T10:00:00+00:00",
+            "findings": [{"resource_id": "res-atom", "cost_estimate_monthly": 42.0}],
+        }
+        findings_path.write_text(json.dumps(findings))
+
+        tracker = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+        tracker.record_run(["res-atom"])
+
+        # Verify baseline
+        ledger_before = json.loads(ledger_path.read_text())
+        assert ledger_before["total_lifetime_savings"] == 42.0
+
+        # Make _write_ledger raise (simulating disk error during write)
+        from unittest.mock import patch
+        with patch.object(tracker, "_write_ledger", side_effect=IOError("disk full")):
+            with pytest.raises(IOError):
+                tracker.record_rollback("res-atom")
+
+        # Ledger on disk must be unchanged (atomic write failed → old data preserved)
+        ledger_after = json.loads(ledger_path.read_text())
+        assert ledger_after["total_lifetime_savings"] == 42.0, (
+            f"Ledger total changed from 42.0 to {ledger_after['total_lifetime_savings']} "
+            f"despite write failure — atomic guarantee violated"
+        )
+        assert len(ledger_after["runs"]) == 1, (
+            "No rollback entry should exist in ledger after failed write"
+        )

@@ -65,7 +65,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Add an `actor_verified: bool` field to the `AuditEntry` dataclass (and its `to_dict()`) so the audit trail can distinguish an STS-verified actor from a Sandbox_Mode fallback or explicit-approver bypass
     - _Requirements: 1.2, 1.3, 1.4, 1.5, 1.7, 1.8_
 
-  - [ ] 3.3 Write unit tests for Orchestrator identity wiring (`tests/test_orchestrator_identity.py`)
+  - [x] 3.3 Write unit tests for Orchestrator identity wiring (`tests/test_orchestrator_identity.py`)
     - Real-AWS mode + STS failure → `approve()`/`rollback()` return `success=False`, assert zero `subprocess.run` calls (mock and assert not called)
     - Sandbox mode + STS failure → action proceeds with fallback actor stamped in audit log, `actor_verified=False`
     - Explicit `approver=` at construction → STS never called (mock and assert not called), value used verbatim
@@ -86,7 +86,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - **Property 3: Savings Reversal Idempotence Per (resource_id, run_id)**
     - **Validates: Requirements 2.2, 2.3**
 
-  - [ ] 4.3 Wire `record_rollback()` into `_handle_confirm_rollback()`
+  - [x] 4.3 Wire `record_rollback()` into `_handle_confirm_rollback()`
     - Call on success path, wrapped in broad try/except matching the existing `record_run()` pattern; never alters `RollbackResult.success`
     - Scheduled in a later wave than task 3.2 (see the wave graph below) even though both edit `_handle_confirm_rollback()` — task 3.2 wires actor resolution into that method first, and this task's edit lands on top of that already-updated method body, avoiding an avoidable same-method merge/ordering hazard between the two tasks
     - _Requirements: 2.4_
@@ -110,7 +110,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - **Property 4: Strict Mode Attestation Gate**
     - **Validates: Requirement 3.2**
 
-  - [ ] 5.3 Write unit tests for privacy attestation (`tests/test_llm_client_privacy.py`)
+  - [x] 5.3 Write unit tests for privacy attestation (`tests/test_llm_client_privacy.py`)
     - Strict mode + `JANITOR_LLM_RETENTION_POLICY` unset → `RuntimeError`
     - Strict mode + `="unknown"` → `RuntimeError`
     - Strict mode + `="none"` + non-free model → client constructed successfully
@@ -122,11 +122,11 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Wire redaction and injection hardening into LLM-calling agents
-  - [ ] 7.1 Wire `redact()`/`rehydrate()` and delimited prompt template into `explainer.py`
+  - [x] 7.1 Wire `redact()`/`rehydrate()` and delimited prompt template into `explainer.py`
     - Wrap finding + HCL data through `redact()` before prompt construction; wrap in `<untrusted_finding_data>`/`<untrusted_hcl>` delimiters; `rehydrate()` the response
     - _Requirements: 4.4, 4.5, 5.1, 5.2_
 
-  - [ ] 7.2 Wire `redact()`/`rehydrate()` and delimited prompt template into `anomaly_detector.py`
+  - [x] 7.2 Wire `redact()`/`rehydrate()` and delimited prompt template into `anomaly_detector.py`
     - Same pattern applied to the up-to-30 raw resource dicts serialized into its prompt
     - _Requirements: 4.4, 4.5, 5.1, 5.2_
 

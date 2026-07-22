@@ -1116,6 +1116,41 @@ class Orchestrator:
                     resource_id=resource_id,
                 )
 
+            # Run terraform plan and scope check before apply (Req 7.1, 7.9)
+            logger.info("[Orchestrator] Running terraform plan for scope check on %s...", resource_id)
+            plan_result = subprocess.run(
+                [self.tf_cmd, "plan", "-input=false", "-out=tfplan"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(apply_dir),
+                env=_build_subprocess_env("terraform"),
+            )
+            if plan_result.returncode != 0:
+                error = _redact(plan_result.stderr.strip() or plan_result.stdout.strip())
+                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} plan failed: {error}")
+                return ApprovalResult(success=False, error=f"{self.tf_cmd} plan failed: {error}", resource_id=resource_id)
+
+            # Convert saved plan to JSON for scope analysis
+            show_result = subprocess.run(
+                [self.tf_cmd, "show", "-json", "tfplan"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=str(apply_dir),
+                env=_build_subprocess_env("terraform"),
+            )
+            if show_result.returncode != 0:
+                error = _redact(show_result.stderr.strip() or show_result.stdout.strip())
+                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} show failed: {error}")
+                return ApprovalResult(success=False, error=f"{self.tf_cmd} show failed: {error}", resource_id=resource_id)
+
+            plan_json = json.loads(show_result.stdout)
+            scope_passed, scope_reason = _check_plan_scope(plan_json, resource_id, plan.finding, "remediate")
+            if not scope_passed:
+                self._log_action("scope_check_failed", resource_id, "blocked", scope_reason)
+                return ApprovalResult(success=False, error=f"Scope check failed: {scope_reason}", resource_id=resource_id)
+
             # Execute terraform apply only for the approved resource
             logger.info("[Orchestrator] Running terraform apply for %s...", resource_id)
             apply_result = subprocess.run(
@@ -1755,6 +1790,56 @@ class Orchestrator:
                 exit_code=init_result.returncode,
             )
 
+        # Run terraform plan and scope check before apply (Req 7.1, 7.9)
+        logger.info("[Orchestrator] Running terraform plan for rollback scope check on %s...", resource_id)
+        plan_result = subprocess.run(
+            [self.tf_cmd, "plan", "-input=false", "-out=tfplan"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.output_dir),
+            env=_build_subprocess_env("terraform"),
+        )
+        if plan_result.returncode != 0:
+            error = _redact(plan_result.stderr.strip() or plan_result.stdout.strip())
+            self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} plan failed: {error}")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"{self.tf_cmd} plan failed: {error}",
+            )
+
+        # Convert saved plan to JSON for scope analysis
+        show_result = subprocess.run(
+            [self.tf_cmd, "show", "-json", "tfplan"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=str(self.output_dir),
+            env=_build_subprocess_env("terraform"),
+        )
+        if show_result.returncode != 0:
+            error = _redact(show_result.stderr.strip() or show_result.stdout.strip())
+            self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} show failed: {error}")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"{self.tf_cmd} show failed: {error}",
+            )
+
+        plan_json = json.loads(show_result.stdout)
+        # Use finding from the plan if available, otherwise construct a minimal finding
+        rollback_plan = self._find_plan(resource_id)
+        rollback_finding = rollback_plan.finding if rollback_plan else {"resource_type": "", "category": ""}
+        scope_passed, scope_reason = _check_plan_scope(plan_json, resource_id, rollback_finding, "rollback")
+        if not scope_passed:
+            self._log_action("scope_check_failed", resource_id, "blocked", scope_reason)
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"Scope check failed: {scope_reason}",
+            )
+
         logger.info("[Orchestrator] Running terraform apply for rollback %s...", resource_id)
         apply_result = subprocess.run(
             [self.tf_cmd, "apply", "-auto-approve"],
@@ -1785,6 +1870,14 @@ class Orchestrator:
 
         # Run post-remediation hook for rollback (only after apply actually succeeded)
         self._run_post_remediation_hook(resource_id, "rollback", "success", actor=actor, actor_verified=actor_verified)
+
+        # Record savings reversal (non-blocking — errors are logged but don't fail rollback)
+        try:
+            self._savings_tracker.record_rollback(resource_id)
+        except Exception as e:
+            logging.getLogger(__name__).warning(
+                "Savings rollback tracking failed (%s): %s", type(e).__name__, e
+            )
 
         return RollbackResult(success=True, resource_id=resource_id)
 
