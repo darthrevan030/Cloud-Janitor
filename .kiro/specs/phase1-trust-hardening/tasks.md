@@ -91,7 +91,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Scheduled in a later wave than task 3.2 (see the wave graph below) even though both edit `_handle_confirm_rollback()` — task 3.2 wires actor resolution into that method first, and this task's edit lands on top of that already-updated method body, avoiding an avoidable same-method merge/ordering hazard between the two tasks
     - _Requirements: 2.4_
 
-  - [ ] 4.4 Write unit tests for savings reversal (`tests/test_savings_tracker.py`)
+  - [x] 4.4 Write unit tests for savings reversal (`tests/test_savings_tracker.py`)
     - Rollback after a recorded run reverses the ledger total by the correct amount, using the run's own stored `monthly_savings_added` (assert this holds even when the resource has since been removed from/changed in the live findings store, to rule out any accidental recompute-from-findings-store regression)
     - Rollback with no prior `record_run()` for that resource is a no-op returning `False`
     - Double-rollback does not double-reverse
@@ -130,7 +130,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Same pattern applied to the up-to-30 raw resource dicts serialized into its prompt
     - _Requirements: 4.4, 4.5, 5.1, 5.2_
 
-  - [ ] 7.3 Wire `redact()`/`rehydrate()` and delimited prompt template into `tagger.py`, `policy_suggester.py`, `incident_policy_generator.py`, `drift_detector.py`
+  - [x] 7.3 Wire `redact()`/`rehydrate()` and delimited prompt template into `tagger.py`, `policy_suggester.py`, `incident_policy_generator.py`, `drift_detector.py`
     - Same pattern applied at each agent's prompt-construction site
     - _Requirements: 4.4, 4.5, 5.1, 5.2_
 
@@ -147,7 +147,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Fail-open with warning when absent and `JANITOR_REQUIRE_TFSEC` unset/`0`; fail-closed when `JANITOR_REQUIRE_TFSEC=1`
     - _Requirements: 6.1, 6.2, 6.3_
 
-  - [ ] 8.2 Write hook tests for tfsec integration (`tests/test_pre_remediation_hook.py` or existing hook test harness)
+  - [x] 8.2 Write hook tests for tfsec integration (`tests/test_pre_remediation_hook.py` or existing hook test harness)
     - Mocked/stubbed `tfsec` binary returning non-zero on a HIGH finding → hook blocks
     - No `tfsec` on PATH, `JANITOR_REQUIRE_TFSEC` unset → hook proceeds with warning
     - No `tfsec` on PATH, `JANITOR_REQUIRE_TFSEC=1` → hook blocks
@@ -162,7 +162,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - For the `(ebs, waste)` and `(elasticache, waste)` rules (both flows), the check MUST be exhaustive, not merely an allowlist: the set of matched address-prefixes across all counted resource_changes must exactly equal the rule's full required address-prefix set (e.g. both `aws_ebs_snapshot.pre_remediation_*` AND `null_resource.destroy_*` must both be present for `(ebs, waste, remediate)`) — a plan containing only the destroy/delete resource without its paired snapshot/backup resource must be rejected as missing a required resource, not passed because nothing in it is disallowed
     - _Requirements: 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.11_
 
-  - [ ] 9.2 Wire `terraform plan -json` + `_check_plan_scope()` into `approve()` and `_handle_confirm_rollback()`
+  - [x] 9.2 Wire `terraform plan -json` + `_check_plan_scope()` into `approve()` and `_handle_confirm_rollback()`
     - Insert between `init` and `apply`; `approve()` calls with `flow="remediate"`, `_handle_confirm_rollback()` calls with `flow="rollback"`
     - On scope-check failure, log `"scope_check_failed"` and return a failure result without calling apply
     - _Requirements: 7.1, 7.9_
