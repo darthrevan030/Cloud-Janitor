@@ -660,6 +660,9 @@ cloud-janitor/
 │       │   └── multi_account_orchestrator.py # Concurrent multi-account audits
 │       ├── core/                    # Shared infrastructure
 │       │   ├── llm_client.py        # LLM client with retry, BYO-endpoint, AI kill switch
+│       │   ├── identity.py          # IAM identity resolution (fail-closed STS verification)
+│       │   ├── redaction.py         # Input-side redaction for LLM prompts
+│       │   ├── state_store.py       # SQLite persistence (plans, rollbacks, audit trail)
 │       │   ├── logging_config.py    # Logging configuration
 │       │   ├── paths.py             # Centralized path constants
 │       │   └── error_telemetry.py   # Structured error recording
@@ -688,6 +691,7 @@ cloud-janitor/
 │   ├── pre-remediation.sh
 │   └── post-remediation.sh
 ├── output/
+│   ├── state.db                     # SQLite state store (plans, pending rollbacks, audit trail)
 │   ├── logs/                        # audit.log, scheduler.log, agent_reasoning.log
 │   ├── policies/                    # Incident-generated policy JSON files
 │   ├── remediations/                # Per-resource remediation HCL

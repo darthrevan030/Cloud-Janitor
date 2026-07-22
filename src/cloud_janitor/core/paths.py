@@ -24,6 +24,7 @@ AUDIT_LOG_PATH = LOGS_DIR / "audit.log"
 REASONING_LOG_PATH = LOGS_DIR / "agent_reasoning.log"
 APPROVAL_GATES_PATH = OUTPUT_DIR / "approval_gates.json"
 SAVINGS_LEDGER_PATH = OUTPUT_DIR / "savings_ledger.json"
+STATE_STORE_PATH = OUTPUT_DIR / "state.db"
 
 # Hooks directory — shipped as package data inside cloud_janitor.hooks
 from cloud_janitor.hooks import HOOKS_DIR  # noqa: E402, F401

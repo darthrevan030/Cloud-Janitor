@@ -99,8 +99,14 @@ from cloud_janitor.core.paths import (  # noqa: E402
     REASONING_LOG_PATH as _CORE_REASONING_LOG_PATH,
     APPROVAL_GATES_PATH as _CORE_APPROVAL_GATES_PATH,
     SAVINGS_LEDGER_PATH as _CORE_SAVINGS_LEDGER_PATH,
+    STATE_STORE_PATH as _CORE_STATE_STORE_PATH,
     HOOKS_DIR as _CORE_HOOKS_DIR,
     ensure_output_dirs,
+)
+from cloud_janitor.core.state_store import (  # noqa: E402
+    StateStore,
+    StateStoreCorruptedError,
+    StateStoreUnavailableError,
 )
 from cloud_janitor.core.error_telemetry import build_error_record, write_error_record  # noqa: E402
 from cloud_janitor.core.identity import IdentityResolutionError, resolve_actor  # noqa: E402
@@ -297,6 +303,7 @@ class AuditResult:
     error_agent: str | None = None
     anomalies: list[dict] = field(default_factory=list)
     drift_report: dict | None = None
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -597,6 +604,27 @@ class Orchestrator:
         self._gate_store = ApprovalGateStore(gate_store_path)
         self._gate_store.load()
 
+        # Persistent state store (SQLite, WAL mode)
+        state_store_path = (
+            _CORE_STATE_STORE_PATH if using_default_root
+            else self.output_dir / "state.db"
+        )
+        try:
+            self._state_store = StateStore(state_store_path)
+        except StateStoreUnavailableError as e:
+            logger.warning("StateStore unavailable on first attempt (%s), retrying once...", e)
+            time.sleep(0.5)
+            try:
+                self._state_store = StateStore(state_store_path)
+            except (StateStoreUnavailableError, StateStoreCorruptedError) as e2:
+                raise RuntimeError(
+                    f"Orchestrator initialization failed: state store unavailable after retry: {e2}"
+                ) from e2
+        except StateStoreCorruptedError as e:
+            raise RuntimeError(
+                f"Orchestrator initialization failed: state store corrupted: {e}"
+            ) from e
+
         # Approval gates per resource (keyed by resource_id)
         self._approval_gates: dict[str, ApprovalGate] = {}
 
@@ -608,6 +636,9 @@ class Orchestrator:
 
         # Track rollback state (resource_id → awaiting confirmation)
         self._pending_rollbacks: set[str] = set()
+
+        # Current run identifier (set by execute_audit, used by state store writes)
+        self.current_run_id: str | None = None
 
     # ──────────────────────────────────────────────────────────────────────
     # Properties
@@ -673,8 +704,14 @@ class Orchestrator:
             if status_callback is not None:
                 status_callback(agent, status)
 
+        # Assign a unique run identifier FIRST (before any pipeline work)
+        self.current_run_id = uuid.uuid4().hex
+
         # Truncate reasoning log at the start of each new audit run
         self._reasoning_logger.truncate()
+
+        # Warnings accumulator for non-fatal issues surfaced in AuditResult
+        audit_warnings: list[str] = []
 
         # Step 1: FinOps Auditor scan
         logger.info("[Orchestrator] Step 1: Running FinOps Auditor scan...")
@@ -739,6 +776,12 @@ class Orchestrator:
                 error_agent="RemediationArchitect",
             )
         self._last_plans = plans
+
+        # Persist plans to StateStore (atomic replace tagged with run_id)
+        if not self._state_store.replace_plans(plans, self.current_run_id):
+            msg = "StateStore: failed to persist plans — plan durability not guaranteed"
+            logger.warning(msg)
+            audit_warnings.append(msg)
 
         blocked_plans = [p for p in plans if p.blocked]
         active_plans = [p for p in plans if not p.blocked]
@@ -805,6 +848,7 @@ class Orchestrator:
             blocked_plans=blocked_plans,
             anomalies=anomalies,
             drift_report=drift_report,
+            warnings=audit_warnings,
         )
 
     def execute_natural_language_audit(self, query: str) -> AuditResult:
@@ -1281,7 +1325,8 @@ class Orchestrator:
                 error=result.get("error", "Invalid rollback command"),
             )
 
-        # Mark as pending confirmation
+        # Mark as pending confirmation (StateStore is source of truth; keep in-memory set for compat)
+        self._state_store.add_pending_rollback(resource_id)
         self._pending_rollbacks.add(resource_id)
         self._log_action("rollback", resource_id, "started", "Awaiting confirmation")
 
@@ -1292,7 +1337,18 @@ class Orchestrator:
         )
 
     def get_audit_trail(self) -> list[AuditEntry]:
-        """Return the complete audit trail."""
+        """Return the complete audit trail.
+
+        Reads from StateStore (source of truth). Falls back to the in-memory
+        list when StateStore returns None (read failure), logging a WARNING.
+        """
+        persisted = self._state_store.get_audit_trail()
+        if persisted is not None:
+            return persisted
+        logger.warning(
+            "StateStore.get_audit_trail() returned None — falling back to "
+            "in-memory audit trail (may be incomplete across restarts)."
+        )
         return list(self._audit_trail)
 
     # ──────────────────────────────────────────────────────────────────────
@@ -1650,11 +1706,13 @@ class Orchestrator:
         return candidate
 
     def _find_plan(self, resource_id: str) -> RemediationPlan | None:
-        """Find a remediation plan by resource_id."""
-        for plan in self._last_plans:
-            if plan.resource_id == resource_id and not plan.blocked:
-                return plan
-        return None
+        """Find a remediation plan by resource_id.
+
+        Reads from StateStore (source of truth for approve/rollback flows).
+        The in-memory _last_plans list is kept for backward compat with
+        same-process readers (e.g. dashboard) but is not the read path here.
+        """
+        return self._state_store.get_plan(resource_id)
 
     def _get_or_create_gate(self, resource_id: str) -> ApprovalGate:
         """Get or create an approval gate for a resource.
@@ -1714,8 +1772,8 @@ class Orchestrator:
                 error="Max attempts exceeded — rollback locked for this resource",
             )
 
-        # Validate resource was pending rollback
-        if resource_id not in self._pending_rollbacks:
+        # Validate resource was pending rollback (StateStore is source of truth)
+        if not self._state_store.has_pending_rollback(resource_id):
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
@@ -1884,7 +1942,8 @@ class Orchestrator:
                 exit_code=apply_result.returncode,
             )
 
-        # Rollback applied successfully
+        # Rollback applied successfully (StateStore is source of truth; keep in-memory set for compat)
+        self._state_store.discard_pending_rollback(resource_id)
         self._pending_rollbacks.discard(resource_id)
         self._log_action("rollback", resource_id, "success", f"Rollback executed by {actor}", actor=actor, actor_verified=actor_verified)
 
@@ -1916,6 +1975,15 @@ class Orchestrator:
         self._audit_trail.append(entry)
         # Persist to append-only file log (failures are non-blocking)
         self._audit_logger.append(entry.to_dict())
+        # Persist to StateStore (source of truth); on failure log WARNING
+        # but don't raise or alter the caller's return value.
+        if not self._state_store.append_audit_entry(entry, run_id=self.current_run_id):
+            logger.warning(
+                "StateStore.append_audit_entry returned False for %s/%s — "
+                "entry persisted to audit.log only, not to state.db.",
+                entry.action,
+                entry.resource_id,
+            )
 
     def _classify_error(self, exc: Exception, context: str = "") -> str:
         """Classify an exception into one of the structured error categories.
