@@ -684,6 +684,7 @@ cloud-janitor/
 │       │   ├── identity.py          # IAM identity resolution (fail-closed STS verification)
 │       │   ├── redaction.py         # Input-side redaction for LLM prompts
 │       │   ├── state_store.py       # SQLite persistence (plans, rollbacks, audit trail)
+│       │   ├── audit_query.py       # Queryable/exportable audit trail (filter, CSV/JSON export)
 │       │   ├── health.py            # Backend reachability preflight
 │       │   ├── timeouts.py          # Configurable subprocess/LLM timeouts
 │       │   ├── run_context.py       # Run ID generation, retention pruning

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from packaging.version import Version
@@ -20,6 +21,7 @@ import streamlit as st
 
 from cloud_janitor.orchestrator import Orchestrator
 from cloud_janitor.core.logging_config import configure_logging
+from cloud_janitor.core.audit_query import query_audit, export_audit_csv, export_audit_json, UNSCOPED
 from cloud_janitor.core.paths import (
     FINDINGS_STORE_PATH,
     REMEDIATIONS_DIR,
@@ -1000,6 +1002,9 @@ with top_left:
     )
 
 # ── Audit Log ─────────────────────────────────────────────────────────
+# NOTE: Tamper-evidence (hash-chaining of audit trail entries) is an
+# explicit non-goal for this spec phase — deferred until a specific
+# compliance requirement names it (YAGNI). See phase3f-audit-query/requirements.md.
 with top_right:
     trail = st.session_state.orchestrator.get_audit_trail()
     log_lines = load_audit_log()
@@ -1769,3 +1774,132 @@ if MultiAccountOrchestrator is not None:
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
+
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────────
+# Audit Trail Query (phase3f-audit-query)
+# Tamper-evidence (hash-chaining) is an explicit non-goal for this spec.
+# ──────────────────────────────────────────────────────────────────────
+
+with st.expander("🔍 Audit Trail Query", expanded=False):
+    st.markdown(
+        '<div style="color:#8b949e;font-size:0.82rem;margin-bottom:8px;">'
+        'Filter and export audit trail entries. Requires phase2-persistent-state.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Filter widgets
+    _aq_col1, _aq_col2 = st.columns(2)
+    with _aq_col1:
+        _aq_resource_id = st.text_input(
+            "Resource ID",
+            key="aq_resource_id",
+            placeholder="e.g. vol-0abc123",
+        )
+        _aq_actor = st.text_input(
+            "Actor",
+            key="aq_actor",
+            placeholder="e.g. arn:aws:iam::...",
+        )
+    with _aq_col2:
+        _aq_result = st.selectbox(
+            "Result",
+            options=["", "success", "failure", "blocked"],
+            key="aq_result",
+            format_func=lambda x: "All" if x == "" else x,
+        )
+        _aq_action = st.selectbox(
+            "Action",
+            options=["", "approval", "rollback", "scan", "remediation"],
+            key="aq_action",
+            format_func=lambda x: "All" if x == "" else x,
+        )
+
+    # Date range
+    _aq_date_col1, _aq_date_col2 = st.columns(2)
+    with _aq_date_col1:
+        _aq_date_from = st.date_input("Date From", value=None, key="aq_date_from")
+    with _aq_date_col2:
+        _aq_date_to = st.date_input("Date To", value=None, key="aq_date_to")
+
+    # Tri-state run scope control
+    _aq_run_scope = st.selectbox(
+        "Run Scope",
+        options=["All", "Scoped to a run", "Unscoped only"],
+        key="aq_run_scope",
+    )
+    _aq_run_id_value: str | None | object = None
+    if _aq_run_scope == "Scoped to a run":
+        _aq_run_id_input = st.text_input(
+            "Run ID",
+            key="aq_run_id_input",
+            placeholder="e.g. run-2025-07-10-abc123",
+        )
+        _aq_run_id_value = _aq_run_id_input if _aq_run_id_input.strip() else None
+    elif _aq_run_scope == "Unscoped only":
+        _aq_run_id_value = UNSCOPED
+
+    # Query button
+    if st.button("🔎 Query Audit Trail", key="btn_query_audit", use_container_width=True):
+        try:
+            _aq_state_store = st.session_state.orchestrator._state_store
+            _aq_rows = query_audit(
+                _aq_state_store,
+                resource_id=_aq_resource_id.strip() or None,
+                actor=_aq_actor.strip() or None,
+                result=_aq_result or None,
+                action=_aq_action or None,
+                run_id=_aq_run_id_value,
+                date_from=str(_aq_date_from) if _aq_date_from else None,
+                date_to=str(_aq_date_to) if _aq_date_to else None,
+            )
+            st.session_state["aq_results"] = _aq_rows
+        except (AttributeError, sqlite3.OperationalError):
+            st.warning(
+                "Audit trail querying requires phase2-persistent-state. "
+                "The StateStore is not yet available."
+            )
+            st.session_state["aq_results"] = None
+        except Exception:
+            st.warning(
+                "Audit trail querying requires phase2-persistent-state. "
+                "The StateStore is not yet available."
+            )
+            st.session_state["aq_results"] = None
+
+    # Render results
+    _aq_results = st.session_state.get("aq_results")
+    if _aq_results is not None:
+        if _aq_results:
+            import pandas as pd
+
+            _aq_df = pd.DataFrame(_aq_results)
+            st.dataframe(_aq_df, use_container_width=True)
+
+            # Download buttons
+            _aq_dl_col1, _aq_dl_col2 = st.columns(2)
+            with _aq_dl_col1:
+                _aq_csv_data = export_audit_csv(_aq_results)
+                st.download_button(
+                    "📥 Download CSV",
+                    data=_aq_csv_data,
+                    file_name="audit_trail.csv",
+                    mime="text/csv",
+                    key="btn_download_audit_csv",
+                    use_container_width=True,
+                )
+            with _aq_dl_col2:
+                _aq_json_data = export_audit_json(_aq_results)
+                st.download_button(
+                    "📥 Download JSON",
+                    data=_aq_json_data,
+                    file_name="audit_trail.json",
+                    mime="application/json",
+                    key="btn_download_audit_json",
+                    use_container_width=True,
+                )
+        else:
+            st.info("No audit trail entries match the current filters.")
