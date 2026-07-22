@@ -43,6 +43,9 @@ output/remediations/*
 output/policies/*.json
 output/remediation.tf
 output/approval_gates.json
+output/state.db
+output/state.db-wal
+output/state.db-shm
 audit.log
 
 # Runtime outputs accidentally written inside src if any

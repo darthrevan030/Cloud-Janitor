@@ -347,6 +347,13 @@ cp .env.example .env
 | `JANITOR_LLM_MODEL` | `anthropic/claude-haiku-4-5` | No | LLM model string |
 | `JANITOR_AI_ENABLED` | `true` | No | Set to `false` to disable all LLM calls (AI kill switch — zero network egress) |
 | `JANITOR_PRIVACY_MODE` | — | No | Set to `strict` to require no-training provider policies and block free-tier models |
+| `JANITOR_LLM_RETENTION_POLICY` | `unknown` | No | In strict mode, must be `none` (operator attests endpoint retains no data) |
+
+### Identity & Audit
+
+| Variable | Default | Required | Description |
+| --- | --- | --- | --- |
+| `JANITOR_ACTOR` | `system` | No | Fallback actor identity for sandbox/fixture mode audit stamps |
 
 ### Infrastructure & Runtime
 
@@ -357,6 +364,17 @@ cp .env.example .env
 | `JANITOR_SCHEDULE` | `disabled` | No | Cron expression for scheduled scans (e.g. `0 6 * * *`) |
 | `JANITOR_HOME` | cwd | No | Base directory for all output files |
 | `LOCALSTACK_AUTH_TOKEN` | — | Yes (for demo) | LocalStack auth token for container usage |
+| `JANITOR_SKIP_HEALTH_CHECK` | — | No | Set to `1` to bypass the backend reachability preflight (proceeds with a warning) |
+
+### Timeouts
+
+| Variable | Default | Required | Description |
+| --- | --- | --- | --- |
+| `JANITOR_TF_INIT_TIMEOUT` | `120` | No | Terraform init timeout (seconds). Clamped to 1800 max. |
+| `JANITOR_TF_APPLY_TIMEOUT` | `120` | No | Terraform plan/apply timeout (seconds). Clamped to 1800 max. |
+| `JANITOR_TF_VALIDATE_TIMEOUT` | `180` | No | Pre-remediation hook validation timeout (seconds). Clamped to 1800 max. |
+| `JANITOR_HOOK_TIMEOUT` | `30` | No | Post-remediation hook timeout (seconds). Clamped to 1800 max. |
+| `JANITOR_LLM_TIMEOUT` | `30` | No | LLM API request timeout (seconds). No ceiling. |
 
 ### Enterprise Deployment (BYO-Endpoint)
 
@@ -663,6 +681,8 @@ cloud-janitor/
 │       │   ├── identity.py          # IAM identity resolution (fail-closed STS verification)
 │       │   ├── redaction.py         # Input-side redaction for LLM prompts
 │       │   ├── state_store.py       # SQLite persistence (plans, rollbacks, audit trail)
+│       │   ├── health.py            # Backend reachability preflight
+│       │   ├── timeouts.py          # Configurable subprocess/LLM timeouts
 │       │   ├── logging_config.py    # Logging configuration
 │       │   ├── paths.py             # Centralized path constants
 │       │   └── error_telemetry.py   # Structured error recording

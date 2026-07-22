@@ -11,7 +11,7 @@ Configuration (via environment variables):
 - JANITOR_PRIVACY_MODE: Set to "strict" to require no-training provider policies
 
 Includes:
-- 30-second timeout to prevent indefinite hangs
+- Configurable timeout (JANITOR_LLM_TIMEOUT, default 30s) to prevent indefinite hangs
 - Manual retry loop with exponential backoff (max 3 retries, 4 total attempts)
 - Respects Retry-After header for HTTP 429 (up to 60s max)
 - Structured logging via logging module (no print statements)
@@ -29,6 +29,8 @@ from dotenv import load_dotenv
 load_dotenv()  # loads .env from project root if present, no-op otherwise
 
 import openai  # noqa: E402
+
+from cloud_janitor.core.timeouts import get_timeout  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +239,7 @@ def get_client() -> openai.OpenAI:
     return openai.OpenAI(
         base_url=base_url,
         api_key=api_key,
-        timeout=_TIMEOUT,
+        timeout=get_timeout("JANITOR_LLM_TIMEOUT"),
     )
 
 

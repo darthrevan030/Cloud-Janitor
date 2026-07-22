@@ -920,6 +920,17 @@ if st.session_state.nl_query_result is not None:
 
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
+# Backend readiness indicator (calls the same function the Orchestrator uses)
+from cloud_janitor.core.health import check_backend_health as _check_health
+
+_health = _check_health()
+if _health.reachable:
+    st.success("✅ Backend ready", icon="✅")
+elif _health.mode == "invalid_credentials":
+    st.error("🔑 Credentials invalid — check AWS session/IAM permissions", icon="🔑")
+else:
+    st.error("🔴 Backend unreachable — check LocalStack is running / network connectivity", icon="🔴")
+
 if st.button("▶  Run Audit", type="primary", use_container_width=False):
     orch = st.session_state.orchestrator
 

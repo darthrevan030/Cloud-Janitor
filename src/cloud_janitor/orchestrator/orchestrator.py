@@ -109,7 +109,9 @@ from cloud_janitor.core.state_store import (  # noqa: E402
     StateStoreUnavailableError,
 )
 from cloud_janitor.core.error_telemetry import build_error_record, write_error_record  # noqa: E402
+from cloud_janitor.core.health import check_backend_health  # noqa: E402
 from cloud_janitor.core.identity import IdentityResolutionError, resolve_actor  # noqa: E402
+from cloud_janitor.core.timeouts import get_timeout  # noqa: E402
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
@@ -710,6 +712,24 @@ class Orchestrator:
         # Truncate reasoning log at the start of each new audit run
         self._reasoning_logger.truncate()
 
+        # Preflight: verify backend is reachable before doing any real work
+        health = check_backend_health()
+        if not health.reachable:
+            if os.environ.get("JANITOR_SKIP_HEALTH_CHECK") == "1":
+                logger.warning(
+                    "Backend health check failed (%s: %s) but JANITOR_SKIP_HEALTH_CHECK=1 — proceeding anyway.",
+                    health.mode, health.detail,
+                )
+            else:
+                self._log_action("health_check_failed", "all", "blocked", f"{health.mode}: {health.detail}")
+                error_category = "credentials_invalid" if health.mode == "invalid_credentials" else "backend_unreachable"
+                return AuditResult(
+                    success=False,
+                    error=f"Backend {health.mode} ({health.environment}): {health.detail}",
+                    error_category=error_category,
+                    error_agent="Orchestrator",
+                )
+
         # Warnings accumulator for non-fatal issues surfaced in AuditResult
         audit_warnings: list[str] = []
 
@@ -1151,7 +1171,7 @@ class Orchestrator:
                 [self.tf_cmd, "init", "-input=false"],
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=get_timeout("JANITOR_TF_INIT_TIMEOUT"),
                 cwd=str(apply_dir),
                 env=_build_subprocess_env("terraform"),
             )
@@ -1172,7 +1192,7 @@ class Orchestrator:
                 [self.tf_cmd, "plan", "-input=false", "-out=tfplan"],
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                 cwd=str(apply_dir),
                 env=_build_subprocess_env("terraform"),
             )
@@ -1186,7 +1206,7 @@ class Orchestrator:
                 [self.tf_cmd, "show", "-json", "tfplan"],
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                 cwd=str(apply_dir),
                 env=_build_subprocess_env("terraform"),
             )
@@ -1214,7 +1234,7 @@ class Orchestrator:
                 [self.tf_cmd, "apply", "-auto-approve"],
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
                 cwd=str(apply_dir),
                 env=_build_subprocess_env("terraform"),
             )
@@ -1228,6 +1248,17 @@ class Orchestrator:
                     error=f"{self.tf_cmd} apply failed: {error}",
                     resource_id=resource_id,
                 )
+        except subprocess.TimeoutExpired as exc:
+            logger.warning("Terraform subprocess timed out for %s: %s", resource_id, exc)
+            self._log_action("execution", resource_id, "failure", f"Terraform timed out: {exc}")
+            self._record_error(exc, "Orchestrator", context="tf_apply")
+            return ApprovalResult(
+                success=False,
+                error=f"Terraform timed out after {exc.timeout}s",
+                resource_id=resource_id,
+                error_category="timeout",
+                error_agent="Orchestrator",
+            )
         finally:
             # Clean up temp directory
             import shutil as _shutil
@@ -1404,7 +1435,7 @@ class Orchestrator:
                     ],
                     capture_output=True,
                     text=True,
-                    timeout=180,
+                    timeout=get_timeout("JANITOR_TF_VALIDATE_TIMEOUT"),
                     cwd=str(self.project_root),
                     env=_build_subprocess_env("hook"),
                 )
@@ -1452,7 +1483,7 @@ class Orchestrator:
                 ],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=get_timeout("JANITOR_HOOK_TIMEOUT"),
                 cwd=str(self.project_root),
                 env=_build_subprocess_env("hook"),
             )
@@ -1839,14 +1870,26 @@ class Orchestrator:
             )
 
         logger.info("[Orchestrator] Running terraform init for rollback %s...", resource_id)
-        init_result = subprocess.run(
-            [self.tf_cmd, "init", "-input=false"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(self.output_dir),
-            env=_build_subprocess_env("terraform"),
-        )
+        try:
+            init_result = subprocess.run(
+                [self.tf_cmd, "init", "-input=false"],
+                capture_output=True,
+                text=True,
+                timeout=get_timeout("JANITOR_TF_INIT_TIMEOUT"),
+                cwd=str(self.output_dir),
+                env=_build_subprocess_env("terraform"),
+            )
+        except subprocess.TimeoutExpired as exc:
+            logger.warning("Terraform init timed out for rollback %s: %s", resource_id, exc)
+            self._log_action("rollback", resource_id, "failure", f"Terraform init timed out: {exc}")
+            self._record_error(exc, "Orchestrator", context="tf_apply")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"Terraform init timed out after {exc.timeout}s",
+                error_category="timeout",
+                error_agent="Orchestrator",
+            )
         if init_result.returncode != 0:
             error = _redact(init_result.stderr.strip() or init_result.stdout.strip())
             self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
@@ -1863,14 +1906,26 @@ class Orchestrator:
 
         # Run terraform plan and scope check before apply (Req 7.1, 7.9)
         logger.info("[Orchestrator] Running terraform plan for rollback scope check on %s...", resource_id)
-        plan_result = subprocess.run(
-            [self.tf_cmd, "plan", "-input=false", "-out=tfplan"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(self.output_dir),
-            env=_build_subprocess_env("terraform"),
-        )
+        try:
+            plan_result = subprocess.run(
+                [self.tf_cmd, "plan", "-input=false", "-out=tfplan"],
+                capture_output=True,
+                text=True,
+                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+                cwd=str(self.output_dir),
+                env=_build_subprocess_env("terraform"),
+            )
+        except subprocess.TimeoutExpired as exc:
+            logger.warning("Terraform plan timed out for rollback %s: %s", resource_id, exc)
+            self._log_action("rollback", resource_id, "failure", f"Terraform plan timed out: {exc}")
+            self._record_error(exc, "Orchestrator", context="tf_apply")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"Terraform plan timed out after {exc.timeout}s",
+                error_category="timeout",
+                error_agent="Orchestrator",
+            )
         if plan_result.returncode != 0:
             error = _redact(plan_result.stderr.strip() or plan_result.stdout.strip())
             self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} plan failed: {error}")
@@ -1881,14 +1936,26 @@ class Orchestrator:
             )
 
         # Convert saved plan to JSON for scope analysis
-        show_result = subprocess.run(
-            [self.tf_cmd, "show", "-json", "tfplan"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            cwd=str(self.output_dir),
-            env=_build_subprocess_env("terraform"),
-        )
+        try:
+            show_result = subprocess.run(
+                [self.tf_cmd, "show", "-json", "tfplan"],
+                capture_output=True,
+                text=True,
+                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+                cwd=str(self.output_dir),
+                env=_build_subprocess_env("terraform"),
+            )
+        except subprocess.TimeoutExpired as exc:
+            logger.warning("Terraform show timed out for rollback %s: %s", resource_id, exc)
+            self._log_action("rollback", resource_id, "failure", f"Terraform show timed out: {exc}")
+            self._record_error(exc, "Orchestrator", context="tf_apply")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"Terraform show timed out after {exc.timeout}s",
+                error_category="timeout",
+                error_agent="Orchestrator",
+            )
         if show_result.returncode != 0:
             error = _redact(show_result.stderr.strip() or show_result.stdout.strip())
             self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} show failed: {error}")
@@ -1919,14 +1986,26 @@ class Orchestrator:
                 )
 
         logger.info("[Orchestrator] Running terraform apply for rollback %s...", resource_id)
-        apply_result = subprocess.run(
-            [self.tf_cmd, "apply", "-auto-approve"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(self.output_dir),
-            env=_build_subprocess_env("terraform"),
-        )
+        try:
+            apply_result = subprocess.run(
+                [self.tf_cmd, "apply", "-auto-approve"],
+                capture_output=True,
+                text=True,
+                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+                cwd=str(self.output_dir),
+                env=_build_subprocess_env("terraform"),
+            )
+        except subprocess.TimeoutExpired as exc:
+            logger.warning("Terraform apply timed out for rollback %s: %s", resource_id, exc)
+            self._log_action("rollback", resource_id, "failure", f"Terraform apply timed out: {exc}")
+            self._record_error(exc, "Orchestrator", context="tf_apply")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"Terraform apply timed out after {exc.timeout}s",
+                error_category="timeout",
+                error_agent="Orchestrator",
+            )
         if apply_result.returncode != 0:
             error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
             self._log_action("rollback", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")

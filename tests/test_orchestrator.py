@@ -15,10 +15,21 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from cloud_janitor.core.health import HealthStatus
 from cloud_janitor.orchestrator import (
     AuditEntry,
     Orchestrator,
 )
+
+
+@pytest.fixture(autouse=True)
+def _mock_health_check():
+    """All orchestrator tests bypass the backend health preflight."""
+    healthy = HealthStatus(
+        reachable=True, environment="sandbox_localstack", mode="healthy", detail="ok", endpoint="mock"
+    )
+    with patch("cloud_janitor.orchestrator.orchestrator.check_backend_health", return_value=healthy):
+        yield
 
 
 @pytest.fixture

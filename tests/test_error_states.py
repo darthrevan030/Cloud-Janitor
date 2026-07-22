@@ -497,3 +497,99 @@ class TestMalformedApproval:
                 args=[], returncode=0, stdout="", stderr=""
             )
             orch.execute_audit()
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 4. Terraform subprocess timeout → graceful failure with error_category
+# ══════════════════════════════════════════════════════════════════════
+
+
+class TestTerraformApplyTimeout:
+    """When terraform subprocess times out during approve(), the orchestrator
+    returns ApprovalResult(success=False) with error_category='timeout'."""
+
+    def _setup_active_plan(self, orch, tmp_project):
+        """Set up a successful audit with an active plan for vol-err001."""
+        active_plan = RemediationPlan(
+            resource_id="vol-err001",
+            finding={"resource_id": "vol-err001", "resource_type": "ebs", "category": "waste"},
+            blocked=False,
+            remediation_hcl='resource "null_resource" "test" {}',
+            rollback_hcl='resource "null_resource" "rollback" {}',
+        )
+        orch._architect.plan = MagicMock(return_value=[active_plan])
+
+        (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
+        (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
+
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
+            orch.execute_audit()
+
+    def test_timeout_returns_failure_with_category(self, tmp_project, findings_store):
+        """TimeoutExpired during approve() returns success=False, error_category='timeout'."""
+        orch = _make_orchestrator(tmp_project, findings_store)
+        self._setup_active_plan(orch, tmp_project)
+
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="terraform", timeout=120)
+            result = orch.approve("APPROVE vol-err001", resource_id="vol-err001")
+
+        assert result.success is False
+        assert result.error_category == "timeout"
+        assert result.error_agent == "Orchestrator"
+        assert result.resource_id == "vol-err001"
+        assert "120" in result.error
+
+    def test_timeout_does_not_propagate_exception(self, tmp_project, findings_store):
+        """TimeoutExpired is caught — no exception escapes approve()."""
+        orch = _make_orchestrator(tmp_project, findings_store)
+        self._setup_active_plan(orch, tmp_project)
+
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="terraform", timeout=300)
+            # Must not raise — returns a result instead
+            result = orch.approve("APPROVE vol-err001", resource_id="vol-err001")
+
+        assert isinstance(result, ApprovalResult)
+        assert result.success is False
+
+    def test_timeout_logged_in_audit_trail(self, tmp_project, findings_store):
+        """Timeout failure is recorded in the audit trail."""
+        orch = _make_orchestrator(tmp_project, findings_store)
+        self._setup_active_plan(orch, tmp_project)
+
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="terraform", timeout=120)
+            orch.approve("APPROVE vol-err001", resource_id="vol-err001")
+
+        trail = orch.get_audit_trail()
+        failure_entries = [
+            e for e in trail
+            if e.result == "failure" and "timed out" in (e.details or "").lower()
+        ]
+        assert len(failure_entries) >= 1
+        assert "vol-err001" in failure_entries[0].resource_id
+
+    def test_timeout_cleans_up_temp_directory(self, tmp_project, findings_store):
+        """The finally block cleans up the temp directory even on timeout."""
+        orch = _make_orchestrator(tmp_project, findings_store)
+        self._setup_active_plan(orch, tmp_project)
+
+        import tempfile
+        import os
+
+        # Count temp dirs before
+        temp_root = tempfile.gettempdir()
+        dirs_before = {d for d in os.listdir(temp_root) if d.startswith("janitor_apply_")}
+
+        with patch("cloud_janitor.orchestrator.orchestrator.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="terraform", timeout=120)
+            orch.approve("APPROVE vol-err001", resource_id="vol-err001")
+
+        # No new janitor_apply_ dirs should remain after cleanup
+        dirs_after = {d for d in os.listdir(temp_root) if d.startswith("janitor_apply_")}
+        new_dirs = dirs_after - dirs_before
+        assert len(new_dirs) == 0, f"Temp directory not cleaned up: {new_dirs}"

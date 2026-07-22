@@ -16,6 +16,7 @@ Key issue addressed:
 import importlib
 import logging
 import sys
+from unittest.mock import patch
 
 import pytest
 
@@ -72,3 +73,28 @@ def _reset_logging_handlers():
     llm_logger = logging.getLogger("cloud_janitor.core.llm_client")
     llm_logger.handlers.clear()
     llm_logger.setLevel(logging.NOTSET)
+
+
+@pytest.fixture(autouse=True)
+def _bypass_backend_health_check():
+    """Bypass the backend health check in all tests.
+
+    The Orchestrator.execute_audit() preflight calls check_backend_health()
+    which probes LocalStack or real AWS — neither is available in unit tests.
+    Mock it to return a healthy status so orchestrator tests exercise the
+    actual pipeline logic.
+    """
+    from cloud_janitor.core.health import HealthStatus
+
+    healthy = HealthStatus(
+        reachable=True,
+        environment="sandbox_localstack",
+        mode="healthy",
+        detail="ok",
+        endpoint="mock://test",
+    )
+    with patch(
+        "cloud_janitor.orchestrator.orchestrator.check_backend_health",
+        return_value=healthy,
+    ):
+        yield
