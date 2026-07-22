@@ -57,7 +57,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Implement `_resolve_actor_or_block(resource_id) -> tuple[str, bool] | None` returning `(actor, actor_verified)`, calling `resolve_actor()` unless `self._explicit_approver is not None`, logging `"identity_verification_failed"` and returning `None` on `IdentityResolutionError`
     - _Requirements: 1.1, 1.6_
 
-  - [ ] 3.2 Wire `_resolve_actor_or_block()` into `approve()`, `rollback()`, `_handle_confirm_rollback()`
+  - [x] 3.2 Wire `_resolve_actor_or_block()` into `approve()`, `rollback()`, `_handle_confirm_rollback()`
     - Each method calls it first, before any `init`/`plan`/`apply` subprocess invocation; returns its own failure result type immediately on `None`
     - Capture the resolved `(actor, actor_verified)` into LOCAL variables in each method — do NOT assign the result back onto `self.approver` or any other shared instance attribute. This must hold even when a single Orchestrator instance is invoked concurrently (Streamlit session threads, `multi_account_orchestrator.py`, `scheduler.py`), so one call's resolved actor can never leak into a different, concurrent call's audit stamp
     - Give `_log_action()` and `_run_post_remediation_hook()` an **optional, defaulted** `actor: str | None = None` parameter (plus `actor_verified: bool = False`) — NOT a required one. `orchestrator.py` has roughly 28 other `_log_action()` call sites (scan-start, plan-generation, hook-error logging, gate lockouts, terraform init/apply failure logging, etc.) with no resolved actor available; making the parameter required would break all of them. Each method's body SHALL fall back to `self.approver` (the unchanged historical default) whenever `actor is None`. Only the four existing stamp sites that currently read `self.approver` (the approval log entry, the post-remediation hook invocation — called from the dry-run remediation path, the real remediation path, and the rollback path — the rollback log entry, and `_log_action`'s own internal `AuditEntry.actor` assignment) pass an explicit, freshly-resolved `actor`
@@ -82,7 +82,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Append the negative entry with `type: "rollback"` and `rolled_back_run_id` set to the matched entry's `run_id`; recalculate `total_lifetime_savings`
     - _Requirements: 2.1, 2.2, 2.3_
 
-  - [ ] 4.2 Write property test for savings reversal
+  - [x] 4.2 Write property test for savings reversal
     - **Property 3: Savings Reversal Idempotence Per (resource_id, run_id)**
     - **Validates: Requirements 2.2, 2.3**
 
@@ -106,7 +106,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Implement `get_privacy_posture() -> dict`
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ] 5.2 Write property test for privacy attestation
+  - [x] 5.2 Write property test for privacy attestation
     - **Property 4: Strict Mode Attestation Gate**
     - **Validates: Requirement 3.2**
 
@@ -154,7 +154,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - _Requirements: 6.1, 6.2, 6.3_
 
 - [ ] 9. Implement Terraform plan scope check
-  - [ ] 9.1 Implement `_check_plan_scope()` in `orchestrator/orchestrator.py`
+  - [x] 9.1 Implement `_check_plan_scope()` in `orchestrator/orchestrator.py`
     - Filter `plan_json["resource_changes"]` to `mode == "managed"` and non-`no-op` actions
     - Add a `flow: Literal["remediate", "rollback"]` parameter and key `_SCOPE_ALLOWLIST` on `(resource_type, category, flow)`, NOT `(resource_type, category)` alone — the remediation and rollback templates for the same finding type generate structurally different HCL (`remediation_architect.py`'s `_remediation_*` vs `_rollback_*` methods)
     - Implement the full per-(resource_type, category, flow) allowlist table from the design, covering every combination that has a live template: `(ebs, waste, remediate)`, `(ebs, waste, rollback)` — `aws_ebs_volume.restore_*`, `(elasticache, waste, remediate)`, `(elasticache, waste, rollback)` — `aws_elasticache_cluster.restore_*`, `(ebs, security, remediate)` and `(ebs, security, rollback)` — both zero-change, `(elasticache, security, remediate)` and `(elasticache, security, rollback)` — both zero-change, `(security_group, security, remediate)` — exactly one `create`/`update` on `aws_security_group_rule.remediate_*` and reject `cidr_blocks` containing `0.0.0.0/0`, `(security_group, security, rollback)` — exactly one `create`/`update` on `aws_security_group_rule.restore_*` and explicitly PERMIT `cidr_blocks` containing `0.0.0.0/0` (this is the correct rollback behavior, not a gap), plus the zero-changes default for anything unmatched

@@ -30,7 +30,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -324,6 +324,148 @@ class RollbackResult:
     error_agent: str | None = None
     needs_confirmation: bool = False
     exit_code: int | None = None
+
+
+# ── Plan Scope Check ──────────────────────────────────────────────────────────
+# Validates that a Terraform plan only touches resources allowed for a given
+# (resource_type, category, flow) combination.
+
+Flow = Literal["remediate", "rollback"]
+
+_SCOPE_ALLOWLIST: dict[tuple[str, str, Flow], dict] = {
+    ("ebs", "waste", "remediate"): {
+        "actions": {("create",)},
+        "addr_prefixes": ("aws_ebs_snapshot.pre_remediation_", "null_resource.destroy_"),
+        "exhaustive": True,
+    },
+    ("ebs", "waste", "rollback"): {
+        "actions": {("create",)},
+        "addr_prefixes": ("aws_ebs_volume.restore_",),
+        "exhaustive": True,
+    },
+    ("elasticache", "waste", "remediate"): {
+        "actions": {("create",)},
+        "addr_prefixes": ("null_resource.snapshot_", "null_resource.destroy_"),
+        "exhaustive": True,
+    },
+    ("elasticache", "waste", "rollback"): {
+        "actions": {("create",)},
+        "addr_prefixes": ("aws_elasticache_cluster.restore_",),
+        "exhaustive": True,
+    },
+    ("ebs", "security", "remediate"): {"max_changes": 0},
+    ("ebs", "security", "rollback"): {"max_changes": 0},
+    ("elasticache", "security", "remediate"): {"max_changes": 0},
+    ("elasticache", "security", "rollback"): {"max_changes": 0},
+    ("security_group", "security", "remediate"): {
+        "count": 1,
+        "resource_type": "aws_security_group_rule",
+        "addr_prefix": "aws_security_group_rule.remediate_",
+        "actions": {("create",), ("update",)},
+        "reject_cidr_0000": True,
+    },
+    ("security_group", "security", "rollback"): {
+        "count": 1,
+        "resource_type": "aws_security_group_rule",
+        "addr_prefix": "aws_security_group_rule.restore_",
+        "actions": {("create",), ("update",)},
+        "reject_cidr_0000": False,
+    },
+}
+
+
+def _sanitize_id(resource_id: str) -> str:
+    """Sanitize resource_id for use in Terraform address matching."""
+    return resource_id.replace("-", "_").replace("/", "_").replace(":", "_")
+
+
+def _check_plan_scope(
+    plan_json: dict, resource_id: str, finding: dict, flow: Flow
+) -> tuple[bool, str]:
+    """Check that a Terraform plan only touches allowed resources for this finding.
+
+    NOTE (known limitation): null_resource + local-exec based remediations/rollbacks
+    are only checked at the Terraform-resource-address level. The check does not and
+    cannot inspect the shell command embedded in the local-exec provisioner.
+
+    Returns (passed, reason). If passed is False, reason explains why.
+    """
+    safe_id = _sanitize_id(resource_id)
+    changes = [
+        c for c in plan_json.get("resource_changes", [])
+        if c.get("mode") == "managed" and c["change"]["actions"] != ["no-op"]
+    ]
+
+    norm_type = finding.get("resource_type", "").replace("aws_", "", 1)
+    category = finding.get("category", "")
+    key = (norm_type, category, flow)
+    rule = _SCOPE_ALLOWLIST.get(key)
+
+    if rule is None:
+        # Unknown template — default to zero-change rule
+        if len(changes) == 0:
+            return True, "no managed changes (unrecognized template, zero-change default)"
+        return False, f"unrecognized template ({norm_type}, {category}, {flow}) with {len(changes)} changes"
+
+    # Zero-change rules (encryption findings)
+    if "max_changes" in rule:
+        if len(changes) <= rule["max_changes"]:
+            return True, "zero managed changes as expected"
+        return False, f"expected 0 managed changes, got {len(changes)}"
+
+    # Security group rules (exactly 1 change with specific constraints)
+    if "count" in rule:
+        if len(changes) != rule["count"]:
+            return False, f"expected exactly {rule['count']} resource change, got {len(changes)}"
+        change = changes[0]
+        addr = change.get("address", "")
+
+        if safe_id not in addr:
+            return False, f"resource address '{addr}' does not contain sanitized resource_id '{safe_id}'"
+        if not addr.startswith(rule["addr_prefix"]):
+            return False, f"resource address '{addr}' does not start with required prefix '{rule['addr_prefix']}'"
+        if change.get("type") != rule["resource_type"]:
+            return False, f"resource type '{change.get('type')}' != expected '{rule['resource_type']}'"
+        action_tuple = tuple(change["change"]["actions"])
+        if action_tuple not in rule["actions"]:
+            return False, f"action set {action_tuple} not in allowed {rule['actions']}"
+
+        # CIDR check (only for remediate flow)
+        if rule.get("reject_cidr_0000"):
+            cidr_blocks = change.get("change", {}).get("after", {}).get("cidr_blocks", [])
+            if "0.0.0.0/0" in (cidr_blocks or []):
+                return False, "remediation plan widens CIDR to 0.0.0.0/0"
+
+        return True, "security group change within allowed scope"
+
+    # EBS/ElastiCache waste rules (multiple changes, all must match)
+    allowed_actions = rule["actions"]
+    required_prefixes = set(rule["addr_prefixes"])
+    found_prefixes: set[str] = set()
+
+    for change in changes:
+        addr = change.get("address", "")
+        if safe_id not in addr:
+            return False, f"resource address '{addr}' does not contain sanitized resource_id '{safe_id}'"
+        action_tuple = tuple(change["change"]["actions"])
+        if action_tuple not in allowed_actions:
+            return False, f"action set {action_tuple} not in allowed {allowed_actions}"
+
+        matched_prefix = None
+        for prefix in required_prefixes:
+            if addr.startswith(prefix):
+                matched_prefix = prefix
+                break
+        if matched_prefix is None:
+            return False, f"resource address '{addr}' does not match any allowed prefix {required_prefixes}"
+        found_prefixes.add(matched_prefix)
+
+    # Exhaustive check: all required prefixes must be present
+    if rule.get("exhaustive") and found_prefixes != required_prefixes:
+        missing = required_prefixes - found_prefixes
+        return False, f"missing required resource(s) with prefix(es): {missing}"
+
+    return True, f"all {len(changes)} changes within allowed scope"
 
 
 class Orchestrator:
@@ -869,13 +1011,18 @@ class Orchestrator:
                 attempts_remaining=result.get("attempts_remaining"),
             )
 
-        # Approval valid — execute remediation (log action)
-        self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
+        # Approval valid — resolve identity before any infrastructure mutation
+        resolved = self._resolve_actor_or_block(resource_id)
+        if resolved is None:
+            return ApprovalResult(success=False, resource_id=resource_id, error="Identity verification failed — cannot confirm approver")
+        actor, actor_verified = resolved
+
+        self._log_action("approval", resource_id, "success", f"Approved by {actor}", actor=actor, actor_verified=actor_verified)
 
         # Dry-run mode: skip terraform execution entirely (demo/dev convenience)
         if os.environ.get("JANITOR_DRY_RUN") == "1":
             self._log_action("execution", resource_id, "success", "Remediation executed (dry-run)")
-            self._run_post_remediation_hook(resource_id, "remediate", "success")
+            self._run_post_remediation_hook(resource_id, "remediate", "success", actor=actor, actor_verified=actor_verified)
             try:
                 self._savings_tracker.record_run(resources_remediated=[resource_id])
             except Exception:
@@ -997,7 +1144,7 @@ class Orchestrator:
         self._log_action("execution", resource_id, "success", "Remediation executed")
 
         # Run post-remediation hook
-        self._run_post_remediation_hook(resource_id, "remediate", "success")
+        self._run_post_remediation_hook(resource_id, "remediate", "success", actor=actor, actor_verified=actor_verified)
 
         # Record savings (non-blocking — errors are logged but don't fail approval)
         try:
@@ -1551,6 +1698,12 @@ class Orchestrator:
                 error=result.get("error", "Invalid confirm rollback command"),
             )
 
+        # Resolve identity — fail-closed before any infrastructure mutation
+        resolved = self._resolve_actor_or_block(resource_id)
+        if resolved is None:
+            return RollbackResult(success=False, resource_id=resource_id, error="Identity verification failed — cannot confirm approver for rollback")
+        actor, actor_verified = resolved
+
         # Validate rollback artifact still exists
         rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
         if not rollback_path.exists():
@@ -1628,10 +1781,10 @@ class Orchestrator:
 
         # Rollback applied successfully
         self._pending_rollbacks.discard(resource_id)
-        self._log_action("rollback", resource_id, "success", f"Rollback executed by {self.approver}")
+        self._log_action("rollback", resource_id, "success", f"Rollback executed by {actor}", actor=actor, actor_verified=actor_verified)
 
         # Run post-remediation hook for rollback (only after apply actually succeeded)
-        self._run_post_remediation_hook(resource_id, "rollback", "success")
+        self._run_post_remediation_hook(resource_id, "rollback", "success", actor=actor, actor_verified=actor_verified)
 
         return RollbackResult(success=True, resource_id=resource_id)
 
