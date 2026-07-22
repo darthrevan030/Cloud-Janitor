@@ -367,6 +367,7 @@ cp .env.example .env
 | `JANITOR_SKIP_HEALTH_CHECK` | — | No | Set to `1` to bypass the backend reachability preflight (proceeds with a warning) |
 | `JANITOR_RUN_RETENTION` | `20` | No | Number of run-scoped reasoning log files to keep before pruning oldest |
 | `JANITOR_FINDINGS_RETENTION` | `20` | No | Number of run-scoped findings store files to keep before pruning oldest |
+| `JANITOR_SLACK_WEBHOOK_URL` | — | No | Slack incoming webhook URL for severity-based alerting on scheduled scans |
 
 ### Timeouts
 
@@ -687,6 +688,8 @@ cloud-janitor/
 │       │   ├── timeouts.py          # Configurable subprocess/LLM timeouts
 │       │   ├── run_context.py       # Run ID generation, retention pruning
 │       │   ├── plan_diff.py         # Structured Terraform plan summary (preview)
+│       │   ├── scan_diff.py         # Severity escalation diff for alerting
+│       │   ├── notifiers/           # Pluggable notification channels (Slack, etc.)
 │       │   ├── logging_config.py    # Logging configuration
 │       │   ├── paths.py             # Centralized path constants
 │       │   └── error_telemetry.py   # Structured error recording

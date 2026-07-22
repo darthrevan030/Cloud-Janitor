@@ -6,26 +6,35 @@ Provides non-blocking, daemon-threaded scheduled scans with:
 - Overlap prevention (skips trigger if previous scan running)
 - RotatingFileHandler logging to scheduler.log
 - Immediate scan on first start if no scan has run today
+- Run history persistence (JSONL, crash-safe)
+- Severity-based alerting with circuit-breaker muting
 
 Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 14.5
 """
 
+import json
 import logging
 import os
 import sys
 import threading
 import uuid
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from cloud_janitor.core.notifiers import Notifier, build_notifiers_from_env
+from cloud_janitor.core.scan_diff import diff_high_severity_findings
 from cloud_janitor.orchestrator import Orchestrator
 
 DEFAULT_SCHEDULE = "0 6 * * *"
 JOB_ID = "janitor_scheduled_scan"
+HISTORY_RETENTION = 500
+MUTE_AFTER_CONSECUTIVE_FAILURES = 3
+MUTE_COOLDOWN = timedelta(hours=1)
 
 
 def _validate_cron(expression: str) -> bool:
@@ -40,13 +49,21 @@ def _validate_cron(expression: str) -> bool:
         return False
 
 
+@dataclass
+class _NotifierState:
+    """Per-notifier circuit breaker state."""
+
+    consecutive_failures: int = 0
+    muted_until: datetime | None = None
+
+
 class JanitorScheduler:
     """Cron-based automated scan scheduler using APScheduler BackgroundScheduler.
 
     The scheduler runs as a daemon thread that exits with the main process.
     """
 
-    def __init__(self, project_root: Path | None = None):
+    def __init__(self, project_root: Path | None = None, notifiers: list[Notifier] | None = None):
         self._project_root = project_root or Path(__file__).resolve().parent
         self._scheduler: BackgroundScheduler | None = None
         self._lock = threading.Lock()
@@ -55,6 +72,11 @@ class JanitorScheduler:
         self._last_run: datetime | None = None
         self._schedule: str = DEFAULT_SCHEDULE
         self._logger = self._setup_logger()
+        self._notifiers = notifiers if notifiers is not None else build_notifiers_from_env()
+        self._notifier_state: dict[int, _NotifierState] = {
+            id(n): _NotifierState() for n in self._notifiers
+        }
+        self._history_path = self._project_root / "output" / "logs" / "scheduler_history.jsonl"
 
     def _setup_logger(self) -> logging.Logger:
         """Configure rotating file handler for scheduler.log."""
@@ -194,6 +216,11 @@ class JanitorScheduler:
         status = "success"
         total_findings = 0
         total_waste = 0.0
+        # Pre-initialized outside the try block, alongside the existing
+        # total_findings/total_waste defaults, for exactly the same reason:
+        # this must be a safe value the except/finally path can read even
+        # if Orchestrator(...) construction or execute_audit() itself raises.
+        findings: list[dict] = []
 
         try:
             self._logger.info(f"Starting scheduled scan: {scan_id}")
@@ -201,9 +228,10 @@ class JanitorScheduler:
             orchestrator = Orchestrator(project_root=self._project_root)
             result = orchestrator.execute_audit()
 
-            total_findings = len(result.findings)
+            findings = result.findings  # Only reference `result` inside this try block
+            total_findings = len(findings)
             total_waste = sum(
-                f.get("cost_estimate_monthly", 0.0) for f in result.findings
+                f.get("cost_estimate_monthly", 0.0) for f in findings
             )
 
             if not result.success:
@@ -220,6 +248,9 @@ class JanitorScheduler:
         except Exception as e:
             status = "failed"
             self._logger.error(f"Scan {scan_id} raised exception: {type(e).__name__}: {e}")
+            # `findings` remains [] here — set outside the try block precisely
+            # for this path. History is still appended below with an empty
+            # snapshot rather than crashing with UnboundLocalError.
 
         finally:
             self._scan_running.clear()
@@ -229,6 +260,29 @@ class JanitorScheduler:
             self._last_run = end_time
             self._runs_completed += 1
 
+            # History/notification logic operates exclusively on the safe
+            # `findings` local, never on `result` (which may not exist).
+            previous_snapshot = self._load_last_snapshot()
+            current_snapshot = {f["resource_id"]: f.get("severity", "LOW") for f in findings}
+
+            record = {
+                "scan_id": scan_id,
+                "timestamp_start": start_time.isoformat(),
+                "timestamp_end": end_time.isoformat(),
+                "status": status,
+                "total_findings": total_findings,
+                "total_waste": total_waste,
+                "findings_snapshot": current_snapshot,
+            }
+            self._append_history(record)
+
+            # Severity diff and notification — only on successful scans
+            escalated = diff_high_severity_findings(previous_snapshot, findings) if status == "success" else []
+            if escalated:
+                summary = f"Cloud Janitor scan {scan_id}: {len(escalated)} new/escalated HIGH+ finding(s)"
+                for notifier in self._notifiers:
+                    self._notify_with_circuit_breaker(notifier, summary, escalated)
+
             # Log entry to scheduler.log
             self._logger.info(
                 f"Scan summary | scan_id={scan_id} | "
@@ -236,5 +290,75 @@ class JanitorScheduler:
                 f"total_findings={total_findings} | "
                 f"total_waste={total_waste:.2f} | "
                 f"status={status} | "
-                f"duration={( end_time - start_time).total_seconds():.1f}s"
+                f"duration={(end_time - start_time).total_seconds():.1f}s"
             )
+
+    def _notify_with_circuit_breaker(self, notifier: Notifier, summary: str, findings: list[dict]) -> None:
+        """Invoke notifier with circuit-breaker muting on sustained failures."""
+        state = self._notifier_state[id(notifier)]
+        now = datetime.now(timezone.utc)
+
+        if state.muted_until is not None and now < state.muted_until:
+            self._logger.warning(
+                "Notifier %s is muted until %s (sustained failures) — skipping",
+                type(notifier).__name__, state.muted_until.isoformat(),
+            )
+            return
+
+        try:
+            ok = notifier.notify(summary, findings)
+        except Exception as exc:
+            ok = False
+            self._logger.warning("Notifier %s raised: %s", type(notifier).__name__, exc)
+
+        if ok:
+            if state.consecutive_failures > 0 or state.muted_until is not None:
+                self._logger.info("Notifier %s recovered after prior failures — un-muting", type(notifier).__name__)
+            state.consecutive_failures = 0
+            state.muted_until = None
+        else:
+            state.consecutive_failures += 1
+            self._logger.warning(
+                "Notifier %s returned False (%d consecutive failure(s))",
+                type(notifier).__name__, state.consecutive_failures,
+            )
+            if state.consecutive_failures >= MUTE_AFTER_CONSECUTIVE_FAILURES:
+                state.muted_until = now + MUTE_COOLDOWN
+                self._logger.warning(
+                    "Notifier %s muted until %s after %d consecutive failures",
+                    type(notifier).__name__, state.muted_until.isoformat(), state.consecutive_failures,
+                )
+
+    def _load_last_snapshot(self) -> dict[str, str]:
+        """Load findings_snapshot from the last history record."""
+        if not self._history_path.exists():
+            return {}
+        try:
+            text = self._history_path.read_text(encoding="utf-8").strip()
+            if not text:
+                return {}
+            last_line = text.splitlines()[-1]
+            return json.loads(last_line)["findings_snapshot"] if last_line else {}
+        except (OSError, ValueError, json.JSONDecodeError, KeyError):
+            return {}
+
+    def _append_history(self, record: dict) -> None:
+        """Append a history record to the JSONL file."""
+        try:
+            self._history_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self._history_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record) + "\n")
+            self._prune_history()
+        except OSError as exc:
+            self._logger.warning("Failed to write scheduler history: %s", exc)
+
+    def _prune_history(self) -> None:
+        """Prune history file to HISTORY_RETENTION lines."""
+        try:
+            lines = self._history_path.read_text(encoding="utf-8").splitlines()
+            if len(lines) > HISTORY_RETENTION:
+                self._history_path.write_text(
+                    "\n".join(lines[-HISTORY_RETENTION:]) + "\n", encoding="utf-8"
+                )
+        except OSError:
+            pass

@@ -34,6 +34,7 @@ output/scan_history.json.tmp
 output/savings_ledger.json
 output/logs/scheduler.log
 output/logs/scheduler.log.*
+output/logs/scheduler_history.jsonl
 output/logs/agent_reasoning.log
 agent_reasoning.log
 output/rollbacks/*
