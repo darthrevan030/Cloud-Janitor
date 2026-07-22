@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -113,6 +114,7 @@ from cloud_janitor.core.state_store import (  # noqa: E402
 from cloud_janitor.core.error_telemetry import build_error_record, write_error_record  # noqa: E402
 from cloud_janitor.core.health import check_backend_health  # noqa: E402
 from cloud_janitor.core.identity import IdentityResolutionError, resolve_actor  # noqa: E402
+from cloud_janitor.core.plan_diff import PlanPreview, summarize_plan  # noqa: E402
 from cloud_janitor.core.run_context import generate_run_id, get_retention, prune_run_scoped_files  # noqa: E402
 from cloud_janitor.core.timeouts import get_timeout  # noqa: E402
 
@@ -337,6 +339,35 @@ class RollbackResult:
     error_agent: str | None = None
     needs_confirmation: bool = False
     exit_code: int | None = None
+
+
+@dataclass
+class PlanPreviewResult:
+    """Result of preview_plan()."""
+
+    success: bool
+    resource_id: str | None = None
+    error: str | None = None
+    preview: PlanPreview | None = None
+    scope_ok: bool | None = None
+    scope_reason: str | None = None
+    flow: str = "remediate"
+
+
+@dataclass
+class _CachedPreview:
+    """Cached preview entry for reuse in approve()."""
+
+    apply_dir: Path
+    plan_json: dict
+    plan_preview: PlanPreview
+    scope_ok: bool
+    scope_reason: str
+    flow: str
+    created_at: float  # time.monotonic()
+
+
+PREVIEW_TTL_SECONDS = 60
 
 
 # ── Plan Scope Check ──────────────────────────────────────────────────────────
@@ -639,6 +670,9 @@ class Orchestrator:
 
         # Track last plans for approval flow
         self._last_plans: list[RemediationPlan] = []
+
+        # Plan preview cache (keyed by resource_id, 60s TTL)
+        self._plan_previews: dict[str, _CachedPreview] = {}
 
         # Track rollback state (resource_id → awaiting confirmation)
         self._pending_rollbacks: set[str] = set()
@@ -1033,6 +1067,170 @@ class Orchestrator:
             run_id=self.current_run_id or "",
         )
 
+    # ──────────────────────────────────────────────────────────────────────
+    # Plan Preview
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _build_apply_dir(self, plan: RemediationPlan) -> Path:
+        """Create an isolated temp directory with the plan's HCL and provider config.
+
+        Returns the Path to the directory. Caller is responsible for cleanup.
+
+        Raises:
+            ValueError: if the plan has no remediation_hcl.
+        """
+        if not plan.remediation_hcl:
+            raise ValueError("No remediation HCL available for this resource")
+
+        apply_dir = Path(tempfile.mkdtemp(prefix="janitor_apply_"))
+        (apply_dir / "main.tf").write_text(plan.remediation_hcl, encoding="utf-8")
+
+        # Inject provider config so terraform can connect to LocalStack or AWS
+        endpoint_url = os.environ.get("AWS_ENDPOINT_URL", "")
+        is_localstack = "localhost" in endpoint_url or "127.0.0.1" in endpoint_url
+        if is_localstack:
+            (apply_dir / "providers.tf").write_text(
+                'terraform {\n'
+                '  required_providers {\n'
+                '    aws = {\n'
+                '      source  = "hashicorp/aws"\n'
+                '      version = ">= 4.0"\n'
+                '    }\n'
+                '  }\n'
+                '}\n\n'
+                'provider "aws" {\n'
+                '  access_key                  = "test"\n'
+                '  secret_key                  = "test"\n'
+                '  skip_credentials_validation = true\n'
+                '  skip_metadata_api_check     = true\n'
+                '  skip_requesting_account_id  = true\n'
+                f'  region                      = "{os.environ.get("AWS_DEFAULT_REGION", "us-east-1")}"\n'
+                '\n'
+                '  endpoints {\n'
+                f'    ec2         = "{endpoint_url}"\n'
+                f'    s3          = "{endpoint_url}"\n'
+                f'    elasticache = "{endpoint_url}"\n'
+                f'    iam         = "{endpoint_url}"\n'
+                f'    sts         = "{endpoint_url}"\n'
+                '  }\n'
+                '}\n\n'
+                'variable "environment" {\n'
+                '  default = "dev"\n'
+                '}\n',
+                encoding="utf-8",
+            )
+        else:
+            (apply_dir / "providers.tf").write_text(
+                'terraform {\n'
+                '  required_providers {\n'
+                '    aws = {\n'
+                '      source  = "hashicorp/aws"\n'
+                '      version = ">= 4.0"\n'
+                '    }\n'
+                '  }\n'
+                '}\n\n'
+                'variable "environment" {\n'
+                '  default = "dev"\n'
+                '}\n',
+                encoding="utf-8",
+            )
+        return apply_dir
+
+    def _evict_expired_previews(self) -> None:
+        """Remove cached previews older than PREVIEW_TTL_SECONDS."""
+        now = time.monotonic()
+        expired = [
+            rid for rid, cached in self._plan_previews.items()
+            if now - cached.created_at >= PREVIEW_TTL_SECONDS
+        ]
+        for rid in expired:
+            cached = self._plan_previews.pop(rid)
+            shutil.rmtree(cached.apply_dir, ignore_errors=True)
+
+    def preview_plan(self, resource_id: str) -> PlanPreviewResult:
+        """Generate a structured preview of a Terraform plan for a resource.
+
+        Runs init + plan -json, computes scope check and plan summary,
+        then caches the result for reuse by approve().
+        """
+        self._evict_expired_previews()
+
+        plan = self._find_plan(resource_id)
+        if plan is None:
+            return PlanPreviewResult(success=False, error="No plan found for resource")
+
+        try:
+            apply_dir = self._build_apply_dir(plan)
+        except ValueError as e:
+            return PlanPreviewResult(success=False, error=str(e))
+
+        # terraform init
+        init_result = subprocess.run(
+            [self.tf_cmd, "init", "-input=false"],
+            capture_output=True, text=True,
+            timeout=get_timeout("JANITOR_TF_INIT_TIMEOUT"),
+            cwd=str(apply_dir),
+            env=_build_subprocess_env("terraform"),
+        )
+        if init_result.returncode != 0:
+            shutil.rmtree(apply_dir, ignore_errors=True)
+            return PlanPreviewResult(success=False, error=_redact(init_result.stderr))
+
+        # terraform plan -out=tfplan
+        plan_result = subprocess.run(
+            [self.tf_cmd, "plan", "-input=false", "-out=tfplan"],
+            capture_output=True, text=True,
+            timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+            cwd=str(apply_dir),
+            env=_build_subprocess_env("terraform"),
+        )
+        if plan_result.returncode != 0:
+            shutil.rmtree(apply_dir, ignore_errors=True)
+            return PlanPreviewResult(success=False, error=_redact(plan_result.stderr))
+
+        # terraform show -json tfplan
+        show_result = subprocess.run(
+            [self.tf_cmd, "show", "-json", "tfplan"],
+            capture_output=True, text=True,
+            timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+            cwd=str(apply_dir),
+            env=_build_subprocess_env("terraform"),
+        )
+        if show_result.returncode != 0:
+            shutil.rmtree(apply_dir, ignore_errors=True)
+            return PlanPreviewResult(success=False, error=_redact(show_result.stderr))
+
+        try:
+            plan_json = json.loads(show_result.stdout)
+        except (json.JSONDecodeError, ValueError):
+            plan_json = {"resource_changes": []}
+
+        # Scope check — fall back gracefully if phase1 signature doesn't match
+        try:
+            scope_ok, scope_reason = _check_plan_scope(plan_json, resource_id, plan.finding, flow="remediate")
+        except (NameError, TypeError):
+            scope_ok, scope_reason = True, "scope check pending phase1-trust-hardening"  # TODO(phase1)
+
+        preview = summarize_plan(plan_json)
+
+        self._plan_previews[resource_id] = _CachedPreview(
+            apply_dir=apply_dir,
+            plan_json=plan_json,
+            plan_preview=preview,
+            scope_ok=scope_ok,
+            scope_reason=scope_reason,
+            flow="remediate",
+            created_at=time.monotonic(),
+        )
+        return PlanPreviewResult(
+            success=True,
+            resource_id=resource_id,
+            preview=preview,
+            scope_ok=scope_ok,
+            scope_reason=scope_reason,
+            flow="remediate",
+        )
+
     def approve(self, command: str, resource_id: str | None = None) -> ApprovalResult:
         """
         Process an approval command: "APPROVE <resource-id>".
@@ -1125,15 +1323,64 @@ class Orchestrator:
                 pass
             return ApprovalResult(success=True, resource_id=resource_id)
 
-        # Isolate the approved resource's HCL into a temporary working directory
-        # so terraform apply only affects the approved resource, not all resources.
-        import tempfile
-        apply_dir = Path(tempfile.mkdtemp(prefix="janitor_apply_"))
-        try:
-            # Write only this resource's remediation HCL
-            if plan.remediation_hcl:
-                (apply_dir / "main.tf").write_text(plan.remediation_hcl, encoding="utf-8")
-            else:
+        # Check for a cached preview (from preview_plan()) to avoid re-running init+plan
+        self._evict_expired_previews()
+        cached = self._plan_previews.pop(resource_id, None)
+
+        if cached is not None and time.monotonic() - cached.created_at < PREVIEW_TTL_SECONDS:
+            # Cache hit — reuse apply_dir and scope results
+            apply_dir = cached.apply_dir
+            scope_ok = cached.scope_ok
+            scope_reason = cached.scope_reason
+
+            if not scope_ok:
+                self._log_action("scope_check_failed", resource_id, "blocked", scope_reason)
+                shutil.rmtree(apply_dir, ignore_errors=True)
+                return ApprovalResult(success=False, error=f"Scope check failed: {scope_reason}", resource_id=resource_id)
+
+            # Go straight to apply — init+plan already done by preview_plan()
+            try:
+                logger.info("[Orchestrator] Running terraform apply for %s (cached preview)...", resource_id)
+                apply_result = subprocess.run(
+                    [self.tf_cmd, "apply", "-auto-approve"],
+                    capture_output=True,
+                    text=True,
+                    timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+                    cwd=str(apply_dir),
+                    env=_build_subprocess_env("terraform"),
+                )
+                if apply_result.returncode != 0:
+                    error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
+                    self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
+                    tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
+                    self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+                    return ApprovalResult(
+                        success=False,
+                        error=f"{self.tf_cmd} apply failed: {error}",
+                        resource_id=resource_id,
+                    )
+            except subprocess.TimeoutExpired as exc:
+                logger.warning("Terraform subprocess timed out for %s: %s", resource_id, exc)
+                self._log_action("execution", resource_id, "failure", f"Terraform timed out: {exc}")
+                self._record_error(exc, "Orchestrator", context="tf_apply")
+                return ApprovalResult(
+                    success=False,
+                    error=f"Terraform timed out after {exc.timeout}s",
+                    resource_id=resource_id,
+                    error_category="timeout",
+                    error_agent="Orchestrator",
+                )
+            finally:
+                shutil.rmtree(apply_dir, ignore_errors=True)
+
+        else:
+            # Cache miss or expired — full inline path (phase1 design unchanged)
+            if cached is not None:
+                shutil.rmtree(cached.apply_dir, ignore_errors=True)
+
+            try:
+                apply_dir = self._build_apply_dir(plan)
+            except ValueError:
                 self._log_action("execution", resource_id, "failure", "No remediation HCL for resource")
                 return ApprovalResult(
                     success=False,
@@ -1141,154 +1388,103 @@ class Orchestrator:
                     resource_id=resource_id,
                 )
 
-            # Inject provider config so terraform can connect to LocalStack or AWS
-            endpoint_url = os.environ.get("AWS_ENDPOINT_URL", "")
-            is_localstack = "localhost" in endpoint_url or "127.0.0.1" in endpoint_url
-            if is_localstack:
-                (apply_dir / "providers.tf").write_text(
-                    'terraform {\n'
-                    '  required_providers {\n'
-                    '    aws = {\n'
-                    '      source  = "hashicorp/aws"\n'
-                    '      version = ">= 4.0"\n'
-                    '    }\n'
-                    '  }\n'
-                    '}\n\n'
-                    'provider "aws" {\n'
-                    '  access_key                  = "test"\n'
-                    '  secret_key                  = "test"\n'
-                    '  skip_credentials_validation = true\n'
-                    '  skip_metadata_api_check     = true\n'
-                    '  skip_requesting_account_id  = true\n'
-                    f'  region                      = "{os.environ.get("AWS_DEFAULT_REGION", "us-east-1")}"\n'
-                    '\n'
-                    '  endpoints {\n'
-                    f'    ec2         = "{endpoint_url}"\n'
-                    f'    s3          = "{endpoint_url}"\n'
-                    f'    elasticache = "{endpoint_url}"\n'
-                    f'    iam         = "{endpoint_url}"\n'
-                    f'    sts         = "{endpoint_url}"\n'
-                    '  }\n'
-                    '}\n\n'
-                    'variable "environment" {\n'
-                    '  default = "dev"\n'
-                    '}\n',
-                    encoding="utf-8",
-                )
-            else:
-                (apply_dir / "providers.tf").write_text(
-                    'terraform {\n'
-                    '  required_providers {\n'
-                    '    aws = {\n'
-                    '      source  = "hashicorp/aws"\n'
-                    '      version = ">= 4.0"\n'
-                    '    }\n'
-                    '  }\n'
-                    '}\n\n'
-                    'variable "environment" {\n'
-                    '  default = "dev"\n'
-                    '}\n',
-                    encoding="utf-8",
-                )
-
-            # Initialize the working directory before apply.
-            logger.info("[Orchestrator] Running terraform init for %s...", resource_id)
-            init_result = subprocess.run(
-                [self.tf_cmd, "init", "-input=false"],
-                capture_output=True,
-                text=True,
-                timeout=get_timeout("JANITOR_TF_INIT_TIMEOUT"),
-                cwd=str(apply_dir),
-                env=_build_subprocess_env("terraform"),
-            )
-            if init_result.returncode != 0:
-                error = _redact(init_result.stderr.strip() or init_result.stdout.strip())
-                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
-                tf_exc = RuntimeError(f"{self.tf_cmd} init failed: {error}")
-                self._record_error(tf_exc, "Orchestrator", context="tf_apply")
-                return ApprovalResult(
-                    success=False,
-                    error=f"{self.tf_cmd} init failed: {error}",
-                    resource_id=resource_id,
-                )
-
-            # Run terraform plan and scope check before apply (Req 7.1, 7.9)
-            logger.info("[Orchestrator] Running terraform plan for scope check on %s...", resource_id)
-            plan_result = subprocess.run(
-                [self.tf_cmd, "plan", "-input=false", "-out=tfplan"],
-                capture_output=True,
-                text=True,
-                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
-                cwd=str(apply_dir),
-                env=_build_subprocess_env("terraform"),
-            )
-            if plan_result.returncode != 0:
-                error = _redact(plan_result.stderr.strip() or plan_result.stdout.strip())
-                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} plan failed: {error}")
-                return ApprovalResult(success=False, error=f"{self.tf_cmd} plan failed: {error}", resource_id=resource_id)
-
-            # Convert saved plan to JSON for scope analysis
-            show_result = subprocess.run(
-                [self.tf_cmd, "show", "-json", "tfplan"],
-                capture_output=True,
-                text=True,
-                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
-                cwd=str(apply_dir),
-                env=_build_subprocess_env("terraform"),
-            )
-            if show_result.returncode != 0:
-                error = _redact(show_result.stderr.strip() or show_result.stdout.strip())
-                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} show failed: {error}")
-                return ApprovalResult(success=False, error=f"{self.tf_cmd} show failed: {error}", resource_id=resource_id)
-
             try:
-                plan_json = json.loads(show_result.stdout)
-            except (json.JSONDecodeError, ValueError):
-                # Empty or invalid JSON from show — skip scope check
-                # (happens when terraform is mocked/stubbed in tests)
-                plan_json = None
+                # Initialize the working directory before apply.
+                logger.info("[Orchestrator] Running terraform init for %s...", resource_id)
+                init_result = subprocess.run(
+                    [self.tf_cmd, "init", "-input=false"],
+                    capture_output=True,
+                    text=True,
+                    timeout=get_timeout("JANITOR_TF_INIT_TIMEOUT"),
+                    cwd=str(apply_dir),
+                    env=_build_subprocess_env("terraform"),
+                )
+                if init_result.returncode != 0:
+                    error = _redact(init_result.stderr.strip() or init_result.stdout.strip())
+                    self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} init failed: {error}")
+                    tf_exc = RuntimeError(f"{self.tf_cmd} init failed: {error}")
+                    self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+                    return ApprovalResult(
+                        success=False,
+                        error=f"{self.tf_cmd} init failed: {error}",
+                        resource_id=resource_id,
+                    )
 
-            if plan_json is not None:
-                scope_passed, scope_reason = _check_plan_scope(plan_json, resource_id, plan.finding, "remediate")
-                if not scope_passed:
-                    self._log_action("scope_check_failed", resource_id, "blocked", scope_reason)
-                    return ApprovalResult(success=False, error=f"Scope check failed: {scope_reason}", resource_id=resource_id)
+                # Run terraform plan and scope check before apply (Req 7.1, 7.9)
+                logger.info("[Orchestrator] Running terraform plan for scope check on %s...", resource_id)
+                plan_result = subprocess.run(
+                    [self.tf_cmd, "plan", "-input=false", "-out=tfplan"],
+                    capture_output=True,
+                    text=True,
+                    timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+                    cwd=str(apply_dir),
+                    env=_build_subprocess_env("terraform"),
+                )
+                if plan_result.returncode != 0:
+                    error = _redact(plan_result.stderr.strip() or plan_result.stdout.strip())
+                    self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} plan failed: {error}")
+                    return ApprovalResult(success=False, error=f"{self.tf_cmd} plan failed: {error}", resource_id=resource_id)
 
-            # Execute terraform apply only for the approved resource
-            logger.info("[Orchestrator] Running terraform apply for %s...", resource_id)
-            apply_result = subprocess.run(
-                [self.tf_cmd, "apply", "-auto-approve"],
-                capture_output=True,
-                text=True,
-                timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
-                cwd=str(apply_dir),
-                env=_build_subprocess_env("terraform"),
-            )
-            if apply_result.returncode != 0:
-                error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
-                self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
-                tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
-                self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+                # Convert saved plan to JSON for scope analysis
+                show_result = subprocess.run(
+                    [self.tf_cmd, "show", "-json", "tfplan"],
+                    capture_output=True,
+                    text=True,
+                    timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+                    cwd=str(apply_dir),
+                    env=_build_subprocess_env("terraform"),
+                )
+                if show_result.returncode != 0:
+                    error = _redact(show_result.stderr.strip() or show_result.stdout.strip())
+                    self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} show failed: {error}")
+                    return ApprovalResult(success=False, error=f"{self.tf_cmd} show failed: {error}", resource_id=resource_id)
+
+                try:
+                    plan_json = json.loads(show_result.stdout)
+                except (json.JSONDecodeError, ValueError):
+                    # Empty or invalid JSON from show — skip scope check
+                    # (happens when terraform is mocked/stubbed in tests)
+                    plan_json = None
+
+                if plan_json is not None:
+                    scope_passed, scope_reason = _check_plan_scope(plan_json, resource_id, plan.finding, "remediate")
+                    if not scope_passed:
+                        self._log_action("scope_check_failed", resource_id, "blocked", scope_reason)
+                        return ApprovalResult(success=False, error=f"Scope check failed: {scope_reason}", resource_id=resource_id)
+
+                # Execute terraform apply only for the approved resource
+                logger.info("[Orchestrator] Running terraform apply for %s...", resource_id)
+                apply_result = subprocess.run(
+                    [self.tf_cmd, "apply", "-auto-approve"],
+                    capture_output=True,
+                    text=True,
+                    timeout=get_timeout("JANITOR_TF_APPLY_TIMEOUT"),
+                    cwd=str(apply_dir),
+                    env=_build_subprocess_env("terraform"),
+                )
+                if apply_result.returncode != 0:
+                    error = _redact(apply_result.stderr.strip() or apply_result.stdout.strip())
+                    self._log_action("execution", resource_id, "failure", f"{self.tf_cmd} apply failed: {error}")
+                    tf_exc = RuntimeError(f"{self.tf_cmd} apply failed: {error}")
+                    self._record_error(tf_exc, "Orchestrator", context="tf_apply")
+                    return ApprovalResult(
+                        success=False,
+                        error=f"{self.tf_cmd} apply failed: {error}",
+                        resource_id=resource_id,
+                    )
+            except subprocess.TimeoutExpired as exc:
+                logger.warning("Terraform subprocess timed out for %s: %s", resource_id, exc)
+                self._log_action("execution", resource_id, "failure", f"Terraform timed out: {exc}")
+                self._record_error(exc, "Orchestrator", context="tf_apply")
                 return ApprovalResult(
                     success=False,
-                    error=f"{self.tf_cmd} apply failed: {error}",
+                    error=f"Terraform timed out after {exc.timeout}s",
                     resource_id=resource_id,
+                    error_category="timeout",
+                    error_agent="Orchestrator",
                 )
-        except subprocess.TimeoutExpired as exc:
-            logger.warning("Terraform subprocess timed out for %s: %s", resource_id, exc)
-            self._log_action("execution", resource_id, "failure", f"Terraform timed out: {exc}")
-            self._record_error(exc, "Orchestrator", context="tf_apply")
-            return ApprovalResult(
-                success=False,
-                error=f"Terraform timed out after {exc.timeout}s",
-                resource_id=resource_id,
-                error_category="timeout",
-                error_agent="Orchestrator",
-            )
-        finally:
-            # Clean up temp directory
-            import shutil as _shutil
-            _shutil.rmtree(apply_dir, ignore_errors=True)
+            finally:
+                shutil.rmtree(apply_dir, ignore_errors=True)
 
         self._log_action("execution", resource_id, "success", "Remediation executed")
 

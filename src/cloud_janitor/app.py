@@ -535,6 +535,8 @@ if "approval_history" not in st.session_state:
     st.session_state.approval_history = []
 if "pending_rollback" not in st.session_state:
     st.session_state.pending_rollback = None
+if "previewed_resources" not in st.session_state:
+    st.session_state.previewed_resources = set()
 if "total_savings" not in st.session_state:
     st.session_state.total_savings = 0.0
 if "last_saving_delta" not in st.session_state:
@@ -1129,6 +1131,42 @@ if audit_result is not None and audit_result.plans:
                     st.rerun()
 
         else:
+            # Preview Plan button — gates Approve
+            col_preview, col_spacer = st.columns([1, 1])
+            with col_preview:
+                if st.button("Preview Plan", key="btn_preview_plan", use_container_width=True):
+                    orch = st.session_state.orchestrator
+                    preview_result = orch.preview_plan(selected_resource)
+                    if preview_result.success:
+                        st.session_state.previewed_resources.add(selected_resource)
+                        st.session_state[f"preview_{selected_resource}"] = preview_result
+                    else:
+                        st.session_state[f"preview_{selected_resource}"] = preview_result
+                    st.rerun()
+
+            # Render PlanPreview tables if available
+            preview_key = f"preview_{selected_resource}"
+            if preview_key in st.session_state and st.session_state[preview_key] is not None:
+                prev = st.session_state[preview_key]
+                if prev.success and prev.preview is not None:
+                    p = prev.preview
+                    if not prev.scope_ok:
+                        st.warning(f"⚠ Scope check failed: {prev.scope_reason}")
+                    if p.creates:
+                        with st.expander(f"Creates ({len(p.creates)})", expanded=True):
+                            st.table([{"Address": c.address, "Type": c.resource_type, "Actions": ", ".join(c.actions)} for c in p.creates])
+                    if p.updates:
+                        with st.expander(f"Updates ({len(p.updates)})", expanded=True):
+                            st.table([{"Address": c.address, "Type": c.resource_type, "Changed Keys": ", ".join(c.changed_keys)} for c in p.updates])
+                    if p.deletes:
+                        with st.expander(f"Deletes ({len(p.deletes)})", expanded=True):
+                            st.table([{"Address": c.address, "Type": c.resource_type, "Actions": ", ".join(c.actions)} for c in p.deletes])
+                    if p.replacements:
+                        with st.expander(f"Replacements ({len(p.replacements)})", expanded=True):
+                            st.table([{"Address": c.address, "Type": c.resource_type, "Changed Keys": ", ".join(c.changed_keys)} for c in p.replacements])
+                elif not prev.success:
+                    st.error(f"Preview failed: {prev.error}")
+
             approval_input = st.text_input(
                 "Command", key="approval_input",
                 placeholder=f"APPROVE {selected_resource}",
@@ -1136,7 +1174,8 @@ if audit_result is not None and audit_result.plans:
             )
             col_approve, col_rollback = st.columns([1, 1])
             with col_approve:
-                if st.button("Approve", key="btn_approve", type="primary", use_container_width=True):
+                approve_disabled = selected_resource not in st.session_state.previewed_resources
+                if st.button("Approve", key="btn_approve", type="primary", use_container_width=True, disabled=approve_disabled):
                     orch = st.session_state.orchestrator
                     result = orch.approve(approval_input, resource_id=selected_resource)
                     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")

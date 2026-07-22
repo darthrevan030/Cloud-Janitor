@@ -686,6 +686,7 @@ cloud-janitor/
 │       │   ├── health.py            # Backend reachability preflight
 │       │   ├── timeouts.py          # Configurable subprocess/LLM timeouts
 │       │   ├── run_context.py       # Run ID generation, retention pruning
+│       │   ├── plan_diff.py         # Structured Terraform plan summary (preview)
 │       │   ├── logging_config.py    # Logging configuration
 │       │   ├── paths.py             # Centralized path constants
 │       │   └── error_telemetry.py   # Structured error recording
