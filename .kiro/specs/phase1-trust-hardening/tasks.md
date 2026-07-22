@@ -51,7 +51,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
 - [x] 2. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. Wire fail-closed identity into the Orchestrator
+- [x] 3. Wire fail-closed identity into the Orchestrator
   - [x] 3.1 Add explicit-approver tracking and `_resolve_actor_or_block()` to `Orchestrator`
     - Change the constructor signature to `approver: str | None = None`; store `self._explicit_approver = approver` and track explicit-vs-default by `is not None`, NOT by comparing the value against the literal string `"system"` (that sentinel is ambiguous: a caller who explicitly passes `approver="system"` is indistinguishable from a caller who omitted it)
     - Implement `_resolve_actor_or_block(resource_id) -> tuple[str, bool] | None` returning `(actor, actor_verified)`, calling `resolve_actor()` unless `self._explicit_approver is not None`, logging `"identity_verification_failed"` and returning `None` on `IdentityResolutionError`
@@ -74,7 +74,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - **Validates: Requirements 1.3, 1.4**
     - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6, 1.7, 1.8_
 
-- [ ] 4. Implement savings ledger reversal
+- [x] 4. Implement savings ledger reversal
   - [x] 4.1 Add `SavingsTracker.record_rollback()`
     - Track "already reversed" state keyed by the (`resource_id`, `run_id`) PAIR — not bare `resource_id` — by recording a `rolled_back_run_id` field on each rollback ledger entry
     - Find the earliest matching non-reversed `record_run()` entry containing `resource_id` whose (`resource_id`, `run_id`) pair is not already in the reversed set; no-op + return `False` if none found
@@ -99,7 +99,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Exception during `record_rollback()` (mocked corrupted ledger) does not propagate and does not flip `RollbackResult.success`
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 5. Implement explicit LLM privacy attestation
+- [x] 5. Implement explicit LLM privacy attestation
   - [x] 5.1 Add `JANITOR_LLM_RETENTION_POLICY` check to `core/llm_client.py`
     - Read env var, default `"unknown"`
     - In `get_client()`, strict mode raises `RuntimeError` unless value is exactly `"none"`, before the existing free-router check
@@ -118,10 +118,10 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - `get_privacy_posture()` returns all 4 required keys with correct values
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 6. Checkpoint — Ensure all tests pass
+- [x] 6. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Wire redaction and injection hardening into LLM-calling agents
+- [x] 7. Wire redaction and injection hardening into LLM-calling agents
   - [x] 7.1 Wire `redact()`/`rehydrate()` and delimited prompt template into `explainer.py`
     - Wrap finding + HCL data through `redact()` before prompt construction; wrap in `<untrusted_finding_data>`/`<untrusted_hcl>` delimiters; `rehydrate()` the response
     - _Requirements: 4.4, 4.5, 5.1, 5.2_
@@ -134,14 +134,14 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Same pattern applied at each agent's prompt-construction site
     - _Requirements: 4.4, 4.5, 5.1, 5.2_
 
-  - [ ] 7.4 Write unit tests for per-agent redaction + delimiting (one test file per agent, or a shared parametrized module)
+  - [x] 7.4 Write unit tests for per-agent redaction + delimiting (one test file per agent, or a shared parametrized module)
     - For each of the 6 agents: assert the constructed prompt contains no raw resource ID/ARN/account ID and does contain the `<untrusted_...>` delimiter wrapper
     - Injection test: place a prompt-injection-style payload in a finding's tag value, assert it appears only inside the delimited block in the constructed prompt
     - Rehydration test: mocked LLM response containing a placeholder token is correctly rehydrated to the original value before being returned by the agent
     - Negative rehydration test: mocked LLM response that never echoes a placeholder token verbatim (e.g. paraphrases or drops it — common with small/cheap models) → `rehydrate()` no-ops for that token without raising, the rest of the response is returned unchanged, and (if a debug log call was added per the design's observability note) a debug log line is emitted for the unmatched placeholder
     - _Requirements: 4.4, 4.5, 5.1, 5.2_
 
-- [ ] 8. Implement tfsec policy check in the pre-remediation hook
+- [x] 8. Implement tfsec policy check in the pre-remediation hook
   - [x] 8.1 Add tfsec step to `hooks/pre-remediation.sh`'s `validate_hcl()`
     - Run after existing validate/fmt check; fail on HIGH/CRITICAL when tfsec present
     - Fail-open with warning when absent and `JANITOR_REQUIRE_TFSEC` unset/`0`; fail-closed when `JANITOR_REQUIRE_TFSEC=1`
@@ -153,7 +153,7 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - No `tfsec` on PATH, `JANITOR_REQUIRE_TFSEC=1` → hook blocks
     - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 9. Implement Terraform plan scope check
+- [x] 9. Implement Terraform plan scope check
   - [x] 9.1 Implement `_check_plan_scope()` in `orchestrator/orchestrator.py`
     - Filter `plan_json["resource_changes"]` to `mode == "managed"` and non-`no-op` actions
     - Add a `flow: Literal["remediate", "rollback"]` parameter and key `_SCOPE_ALLOWLIST` on `(resource_type, category, flow)`, NOT `(resource_type, category)` alone — the remediation and rollback templates for the same finding type generate structurally different HCL (`remediation_architect.py`'s `_remediation_*` vs `_rollback_*` methods)
@@ -167,11 +167,11 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - On scope-check failure, log `"scope_check_failed"` and return a failure result without calling apply
     - _Requirements: 7.1, 7.9_
 
-  - [ ] 9.3 Write property test for scope check
+  - [x] 9.3 Write property test for scope check
     - **Property 7: Scope Check Allowlist Partition (Both Flows)**
     - **Validates: Requirements 7.3, 7.4, 7.5, 7.6, 7.7, 7.8**
 
-  - [ ] 9.4 Write unit tests for scope check (`tests/test_scope_check.py`)
+  - [x] 9.4 Write unit tests for scope check (`tests/test_scope_check.py`)
     - One in-scope-plan test per (resource_type, category, flow) combination — both `"remediate"` and `"rollback"` where a rollback template exists — built from `remediation_architect.py`'s real templates: `(ebs, waste, remediate)`, `(ebs, waste, rollback)`, `(elasticache, waste, remediate)`, `(elasticache, waste, rollback)`, `(ebs, security, remediate)`, `(ebs, security, rollback)`, `(elasticache, security, remediate)`, `(elasticache, security, rollback)`, `(security_group, security, remediate)`, `(security_group, security, rollback)`
     - Out-of-scope address rejection (a plan touching a resource address unrelated to the approved resource), tested for at least one remediate and one rollback case
     - Security-group widen-to-`0.0.0.0/0` REJECTION in the `"remediate"` flow
@@ -182,14 +182,14 @@ This plan implements 7 requirements derived from 5 backlog issues (SEC-3, BUG-1,
     - Data-source-only plan (e.g. `data.aws_vpc.current` read with no managed changes) does not count toward the change threshold
     - _Requirements: 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.11_
 
-  - [ ] 9.5 Document the local-exec limitation
+  - [x] 9.5 Document the local-exec limitation
     - Add the known-limitation note (Requirement 7.10) as a code comment on `_check_plan_scope()` and in this phase's design doc (already present in `design.md`), and explicitly state that the allowlist covers both the remediation and rollback flows for every (resource_type, category) combination that has a live template
     - _Requirements: 7.10_
 
-- [ ] 10. Final checkpoint — Ensure all tests pass
+- [x] 10. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Cross-reference follow-up (execute once this phase ships): update `docs/deployment.md`'s Phase-1 wording
+- [x] 11. Cross-reference follow-up (execute once this phase ships): update `docs/deployment.md`'s Phase-1 wording
   - `docs/deployment.md` (written by `phase4-aws-lockdown`'s DOC-1 requirement) describes this phase's SEC-1 (`JANITOR_LLM_RETENTION_POLICY`/privacy posture) and SEC-3 (fail-closed identity) as "designed, pending implementation" until this phase actually ships in code. Once tasks 1-10 above are complete and merged, update `docs/deployment.md`'s Identity & Auth and BYO-Endpoint & Privacy Posture sections to describe actual shipped behavior instead
   - This task exists because nothing else in either phase's plan revisits that wording once this phase merges — left untracked, the guide would go stale the day this phase ships, unflagged. Tracked as Follow-Up task F.2 in `.kiro/specs/phase4-aws-lockdown/tasks.md`; this entry is the matching cross-reference from this phase's side, so the dependency is visible from both directions
   - _Requirements: phase4-aws-lockdown Requirement 5.7_
