@@ -12,7 +12,6 @@ contains invalid JSON, get() returns None (not raises).
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 from hypothesis import given, settings

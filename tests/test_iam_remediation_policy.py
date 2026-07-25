@@ -215,7 +215,7 @@ class TestRemediationPolicyTemplateCoverage:
 
         assert not missing, (
             "Actions required by the template→action table but missing from "
-            f"iam/janitor-remediation-policy.json:\n"
+            "iam/janitor-remediation-policy.json:\n"
             + "\n".join(f"  - {a}" for a in sorted(missing))
         )
 

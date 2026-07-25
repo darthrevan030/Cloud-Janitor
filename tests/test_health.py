@@ -18,10 +18,8 @@ from __future__ import annotations
 import json
 import os
 import urllib.error
-from io import BytesIO
 from unittest.mock import MagicMock, patch
 
-import pytest
 from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError
 
 from cloud_janitor.core.health import (
@@ -242,7 +240,7 @@ class TestCheckStsSuccess:
 class TestCheckStsCredentialFailures:
     """Mocked STS raising ClientError/NoCredentialsError → mode='invalid_credentials'."""
 
-    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""}, clear=True)
+    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
     @patch("cloud_janitor.mcp_server.backends.aws_provider._make_client")
     def test_client_error_access_denied(self, mock_make_client):
         mock_client = MagicMock()
@@ -259,7 +257,7 @@ class TestCheckStsCredentialFailures:
         assert result.environment == "real_aws"
         assert "AccessDenied" in result.detail or "Access denied" in result.detail
 
-    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""}, clear=True)
+    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
     @patch("cloud_janitor.mcp_server.backends.aws_provider._make_client")
     def test_no_credentials_error(self, mock_make_client):
         mock_client = MagicMock()
@@ -272,7 +270,7 @@ class TestCheckStsCredentialFailures:
         assert result.mode == "invalid_credentials"
         assert result.environment == "real_aws"
 
-    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""}, clear=True)
+    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
     @patch("cloud_janitor.mcp_server.backends.aws_provider._make_client")
     def test_expired_token_client_error(self, mock_make_client):
         mock_client = MagicMock()
@@ -417,6 +415,6 @@ class TestCheckBackendHealthDispatch:
     def test_aws_backend_with_localhost_dispatches_to_localstack(self, mock_check_ls):
         mock_check_ls.return_value = HealthStatus(True, "sandbox_localstack", "healthy", "ok", "url")
 
-        result = check_backend_health()
+        check_backend_health()
 
         mock_check_ls.assert_called_once()

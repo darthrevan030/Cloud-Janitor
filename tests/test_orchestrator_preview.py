@@ -9,14 +9,13 @@ Covers:
 
 import json
 import time
-from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from cloud_janitor.agents.remediation_architect import RemediationPlan
 from cloud_janitor.core.health import HealthStatus
-from cloud_janitor.orchestrator import Orchestrator, PlanPreviewResult, PREVIEW_TTL_SECONDS
+from cloud_janitor.orchestrator import Orchestrator, PREVIEW_TTL_SECONDS
 from cloud_janitor.orchestrator.orchestrator import _CachedPreview
 
 

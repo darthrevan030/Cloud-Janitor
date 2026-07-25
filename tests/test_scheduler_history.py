@@ -5,7 +5,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 from scheduler import JanitorScheduler, HISTORY_RETENTION
 

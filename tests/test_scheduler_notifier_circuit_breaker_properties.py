@@ -1,6 +1,5 @@
 """Property test: Circuit Breaker Mute Threshold (Property 3)."""
 
-import json
 import logging
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -8,13 +7,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
-from hypothesis import given, settings, assume, strategies as st
+from hypothesis import given, settings, strategies as st
 
 from scheduler import (
     JanitorScheduler,
     MUTE_AFTER_CONSECUTIVE_FAILURES,
-    MUTE_COOLDOWN,
-    _NotifierState,
 )
 
 _counter = 0

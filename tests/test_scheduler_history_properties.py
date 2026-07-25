@@ -4,7 +4,6 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
 from hypothesis import given, settings, strategies as st

@@ -14,9 +14,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 
 from cloud_janitor.agents.remediation_architect import RemediationPlan
 from cloud_janitor.orchestrator import Orchestrator

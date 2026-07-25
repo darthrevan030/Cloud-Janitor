@@ -13,11 +13,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 from cloud_janitor.core.paths import (
     resolve_latest_findings_store,
-    update_findings_store_pointer,
 )
 from cloud_janitor.core.run_context import prune_run_scoped_files, get_retention
 

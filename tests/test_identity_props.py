@@ -18,7 +18,7 @@ from botocore.exceptions import (
     NoCredentialsError,
     NoRegionError,
 )
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cloud_janitor.core.identity import (

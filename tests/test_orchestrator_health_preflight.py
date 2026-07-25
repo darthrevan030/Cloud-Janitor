@@ -6,13 +6,12 @@ Validates that:
 - Reachable backend → pipeline proceeds unchanged
 """
 
-import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from cloud_janitor.core.health import HealthStatus
-from cloud_janitor.orchestrator import AuditResult, Orchestrator
+from cloud_janitor.orchestrator import Orchestrator
 
 
 @pytest.fixture
@@ -109,7 +108,7 @@ class TestUnreachableBackendWithOverride:
         )
         with patch("cloud_janitor.orchestrator.orchestrator.check_backend_health", return_value=unhealthy):
             orch = _make_orchestrator(tmp_project)
-            result = orch.execute_audit()
+            orch.execute_audit()
 
         # scan() WAS called — pipeline proceeded past health check
         orch._finops.scan.assert_called_once()
@@ -146,7 +145,7 @@ class TestReachableBackend:
         )
         with patch("cloud_janitor.orchestrator.orchestrator.check_backend_health", return_value=healthy):
             orch = _make_orchestrator(tmp_project)
-            result = orch.execute_audit()
+            orch.execute_audit()
 
         # scan() was called — pipeline proceeded
         orch._finops.scan.assert_called_once()

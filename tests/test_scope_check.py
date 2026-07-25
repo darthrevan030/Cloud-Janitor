@@ -13,7 +13,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import pytest
 
 from cloud_janitor.orchestrator.orchestrator import _check_plan_scope, _sanitize_id
 

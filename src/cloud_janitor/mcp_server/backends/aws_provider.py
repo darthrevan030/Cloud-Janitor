@@ -15,7 +15,10 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from botocore.config import Config as BotocoreConfig
 
 from cloud_janitor.mcp_server.backends import CloudProvider
 
@@ -23,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def _make_client(
-    service: str, region: Optional[str], config: "botocore.config.Config | None" = None
+    service: str, region: Optional[str], config: "BotocoreConfig | None" = None
 ):
     """Return a boto3 client, wiring in AWS_ENDPOINT_URL when present.
 

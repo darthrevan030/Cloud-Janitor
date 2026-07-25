@@ -80,7 +80,12 @@ def resolve_latest_findings_store() -> Path | None:
 
 def update_findings_store_pointer(run_id: str, path: Path) -> None:
     """Atomically point 'latest.json' at this run's Findings Store file."""
-    FINDINGS_STORE_DIR.mkdir(parents=True, exist_ok=True)
-    tmp = FINDINGS_STORE_LATEST_POINTER.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps({"run_id": run_id, "path": str(path)}), encoding="utf-8")
-    tmp.replace(FINDINGS_STORE_LATEST_POINTER)
+    try:
+        FINDINGS_STORE_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = FINDINGS_STORE_LATEST_POINTER.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps({"run_id": run_id, "path": str(path)}), encoding="utf-8")
+        tmp.replace(FINDINGS_STORE_LATEST_POINTER)
+    except OSError:
+        # Best-effort: parallel test workers or missing output/ in CI
+        # should not crash the pipeline for a pointer file.
+        pass

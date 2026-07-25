@@ -8,9 +8,8 @@ Tests cover:
 - changed_keys correct for updates/replacements
 """
 
-import pytest
 
-from cloud_janitor.core.plan_diff import PlanChange, PlanPreview, summarize_plan
+from cloud_janitor.core.plan_diff import PlanPreview, summarize_plan
 
 
 def _make_change(

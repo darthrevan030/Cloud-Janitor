@@ -15,6 +15,11 @@ import threading
 import time
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cloud_janitor.agents.remediation_architect import RemediationPlan
+    from cloud_janitor.orchestrator.orchestrator import AuditEntry
 
 logger = logging.getLogger(__name__)
 

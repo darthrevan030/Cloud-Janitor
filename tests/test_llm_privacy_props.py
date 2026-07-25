@@ -8,7 +8,7 @@ RuntimeError for ANY retention policy value that is not exactly "none".
 from unittest.mock import patch
 
 import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cloud_janitor.core import llm_client

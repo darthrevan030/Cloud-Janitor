@@ -5,10 +5,10 @@ one bucket of PlanPreview. Entries with mode!="managed", actions==["no-op"],
 or unrecognized action tuples appear in zero buckets.
 """
 
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from cloud_janitor.core.plan_diff import PlanPreview, summarize_plan, _ACTION_BUCKET
+from cloud_janitor.core.plan_diff import summarize_plan, _ACTION_BUCKET
 
 
 # Strategy: generate a list of resource_changes entries

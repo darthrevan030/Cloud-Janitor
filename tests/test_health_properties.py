@@ -14,7 +14,6 @@ Validates: Requirements 1.2, 1.4, 1.5, 1.7
 from __future__ import annotations
 
 import json
-import os
 from unittest.mock import MagicMock, patch
 
 from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError
@@ -22,7 +21,6 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cloud_janitor.core.health import (
-    HealthMode,
     HealthStatus,
     _check_localstack,
     _check_sts,

@@ -6,13 +6,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 from scheduler import (
     JanitorScheduler,
-    MUTE_AFTER_CONSECUTIVE_FAILURES,
-    MUTE_COOLDOWN,
-    _NotifierState,
 )
 
 

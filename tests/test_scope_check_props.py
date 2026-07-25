@@ -11,7 +11,7 @@ allowlist (wrong prefix, missing required prefix, wrong action set, wrong
 CIDR direction), it must return (False, ...).
 """
 
-from hypothesis import given, settings, HealthCheck, assume
+from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
 from cloud_janitor.orchestrator.orchestrator import (

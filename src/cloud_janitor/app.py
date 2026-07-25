@@ -23,7 +23,6 @@ from cloud_janitor.orchestrator import Orchestrator
 from cloud_janitor.core.logging_config import configure_logging
 from cloud_janitor.core.audit_query import query_audit, export_audit_csv, export_audit_json, UNSCOPED
 from cloud_janitor.core.paths import (
-    FINDINGS_STORE_PATH,
     REMEDIATIONS_DIR,
     ROLLBACKS_DIR,
     AUDIT_LOG_PATH,
@@ -939,7 +938,7 @@ if st.session_state.nl_query_result is not None:
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 # Backend readiness indicator (calls the same function the Orchestrator uses)
-from cloud_janitor.core.health import check_backend_health as _check_health
+from cloud_janitor.core.health import check_backend_health as _check_health  # noqa: E402
 
 _health = _check_health()
 if _health.reachable:

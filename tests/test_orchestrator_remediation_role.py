@@ -12,11 +12,8 @@ approve() and _handle_confirm_rollback(), ensuring:
 Validates: Requirements 2.2, 2.3, 2.4, 2.5, 2.6
 """
 
-import json
 import os
-import subprocess
-from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -486,7 +483,7 @@ class TestHookEnvUnaffected:
         orch.approve(f"APPROVE {RESOURCE_ID}")
 
         hook_calls = _hook_subprocess_calls(mock_run)
-        expected_hook_env = _build_subprocess_env("hook")
+        _build_subprocess_env("hook")
 
         for hc in hook_calls:
             env = hc.kwargs.get("env")

@@ -21,7 +21,6 @@ from unittest.mock import MagicMock
 from cloud_janitor.core.audit_query import (
     export_audit_csv,
     export_audit_json,
-    query_audit,
     UNSCOPED,
 )
 

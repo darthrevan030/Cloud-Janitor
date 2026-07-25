@@ -1,6 +1,5 @@
 """Unit tests for core/redaction.py — round-trip, field exclusion, nested structures."""
 
-import pytest
 
 from cloud_janitor.core.redaction import redact, rehydrate
 

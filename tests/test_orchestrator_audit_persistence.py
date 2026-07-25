@@ -17,9 +17,8 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
-from cloud_janitor.orchestrator import AuditEntry, Orchestrator
+from cloud_janitor.orchestrator import Orchestrator
 
 
 # ---------------------------------------------------------------------------

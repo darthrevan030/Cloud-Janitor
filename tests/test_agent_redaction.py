@@ -11,7 +11,6 @@ Requirements: 4.4, 4.5, 5.1, 5.2
 """
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest

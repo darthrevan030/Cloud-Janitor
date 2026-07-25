@@ -26,7 +26,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from cloud_janitor.agents.remediation_architect import DependencyReport, RemediationPlan
+from cloud_janitor.agents.remediation_architect import RemediationPlan
 from cloud_janitor.core.state_store import StateStore
 from cloud_janitor.orchestrator.orchestrator import AuditEntry
 
@@ -337,7 +337,7 @@ class TestWALConcurrentReaderWriterNonBlocking:
                             blocked=False,
                             block_reason="",
                             dependency_report=None,
-                            remediation_hcl=f"resource {{}}",
+                            remediation_hcl="resource {}",
                             rollback_hcl=None,
                         )
                         store.replace_plans([plan], run_id)

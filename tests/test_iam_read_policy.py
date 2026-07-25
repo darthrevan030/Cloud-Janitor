@@ -15,10 +15,8 @@ from __future__ import annotations
 
 import ast
 import json
-import re
 from pathlib import Path
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Paths (relative to project root)

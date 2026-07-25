@@ -1,7 +1,6 @@
 """Unit tests for core/notifiers — SlackWebhookNotifier and build_notifiers_from_env."""
 
 import urllib.error
-from io import BytesIO
 from unittest.mock import patch, MagicMock
 
 from cloud_janitor.core.notifiers import build_notifiers_from_env, SlackWebhookNotifier

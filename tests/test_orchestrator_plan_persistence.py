@@ -17,10 +17,9 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
-from cloud_janitor.agents.remediation_architect import DependencyReport, RemediationPlan
-from cloud_janitor.orchestrator import AuditResult, Orchestrator
+from cloud_janitor.agents.remediation_architect import RemediationPlan
+from cloud_janitor.orchestrator import Orchestrator
 
 
 # ---------------------------------------------------------------------------

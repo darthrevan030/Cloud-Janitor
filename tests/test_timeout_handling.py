@@ -6,7 +6,7 @@ the orchestrator returns a failure result without propagating the exception.
 """
 
 import subprocess
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import patch
 
 import pytest
 
@@ -195,7 +195,7 @@ class TestRollbackTimeoutInit:
         assert r1.needs_confirmation is True
 
         def _side_effect(*args, **kwargs):
-            cmd = args[0] if args else kwargs.get("args", [])
+            args[0] if args else kwargs.get("args", [])
             # Terraform init times out
             raise _timeout_expired(cmd="terraform init", timeout=120)
 

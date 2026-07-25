@@ -410,7 +410,7 @@ class TestRecordRollbackExceptionNonPropagation:
         without flipping the result.
         """
         import subprocess as sp
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
         from cloud_janitor.orchestrator import Orchestrator, RollbackResult
         from cloud_janitor.agents.remediation_architect import RemediationPlan
 
@@ -466,7 +466,7 @@ class TestRecordRollbackExceptionNonPropagation:
         """Various exception types raised by record_rollback are all swallowed."""
         import subprocess as sp
         from unittest.mock import patch
-        from cloud_janitor.orchestrator import Orchestrator, RollbackResult
+        from cloud_janitor.orchestrator import Orchestrator
         from cloud_janitor.agents.remediation_architect import RemediationPlan
 
         (tmp_path / "hooks").mkdir(parents=True, exist_ok=True)

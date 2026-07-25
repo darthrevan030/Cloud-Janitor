@@ -9,7 +9,6 @@ durable across process boundaries.
 
 from __future__ import annotations
 
-from pathlib import Path
 
 from hypothesis import given, settings
 from hypothesis import strategies as st

@@ -12,13 +12,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import patch
 
-import pytest
 
 from cloud_janitor.agents.remediation_architect import RemediationPlan
 from cloud_janitor.orchestrator import AuditEntry, Orchestrator
-from cloud_janitor.core.state_store import StateStore
 
 
 # ---------------------------------------------------------------------------
