@@ -91,16 +91,15 @@ def _setup_orchestrator_for_approval(project_dir: Path, resource_id: str) -> Orc
     """Create an Orchestrator with a plan so approve() can reach the savings tracker call."""
     orch = Orchestrator(project_root=project_dir, approver="test-user")
 
-    # Inject a remediation plan so approve() doesn't short-circuit at "no plan found"
-    orch._last_plans = [
-        RemediationPlan(
-            resource_id=resource_id,
-            finding={"resource_id": resource_id, "resource_type": "ebs"},
-            blocked=False,
-            remediation_hcl='resource "null_resource" "test" {}',
-            rollback_hcl='resource "null_resource" "rollback" {}',
-        ),
-    ]
+    # Inject a remediation plan into StateStore so _find_plan() succeeds
+    plan = RemediationPlan(
+        resource_id=resource_id,
+        finding={"resource_id": resource_id, "resource_type": "ebs"},
+        blocked=False,
+        remediation_hcl='resource "null_resource" "test" {}',
+        rollback_hcl='resource "null_resource" "rollback" {}',
+    )
+    orch._state_store.replace_plans([plan], "test-run")
 
     # Create rollback artifact so rollback flow doesn't interfere
     rollback_file = project_dir / "output" / "rollbacks" / f"{resource_id}.tf"
@@ -178,6 +177,9 @@ class TestProperty5SavingsExceptionSwallowing:
                 f"Expected resource_id='{resource_id}', got '{result.resource_id}'"
             )
 
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
+
     @given(
         resource_id=fs_safe_resource_ids,
         exc_cls=exception_class_strategy,
@@ -228,6 +230,9 @@ class TestProperty5SavingsExceptionSwallowing:
                 f"WARNING message should contain exception type '{exc_cls.__name__}', "
                 f"got: '{formatted_msg}'"
             )
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
 
     @given(
         resource_id=fs_safe_resource_ids,
@@ -287,6 +292,10 @@ class TestProperty5SavingsExceptionSwallowing:
                 f"attempts_remaining differs: ok={result_ok.attempts_remaining}, exc={result_exc.attempts_remaining}"
             )
 
+            # Close state stores to release SQLite file handles (Windows cleanup)
+            orch_ok._state_store.close()
+            orch_exc._state_store.close()
+
     @given(
         resource_id=fs_safe_resource_ids,
         exc_msg=exception_messages,
@@ -322,3 +331,6 @@ class TestProperty5SavingsExceptionSwallowing:
                 f"but got success={result.success}, error={result.error}"
             )
             assert result.resource_id == resource_id
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()

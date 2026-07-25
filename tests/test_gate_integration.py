@@ -49,7 +49,7 @@ def orch_with_plan(tmp_project):
             rollback_hcl='resource "null_resource" "rollback" {}',
         ),
     ]
-    orch._last_plans = plans
+    orch._state_store.replace_plans(plans, "test-run")
 
     # Create rollback artifact
     (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text(
@@ -123,7 +123,7 @@ class TestGateStorePersistence:
                 rollback_hcl='resource "null_resource" "rollback" {}',
             ),
         ]
-        orch._last_plans = plans
+        orch._state_store.replace_plans(plans, "test-run")
         (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
 
         # One more failed attempt should lock (was at 2, max is 3)
@@ -158,7 +158,7 @@ class TestGateStorePersistence:
                 rollback_hcl='resource "null_resource" "rollback" {}',
             ),
         ]
-        orch._last_plans = plans
+        orch._state_store.replace_plans(plans, "test-run")
 
         # Even a correct command should be rejected
         result = orch.approve("APPROVE vol-abc123", resource_id="vol-abc123")
@@ -187,7 +187,7 @@ class TestCorruptedGateStore:
                 rollback_hcl='resource "null_resource" "rollback" {}',
             ),
         ]
-        orch._last_plans = plans
+        orch._state_store.replace_plans(plans, "test-run")
 
         result = orch.approve("APPROVE vol-abc123", resource_id="vol-abc123")
         assert result.success is False
@@ -213,7 +213,8 @@ class TestCorruptedGateStore:
 
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
         (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
-        # Simulate pending rollback
+        # Simulate pending rollback via StateStore
+        orch._state_store.add_pending_rollback("vol-abc123")
         orch._pending_rollbacks.add("vol-abc123")
 
         result = orch.rollback("CONFIRM ROLLBACK vol-abc123")
@@ -274,6 +275,7 @@ class TestRollbackGateEnforcement:
 
         # Now rollback should be rejected
         orch._pending_rollbacks.discard("vol-abc123")
+        orch._state_store.discard_pending_rollback("vol-abc123")
         r3 = orch.rollback("ROLLBACK vol-abc123")
         assert r3.success is False
         assert "Max attempts exceeded" in r3.error
@@ -298,6 +300,7 @@ class TestRollbackGateEnforcement:
         """Locked gate rejects confirm rollback too."""
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
         (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
+        orch._state_store.add_pending_rollback("vol-abc123")
         orch._pending_rollbacks.add("vol-abc123")
 
         # Pre-lock the gate
@@ -317,7 +320,7 @@ class TestRollbackGateEnforcement:
         (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
 
         # Set up a plan so approve() can pass the plan check
-        orch._last_plans = [
+        plans = [
             RemediationPlan(
                 resource_id="vol-abc123",
                 finding={"resource_id": "vol-abc123", "resource_type": "ebs"},
@@ -326,6 +329,7 @@ class TestRollbackGateEnforcement:
                 rollback_hcl='resource "null_resource" "rollback" {}',
             ),
         ]
+        orch._state_store.replace_plans(plans, "test-run")
 
         gate_path = tmp_project / "output" / "approval_gates.json"
 

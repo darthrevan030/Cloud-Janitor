@@ -218,6 +218,9 @@ class TestProperty6PreRemediationHookCoverage:
                 f"Resources appear in BOTH validated and failures: {overlap}"
             )
 
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
+
     @given(
         resource_ids=unique_resource_id_lists(min_size=1, max_size=5),
     )
@@ -257,6 +260,9 @@ class TestProperty6PreRemediationHookCoverage:
                 f"Expected empty validated_paths when all files missing, "
                 f"got: {validated_paths}"
             )
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
 
 
 class TestProperty7PreRemediationHookSuccess:
@@ -331,6 +337,9 @@ class TestProperty7PreRemediationHookSuccess:
                     f"Validated path {vp} is empty (0 bytes)"
                 )
 
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
+
     @given(
         resource_ids=unique_resource_id_lists(min_size=1, max_size=5),
         data=st.data(),
@@ -380,3 +389,6 @@ class TestProperty7PreRemediationHookSuccess:
                 f"Expected: {sorted(str(p) for p in expected_paths)}\n"
                 f"Actual:   {sorted(str(p) for p in actual_paths)}"
             )
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()

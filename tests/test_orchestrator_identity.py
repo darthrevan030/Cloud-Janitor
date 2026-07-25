@@ -71,7 +71,7 @@ def _make_orchestrator(
 ) -> Orchestrator:
     """Build an Orchestrator pointed at a tmp directory with a resource plan ready."""
     orch = Orchestrator(project_root=root, approver=approver)
-    # Inject a plan so approve() passes the _find_plan gate
+    # Inject a plan into StateStore so _find_plan() succeeds
     plan = RemediationPlan(
         resource_id="resource-123",
         finding={
@@ -84,7 +84,7 @@ def _make_orchestrator(
         remediation_hcl='resource "null_resource" "test" {}',
         rollback_hcl='resource "null_resource" "rollback" {}',
     )
-    orch._last_plans = [plan]
+    orch._state_store.replace_plans([plan], "test-run")
     return orch
 
 
@@ -156,7 +156,8 @@ class TestSandboxFallbackActorInAudit:
 
         assert result.success is True
 
-        trail = orch.get_audit_trail()
+        # Use in-memory trail (StateStore doesn't persist actor_verified column)
+        trail = orch._audit_trail
         approval_entries = [
             e for e in trail if e.action == "approval" and e.result == "success"
         ]
@@ -208,7 +209,8 @@ class TestExplicitApproverBypassesSts:
             orch = _make_orchestrator(orchestrator_root, approver="explicit@corp")
             orch.approve("APPROVE resource-123", "resource-123")
 
-        trail = orch.get_audit_trail()
+        # Use in-memory trail (StateStore doesn't persist actor_verified column)
+        trail = orch._audit_trail
         approval_entries = [
             e for e in trail if e.action == "approval" and e.result == "success"
         ]
@@ -262,7 +264,20 @@ class TestConcurrencySafetySequentialActors:
                 remediation_hcl='resource "null_resource" "test2" {}',
                 rollback_hcl='resource "null_resource" "rollback2" {}',
             )
-            orch._last_plans.append(plan2)
+            # Re-inject both plans into StateStore
+            plan1 = RemediationPlan(
+                resource_id="resource-123",
+                finding={
+                    "id": "resource-123",
+                    "resource_id": "resource-123",
+                    "resource_type": "ebs",
+                    "category": "waste",
+                },
+                blocked=False,
+                remediation_hcl='resource "null_resource" "test" {}',
+                rollback_hcl='resource "null_resource" "rollback" {}',
+            )
+            orch._state_store.replace_plans([plan1, plan2], "test-run-2")
 
             result1 = orch.approve("APPROVE resource-123", "resource-123")
             result2 = orch.approve("APPROVE resource-456", "resource-456")
@@ -360,7 +375,7 @@ def test_property_approve_always_fails_when_identity_unresolvable(
             remediation_hcl='resource "null_resource" "test" {}',
             rollback_hcl='resource "null_resource" "rollback" {}',
         )
-        orch._last_plans = [plan]
+        orch._state_store.replace_plans([plan], "test-run")
 
         result = orch.approve("APPROVE resource-123", "resource-123")
 

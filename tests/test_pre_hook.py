@@ -78,6 +78,9 @@ class TestPreHookTimeout:
                 with pytest.raises(TimeoutError, match="60s timeout"):
                     orch._run_pre_remediation_hook_full(plans)
 
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
+
     def test_timeout_blocks_all_subsequent_plans(self):
         """When timeout fires on the first plan, no plans get validated."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -96,6 +99,9 @@ class TestPreHookTimeout:
             with patch("time.monotonic", side_effect=[0.0, 61.0]):
                 with pytest.raises(TimeoutError, match="60s timeout"):
                     orch._run_pre_remediation_hook_full(plans)
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
 
 
 # --- Test: Empty rollback file ---
@@ -145,6 +151,9 @@ class TestPreHookEmptyRollbackFile:
             assert "res-good" in validated_stems, (
                 f"Valid rollback should be validated. validated={validated_stems}"
             )
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
 
 
 # --- Test: Hook script non-zero exit code ---
@@ -197,6 +206,9 @@ class TestPreHookNonZeroExit:
                 f"Failed hook should not be validated. validated={validated_stems}"
             )
 
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
+
 
 # --- Test: Successful validation ---
 
@@ -248,6 +260,9 @@ class TestPreHookSuccess:
                 f"Actual:   {sorted(str(p) for p in actual_paths)}"
             )
 
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()
+
     def test_validated_paths_are_existing_files(self):
         """Each path in validated_paths must point to an existing non-empty file."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -275,3 +290,6 @@ class TestPreHookSuccess:
             path = validated_paths[0]
             assert path.exists(), f"Validated path {path} does not exist"
             assert path.stat().st_size > 0, f"Validated path {path} is empty"
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()

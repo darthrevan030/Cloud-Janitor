@@ -10,6 +10,7 @@ import pytest
 from cloud_janitor.core.paths import (
     APPROVAL_GATES_PATH,
     AUDIT_LOG_PATH,
+    COST_EXPLORER_CACHE_PATH,
     FINDINGS_STORE_PATH,
     HOOKS_DIR,
     LOGS_DIR,
@@ -77,6 +78,10 @@ class TestPathConstants:
         """SAVINGS_LEDGER_PATH must be output/savings_ledger.json."""
         assert SAVINGS_LEDGER_PATH == OUTPUT_DIR / "savings_ledger.json"
 
+    def test_cost_explorer_cache_path(self) -> None:
+        """COST_EXPLORER_CACHE_PATH must be output/cost_explorer_cache.json."""
+        assert COST_EXPLORER_CACHE_PATH == OUTPUT_DIR / "cost_explorer_cache.json"
+
     def test_hooks_dir_is_package_relative(self) -> None:
         """HOOKS_DIR must point to the cloud_janitor/hooks package directory."""
         assert HOOKS_DIR.name == "hooks"
@@ -106,6 +111,7 @@ class TestPathConstants:
             REASONING_LOG_PATH,
             APPROVAL_GATES_PATH,
             SAVINGS_LEDGER_PATH,
+            COST_EXPLORER_CACHE_PATH,
             HOOKS_DIR,
         ]
         for p in paths:

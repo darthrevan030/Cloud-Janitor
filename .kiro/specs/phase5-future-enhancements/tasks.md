@@ -9,11 +9,11 @@ This plan implements 19 requirements covering two independent backlog issues: FE
 ## Tasks
 
 - [ ] 1. FEAT-3: Build the Cost Explorer client and cache
-  - [ ] 1.1 Add `COST_EXPLORER_CACHE_PATH` to `core/paths.py`
+  - [x] 1.1 Add `COST_EXPLORER_CACHE_PATH` to `core/paths.py`
     - Add the single new constant `COST_EXPLORER_CACHE_PATH = OUTPUT_DIR / "cost_explorer_cache.json"` following the existing pattern for `SAVINGS_LEDGER_PATH`/`APPROVAL_GATES_PATH`
     - _Requirements: 3.5_
 
-  - [ ] 1.2 Create `mcp_server/backends/cost_explorer.py` with `CostExplorerCache`
+  - [x] 1.2 Create `mcp_server/backends/cost_explorer.py` with `CostExplorerCache`
     - Implement `get(key)`/`set(key, response)`/`make_key(account_id, start, end, filter_obj)` per the design
     - TTL read from `JANITOR_CE_CACHE_TTL_SECONDS`, default `86400`
     - Corrupted/missing cache file treated as a full miss on `get()`, safely rewritten on next `set()`
@@ -87,11 +87,11 @@ This plan implements 19 requirements covering two independent backlog issues: FE
   - FEAT-3 (Requirements 1–4) is now independently shippable regardless of FEAT-4's progress.
 
 - [ ] 4. FEAT-4 Wave 1 (GCP): Dependencies and credential resolution
-  - [ ] 4.1 Add the `gcp` optional extras group to `pyproject.toml`
+  - [x] 4.1 Add the `gcp` optional extras group to `pyproject.toml`
     - `[project.optional-dependencies] gcp = ["google-auth>=2.30.0", "google-cloud-compute>=1.19.0", "google-cloud-redis>=2.16.0"]`
     - _Requirements: 9.5_
 
-  - [ ] 4.2 Implement `GCPProvider.__init__()` credential resolution
+  - [x] 4.2 Implement `GCPProvider.__init__()` credential resolution
     - Lazy import of `google.auth`/GCP client libraries with `ImportError` on missing SDK, naming the `gcp` extras group and `pip install` command
     - `google.auth.default()` resolution; `DefaultCredentialsError` wrapped in `RuntimeError` naming `gcloud auth application-default login` / `GOOGLE_APPLICATION_CREDENTIALS`
     - Resolve `project_id` from constructor arg, ADC's resolved project, or `GCP_PROJECT_ID` env var, in that order
@@ -174,7 +174,7 @@ This plan implements 19 requirements covering two independent backlog issues: FE
   - This checkpoint gates the start of Azure (Wave 2) — Azure's tasks below assume this provider is stable and its patterns (price table structure, sensitive-port scan, resource-type normalization, the Task 6.5 SecOps Guard fix) are the template to copy.
 
 - [ ] 8. FEAT-4 Wave 2 (Azure): Dependencies and credential resolution
-  - [ ] 8.1 Add the `azure` optional extras group to `pyproject.toml`
+  - [x] 8.1 Add the `azure` optional extras group to `pyproject.toml`
     - `[project.optional-dependencies] azure = ["azure-identity>=1.17.0", "azure-mgmt-compute>=33.0.0", "azure-mgmt-network>=27.0.0", "azure-mgmt-redis>=14.4.0"]`
     - _Requirements: 13.6_
 

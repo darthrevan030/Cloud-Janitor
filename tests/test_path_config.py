@@ -188,8 +188,7 @@ class TestUIDisplaysNoDataMessage:
         """load_findings() returns [] when findings_store.json does not exist."""
         from cloud_janitor.app import load_findings
 
-        nonexistent = tmp_path / "does_not_exist.json"
-        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", nonexistent):
+        with patch("cloud_janitor.app.resolve_latest_findings_store", return_value=None):
             result = load_findings()
 
         assert result == []
@@ -243,7 +242,7 @@ class TestUIDisplaysNoDataMessage:
         corrupt_file = tmp_path / "findings_store.json"
         corrupt_file.write_text("{{not valid json", encoding="utf-8")
 
-        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", corrupt_file):
+        with patch("cloud_janitor.app.resolve_latest_findings_store", return_value=corrupt_file):
             result = load_findings()
 
         # Returns empty list rather than raising
@@ -256,7 +255,7 @@ class TestUIDisplaysNoDataMessage:
         incomplete_file = tmp_path / "findings_store.json"
         incomplete_file.write_text(json.dumps({"schema_version": "1.0.0"}), encoding="utf-8")
 
-        with patch("cloud_janitor.app.FINDINGS_STORE_PATH", incomplete_file):
+        with patch("cloud_janitor.app.resolve_latest_findings_store", return_value=incomplete_file):
             result = load_findings()
 
         # Returns empty list for missing key, not crash

@@ -6,6 +6,7 @@ with informative error messages.
 """
 
 import os
+import sys
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -34,7 +35,16 @@ def test_valid_backend_returns_cloud_provider_instance(backend_name):
     with patch.dict(os.environ, {"JANITOR_BACKEND": backend_name}):
         # AWSProvider lazily imports boto3 on __init__. Mock it so the test
         # doesn't require boto3 to be installed.
-        with patch("cloud_janitor.mcp_server.backends.aws_provider.boto3", create=True):
+        # GCPProvider lazily imports google-auth. Mock it similarly.
+        mock_google = MagicMock()
+        mock_google.auth.default.return_value = (MagicMock(), "test-project")
+        mock_google.auth.exceptions.DefaultCredentialsError = Exception
+        with patch("cloud_janitor.mcp_server.backends.aws_provider.boto3", create=True), \
+             patch.dict(sys.modules, {
+                 "google": mock_google,
+                 "google.auth": mock_google.auth,
+                 "google.auth.exceptions": mock_google.auth.exceptions,
+             }):
             # Patch the import inside AWSProvider.__init__
             with patch("builtins.__import__", side_effect=_mock_import):
                 provider = _load_provider()
@@ -47,9 +57,14 @@ def test_valid_backend_returns_cloud_provider_instance(backend_name):
 
 
 def _mock_import(name, *args, **kwargs):
-    """Mock import that intercepts boto3 and delegates everything else."""
+    """Mock import that intercepts boto3 and google-auth, delegates everything else."""
     if name == "boto3":
         return MagicMock()
+    if name in ("google", "google.auth", "google.auth.exceptions"):
+        mock = MagicMock()
+        mock.auth.default.return_value = (MagicMock(), "test-project")
+        mock.auth.exceptions.DefaultCredentialsError = Exception
+        return mock
     return original_import(name, *args, **kwargs)
 
 

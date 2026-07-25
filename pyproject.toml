@@ -23,6 +23,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dashboard = ["streamlit>=1.45.0"]
+gcp = ["google-auth>=2.30.0", "google-cloud-compute>=1.19.0", "google-cloud-redis>=2.16.0"]
+azure = ["azure-identity>=1.17.0", "azure-mgmt-compute>=33.0.0", "azure-mgmt-network>=27.0.0", "azure-mgmt-redis>=14.4.0"]
 
 [project.scripts]
 cloud-janitor = "cloud_janitor.cli:main"

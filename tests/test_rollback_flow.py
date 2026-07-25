@@ -46,16 +46,15 @@ def _setup_orchestrator(project_dir: Path, resource_id: str) -> Orchestrator:
     with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="tflocal"):
         orch = Orchestrator(project_root=project_dir, approver="test-user")
 
-    # Inject a remediation plan so rollback flow doesn't short-circuit
-    orch._last_plans = [
-        RemediationPlan(
-            resource_id=resource_id,
-            finding={"resource_id": resource_id, "resource_type": "ebs"},
-            blocked=False,
-            remediation_hcl='resource "null_resource" "test" {}',
-            rollback_hcl='resource "null_resource" "rollback" {}',
-        ),
-    ]
+    # Inject a remediation plan into StateStore so rollback flow doesn't short-circuit
+    plan = RemediationPlan(
+        resource_id=resource_id,
+        finding={"resource_id": resource_id, "resource_type": "ebs"},
+        blocked=False,
+        remediation_hcl='resource "null_resource" "test" {}',
+        rollback_hcl='resource "null_resource" "rollback" {}',
+    )
+    orch._state_store.replace_plans([plan], "test-run")
 
     # Create rollback artifact
     rollback_file = project_dir / "output" / "rollbacks" / f"{resource_id}.tf"
@@ -229,17 +228,17 @@ class TestMissingRollbackFileReturnsError:
             orch = Orchestrator(project_root=project_dir, approver="test-user")
 
         # Inject a plan but do NOT create the rollback file
-        orch._last_plans = [
-            RemediationPlan(
-                resource_id=resource_id,
-                finding={"resource_id": resource_id, "resource_type": "ebs"},
-                blocked=False,
-                remediation_hcl='resource "null_resource" "test" {}',
-                rollback_hcl='resource "null_resource" "rollback" {}',
-            ),
-        ]
+        plan = RemediationPlan(
+            resource_id=resource_id,
+            finding={"resource_id": resource_id, "resource_type": "ebs"},
+            blocked=False,
+            remediation_hcl='resource "null_resource" "test" {}',
+            rollback_hcl='resource "null_resource" "rollback" {}',
+        )
+        orch._state_store.replace_plans([plan], "test-run")
 
-        # Manually add to pending set (bypassing ROLLBACK command which also checks file)
+        # Manually add to pending via StateStore (bypassing ROLLBACK command which also checks file)
+        orch._state_store.add_pending_rollback(resource_id)
         orch._pending_rollbacks.add(resource_id)
 
         # Confirm the file does NOT exist
