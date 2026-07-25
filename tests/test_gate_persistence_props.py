@@ -176,16 +176,15 @@ class TestProperty9CorruptedStoreLocks:
             # Create Orchestrator — it loads the corrupted store at init
             orch = Orchestrator(project_root=project_dir, approver="test-user")
 
-            # Inject a plan so approve() doesn't short-circuit at "no plan found"
-            orch._last_plans = [
-                RemediationPlan(
-                    resource_id=rid,
-                    finding={"resource_id": rid, "resource_type": "ebs"},
-                    blocked=False,
-                    remediation_hcl='resource "null_resource" "test" {}',
-                    rollback_hcl='resource "null_resource" "rollback" {}',
-                ),
-            ]
+            # Inject a plan into StateStore so approve() doesn't short-circuit at "no plan found"
+            plan = RemediationPlan(
+                resource_id=rid,
+                finding={"resource_id": rid, "resource_type": "ebs"},
+                blocked=False,
+                remediation_hcl='resource "null_resource" "test" {}',
+                rollback_hcl='resource "null_resource" "rollback" {}',
+            )
+            orch._state_store.replace_plans([plan], "test-run")
 
             # Create rollback artifact so rollback doesn't fail at file-not-found
             (project_dir / "output" / "rollbacks" / f"{rid}.tf").write_text(
@@ -211,3 +210,6 @@ class TestProperty9CorruptedStoreLocks:
             assert "corrupted" in rollback_result.error.lower(), (
                 f"rollback() error should mention 'corrupted', got: {rollback_result.error!r}"
             )
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()

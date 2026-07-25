@@ -68,16 +68,15 @@ def _setup_orchestrator(project_dir: Path, resource_id: str) -> "Orchestrator":
     """Create an Orchestrator with a plan and rollback artifact for the given resource."""
     orch = Orchestrator(project_root=project_dir, approver="test-user")
 
-    # Inject a remediation plan so approve() doesn't short-circuit at "no plan found"
-    orch._last_plans = [
-        RemediationPlan(
-            resource_id=resource_id,
-            finding={"resource_id": resource_id, "resource_type": "ebs"},
-            blocked=False,
-            remediation_hcl='resource "null_resource" "test" {}',
-            rollback_hcl='resource "null_resource" "rollback" {}',
-        ),
-    ]
+    # Inject a remediation plan into StateStore so _find_plan() succeeds
+    plan = RemediationPlan(
+        resource_id=resource_id,
+        finding={"resource_id": resource_id, "resource_type": "ebs"},
+        blocked=False,
+        remediation_hcl='resource "null_resource" "test" {}',
+        rollback_hcl='resource "null_resource" "rollback" {}',
+    )
+    orch._state_store.replace_plans([plan], "test-run")
 
     # Create rollback artifact so rollback doesn't fail at "file not found"
     rollback_file = project_dir / "output" / "rollbacks" / f"{resource_id}.tf"
@@ -158,6 +157,9 @@ class TestProperty1GateLockoutInvariant:
                     "All post-lockout approve attempts must return success=False"
                 )
 
+            # Close first orchestrator's state store before creating a new one
+            orch._state_store.close()
+
             # --- Phase 5: Simulate process restart — new Orchestrator, same project_root ---
             # The new instance loads persisted gate state from disk
             orch2 = _setup_orchestrator(project_dir, resource_id)
@@ -183,6 +185,9 @@ class TestProperty1GateLockoutInvariant:
             assert rollback_after_restart.success is False, (
                 "Rollback must be rejected after process restart when gate is locked"
             )
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch2._state_store.close()
 
     @given(resource_id=fs_safe_resource_ids)
     @settings(
@@ -221,3 +226,6 @@ class TestProperty1GateLockoutInvariant:
             # (we don't actually execute it since tf apply would run,
             # but the gate itself isn't blocking)
             assert gate.locked is False
+
+            # Close state store to release SQLite file handle (Windows cleanup)
+            orch._state_store.close()

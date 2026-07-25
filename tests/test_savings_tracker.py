@@ -427,16 +427,15 @@ class TestRecordRollbackExceptionNonPropagation:
         with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="tflocal"):
             orch = Orchestrator(project_root=tmp_path, approver="test-user")
 
-        # Inject plan and rollback artifact
-        orch._last_plans = [
-            RemediationPlan(
-                resource_id=resource_id,
-                finding={"resource_id": resource_id, "resource_type": "ebs"},
-                blocked=False,
-                remediation_hcl='resource "null_resource" "test" {}',
-                rollback_hcl='resource "null_resource" "rollback" {}',
-            ),
-        ]
+        # Inject plan into StateStore so _find_plan() succeeds
+        plan = RemediationPlan(
+            resource_id=resource_id,
+            finding={"resource_id": resource_id, "resource_type": "ebs"},
+            blocked=False,
+            remediation_hcl='resource "null_resource" "test" {}',
+            rollback_hcl='resource "null_resource" "rollback" {}',
+        )
+        orch._state_store.replace_plans([plan], "test-run")
         rollback_file = tmp_path / "output" / "rollbacks" / f"{resource_id}.tf"
         rollback_file.write_text('resource "null_resource" "rollback" {}')
 
@@ -500,15 +499,15 @@ class TestRecordRollbackExceptionNonPropagation:
             with patch("cloud_janitor.orchestrator.orchestrator._validate_tf_cmd", return_value="tflocal"):
                 orch = Orchestrator(project_root=sub_dir, approver="test-user")
 
-            orch._last_plans = [
-                RemediationPlan(
-                    resource_id=resource_id,
-                    finding={"resource_id": resource_id, "resource_type": "ebs"},
-                    blocked=False,
-                    remediation_hcl='resource "null_resource" "test" {}',
-                    rollback_hcl='resource "null_resource" "rollback" {}',
-                ),
-            ]
+            # Inject plan into StateStore so _find_plan() succeeds
+            plan = RemediationPlan(
+                resource_id=resource_id,
+                finding={"resource_id": resource_id, "resource_type": "ebs"},
+                blocked=False,
+                remediation_hcl='resource "null_resource" "test" {}',
+                rollback_hcl='resource "null_resource" "rollback" {}',
+            )
+            orch._state_store.replace_plans([plan], "test-run")
             rollback_file = sub_dir / "output" / "rollbacks" / f"{resource_id}.tf"
             rollback_file.write_text('resource "null_resource" "rollback" {}')
 

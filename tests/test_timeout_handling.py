@@ -67,7 +67,6 @@ def _inject_plan(orch, tmp_project, resource_id="vol-abc123"):
     )
     # Store in state store so _find_plan() can locate it
     orch._state_store.replace_plans([plan], run_id="test-run")
-    orch._last_plans = [plan]
 
     # Write required output files
     (tmp_project / "output" / "remediation.tf").write_text(

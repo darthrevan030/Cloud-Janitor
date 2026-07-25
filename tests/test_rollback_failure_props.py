@@ -154,8 +154,9 @@ class TestProperty3RollbackFailureErrorPropagation:
             assert result.error is not None, (
                 "Expected error to be non-None for validate failure"
             )
-            assert stderr_text.strip() in result.error, (
-                f"Expected stderr '{stderr_text.strip()}' in error, got: '{result.error}'"
+            assert stderr_text.strip() in result.error or "[REDACTED]" in result.error, (
+                f"Expected stderr '{stderr_text.strip()}' (or [REDACTED] if it matches "
+                f"a sensitive pattern) in error, got: '{result.error}'"
             )
             assert result.resource_id == resource_id, (
                 f"Expected resource_id='{resource_id}', got '{result.resource_id}'"
@@ -239,8 +240,9 @@ class TestProperty3RollbackFailureErrorPropagation:
             assert result.error is not None, (
                 "Expected error to be non-None for apply failure"
             )
-            assert stderr_text.strip() in result.error, (
-                f"Expected stderr '{stderr_text.strip()}' in error, got: '{result.error}'"
+            assert stderr_text.strip() in result.error or "[REDACTED]" in result.error, (
+                f"Expected stderr '{stderr_text.strip()}' (or [REDACTED] if it matches "
+                f"a sensitive pattern) in error, got: '{result.error}'"
             )
             assert result.resource_id == resource_id, (
                 f"Expected resource_id='{resource_id}', got '{result.resource_id}'"
