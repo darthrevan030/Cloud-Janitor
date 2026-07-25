@@ -24,9 +24,17 @@ uv run pytest -k "approval"
 |------|-------------|
 | `test_orchestrator.py` | Agent sequencing, pre/post hooks, approval gate, rollback, audit trail |
 | `test_orchestrator_ai_agents.py` | Orchestrator integration with AI agents (anomaly detection, drift, NL queries) |
+| `test_orchestrator_remediation_role.py` | Remediation-role credential wiring into approve/rollback flow (Phase 4) |
+| `test_orchestrator_identity.py` | Identity resolution wiring — STS failure blocks, sandbox fallback, explicit approver bypass |
 | `test_error_states.py` | Dependency blocking, terraform validate failure, approval lockout edge cases |
 | `test_approval_gate.py` | Command parsing (exact-match format, rejection of malformed input, 3-attempt lockout) |
 | `test_audit_logger.py` | Append-only audit log writer (entry schema, file creation, append semantics) |
+| `test_audit_query.py` | Queryable audit trail — filter conjunction, export round-trip, SQL injection prevention (Phase 3f) |
+| `test_audit_query_e2e.py` | End-to-end audit trail: StateStore write → query_audit read-back |
+| `test_remediation_role.py` | `_assume_remediation_role()` unit tests — success/failure/unset paths (Phase 4) |
+| `test_gate_integration.py` | Approval gate persistence and lockout across orchestrator restarts |
+| `test_rollback_flow.py` | Rollback state machine — pending state, confirm, missing file |
+| `test_pre_hook.py` | Pre-remediation hook validation — timeout, non-zero exit, empty rollback |
 
 ### Agents
 
@@ -57,6 +65,18 @@ uv run pytest -k "approval"
 | `test_fixture.py` | Validates fixture JSON schema and content (required fields, types, flaggable data) |
 | `test_mcp_tools_phase_bc.py` | MCP tool endpoints (get_cost_data, get_security_data, check_dependencies, etc.) |
 | `test_mcp_interpret_query.py` | MCP interpret_query tool integration with QueryInterpreter |
+| `test_stub_providers.py` | GCP/Azure provider instantiation — SDK detection, NotImplementedError messages |
+| `test_cost_explorer_cache_props.py` | Cost Explorer cache round-trip, TTL expiry, corrupted file resilience (Phase 5) |
+
+### IAM & Deployment (Phase 4)
+
+| File | Description |
+|------|-------------|
+| `test_iam_policies.py` | Static validity — JSON parse, Version field, no duplicate SIDs, valid ARN patterns |
+| `test_iam_read_policy.py` | Property 4 & 5 — action-source completeness from aws_provider.py, no mutation verbs |
+| `test_iam_remediation_policy.py` | Property 6 & 7 — resource-level scoping, template coverage |
+| `test_iam_remediation_policy_hcl.py` | Property 8 — HCL-derived action coverage cross-check |
+| `test_deployment_docs.py` | docs/deployment.md content-presence (required sections, literal strings) |
 
 ### Dev Tooling
 
@@ -69,18 +89,26 @@ uv run pytest -k "approval"
 | File | Validates |
 |------|-----------|
 | `test_anomaly_detector_properties.py` | Output schema invariants for any resource/finding input |
+| `test_audit_query_properties.py` | Audit query filter conjunction soundness and completeness (Phase 3f) |
 | `test_backward_compatibility_properties.py` | FixtureProvider equivalence to original inline implementation |
 | `test_drift_detector_properties.py` | Snapshot storage and drift detection invariants |
 | `test_explainer_properties.py` | Explainer output schema for any finding input |
 | `test_fixture_provider_properties.py` | Cost sum accuracy, critical count, dependency boolean |
+| `test_gate_lockout_props.py` | Approval gate lockout invariant after max attempts |
+| `test_gate_persistence_props.py` | Gate state persistence and corruption handling |
 | `test_incident_policy_generator_properties.py` | Policy JSON schema for any finding input |
 | `test_malformed_line_resilience.py` | Reasoning log parser skips malformed lines |
 | `test_multi_account_orchestrator_properties.py` | Concurrent execution invariants |
 | `test_policy_suggester_properties.py` | Suggestion schema for any findings input |
+| `test_pre_remediation_hook_props.py` | Pre-hook coverage and success path validation |
+| `test_prop_stub_providers.py` | Stub provider NotImplementedError content for any method |
 | `test_provider_selection_properties.py` | Backend registry completeness and invalid rejection |
 | `test_query_interpreter_properties.py` | Output schema for any query string |
 | `test_reasoning_logger_properties.py` | JSON validity and sequential append for any unicode |
 | `test_reasoning_panel_properties.py` | Section header transitions on agent name changes |
+| `test_remediation_role_properties.py` | Credential isolation, fail-closed, unset-role fallback (Phase 4) |
+| `test_rollback_failure_props.py` | Rollback failure error propagation for any exit code/stderr |
+| `test_savings_exception_swallowing.py` | Savings tracker exceptions swallowed without blocking approval |
 | `test_savings_tracker_properties.py` | Ledger accumulation invariants |
 | `test_scheduler_properties.py` | JanitorScheduler status schema and idempotent start |
 | `test_tagger_properties.py` | Tagger output schema for any resource input |
@@ -93,8 +121,9 @@ uv run pytest -k "approval"
 
 ## What Is Not Tested
 
-- **`app.py`** — Streamlit UI requires a browser runtime. Cannot be unit tested in headless pytest.
+- **`app.py` (Streamlit UI)** — Most Streamlit UI code requires a browser runtime and cannot be unit tested in headless pytest. However, the **Audit Trail Query** logic is extracted into a testable helper and covered by `test_app_audit_trail_ui.py`.
 - **LocalStack-dependent paths** — `tflocal apply/rollback` skipped unless LocalStack is running. Tested manually or in CI.
+- **GCP/Azure live API calls** — Provider tests use mocked SDK clients. Real-account smoke tests are documented in `tests/manual/` (Phase 5, Requirement 18).
 
 ## Adding Tests for a New Agent
 

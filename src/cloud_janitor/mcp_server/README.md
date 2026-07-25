@@ -205,8 +205,8 @@ The MCP server uses a pluggable provider architecture. The active backend is sel
 |---------|------------------------|--------|-------------------|-------------|
 | Fixture | `fixture` | **Complete** | None | Reads from local JSON fixture files. Default backend. |
 | AWS | `aws` | **Complete** | AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`) | Queries live AWS infrastructure via boto3. |
-| GCP | `gcp` | Interface only | — | Placeholder for Google Cloud Platform. All methods raise `NotImplementedError`. |
-| Azure | `azure` | Interface only | — | Placeholder for Microsoft Azure. All methods raise `NotImplementedError`. |
+| GCP | `gcp` | Interface only | `GOOGLE_APPLICATION_CREDENTIALS` or ADC | Requires `pip install 'cloud-janitor[gcp]'`. Credential resolution implemented; methods raise `NotImplementedError` (audit implementation in progress). |
+| Azure | `azure` | Interface only | `AZURE_SUBSCRIPTION_ID` | Requires `pip install 'cloud-janitor[azure]'`. Placeholder for Microsoft Azure. All methods raise `NotImplementedError`. |
 
 When `JANITOR_BACKEND` is unset, it defaults to `"fixture"`. Setting it to an invalid value raises a `ValueError` listing valid options.
 
@@ -216,8 +216,8 @@ When `JANITOR_BACKEND` is unset, it defaults to `"fixture"`. Setting it to an in
 CloudProvider (ABC)
 ├── FixtureProvider   — reads bundled cloud_janitor/fixtures/*.json via importlib.resources
 ├── AWSProvider       — complete, queries live AWS via boto3
-├── GCPProvider       — stub
-└── AzureProvider     — stub
+├── GCPProvider       — credential resolution implemented, audit methods pending
+└── AzureProvider     — stub (interface only)
 ```
 
 All providers live in `src/cloud_janitor/mcp_server/backends/` and implement three abstract methods:
@@ -249,19 +249,18 @@ All providers live in `src/cloud_janitor/mcp_server/backends/` and implement thr
 
 5. Users can now activate it with `JANITOR_BACKEND=my_backend`
 
-## Phase B/C Tools (Planned)
+## Phase B/C Tools
 
-The following tools will be added in future specs to support natural-language querying, AI-driven remediation explanation, and policy inference.
+The following AI-powered tools are implemented and available:
 
 | Tool | Status | Description |
 |------|--------|-------------|
-| `interpret_query` | `[planned]` | Translate natural-language infrastructure questions into structured tool calls |
-| `explain_remediation` | `[planned]` | Generate human-readable explanation of a proposed Terraform remediation |
-| `suggest_policies` | `[planned]` | Recommend IAM/SCP policies based on current findings and remediation history |
-| `infer_resource_context` | `[planned]` | Enrich a resource ID with usage context, ownership, and blast radius |
-| `detect_anomalies` | `[planned]` | Identify unusual cost or security patterns across time-series data |
-| `policy_from_incident` | `[planned]` | Generate a preventive policy from a resolved security incident |
-| `aggregate_findings` | `[planned]` | Roll up findings by severity, service, or account for executive summaries |
+| `interpret_query` | **Complete** | Translate natural-language infrastructure questions into structured tool calls |
+| `explain_remediation` | **Complete** | Generate human-readable explanation of a proposed Terraform remediation |
+| `suggest_policies` | **Complete** | Recommend additional security/cost checks based on current findings |
+| `infer_resource_context` | **Complete** | Infer environment, team, owner, and risk level from resource names |
+| `detect_anomalies` | **Complete** | Identify unusual cost or security patterns using LLM analysis |
+| `policy_from_incident` | **Complete** | Generate preventive policies from a resolved security incident description |
 
 ## Architecture Note
 

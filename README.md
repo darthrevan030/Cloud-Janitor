@@ -824,7 +824,7 @@ uv run pytest tests/test_orchestrator.py
 uv run pytest tests/test_approval_gate.py -k "test_valid_approval"
 ```
 
-649 tests. No AWS credentials required — all tests run against fixture data or mocks.
+649+ tests (1950+ including all property-based and phase-specific tests). No AWS credentials required — all tests run against fixture data or mocks.
 
 The suite uses [Hypothesis](https://hypothesis.readthedocs.io/) for property-based testing. Property tests verify invariants that must hold for *any* input, not just hand-picked examples. See `tests/README.md` for the full test inventory and philosophy.
 
