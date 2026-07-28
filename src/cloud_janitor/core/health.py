@@ -97,8 +97,12 @@ def _check_sts(_client_factory=None) -> HealthStatus:
         from cloud_janitor.mcp_server.backends.aws_provider import _make_client
         _client_factory = _make_client
 
-    timeout_config = Config(connect_timeout=_PROBE_TIMEOUT_SECONDS, read_timeout=_PROBE_TIMEOUT_SECONDS)
     try:
+        timeout_config = Config(
+            connect_timeout=_PROBE_TIMEOUT_SECONDS,
+            read_timeout=_PROBE_TIMEOUT_SECONDS,
+            signature_version="v4",
+        )
         client = _client_factory("sts", region=None, config=timeout_config)
         client.get_caller_identity()
         return HealthStatus(True, "real_aws", "healthy", "ok", "sts:GetCallerIdentity")

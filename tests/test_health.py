@@ -20,6 +20,8 @@ import os
 import urllib.error
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError
 
 from cloud_janitor.core.health import (
@@ -239,47 +241,45 @@ class TestCheckStsSuccess:
 class TestCheckStsCredentialFailures:
     """Mocked STS raising ClientError/NoCredentialsError → mode='invalid_credentials'."""
 
-    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("botocore.config.Config")
-    def test_client_error_access_denied(self, _mock_config):
+    def test_client_error_access_denied(self):
+        """ClientError with AccessDenied → invalid_credentials."""
+        from botocore.exceptions import ClientError as _CE
+
         mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = ClientError(
+        mock_client.get_caller_identity.side_effect = _CE(
             {"Error": {"Code": "AccessDenied", "Message": "Access denied"}},
             "GetCallerIdentity",
         )
-        mock_make_client = MagicMock(return_value=mock_client)
-
-        result = _check_sts(_client_factory=mock_make_client)
+        # Pass a factory that skips Config entirely — returns mock_client directly
+        result = _check_sts(_client_factory=lambda *a, **kw: mock_client)
 
         assert result.reachable is False
         assert result.mode == "invalid_credentials"
         assert result.environment == "real_aws"
         assert "AccessDenied" in result.detail or "Access denied" in result.detail
 
-    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("botocore.config.Config")
-    def test_no_credentials_error(self, _mock_config):
+    def test_no_credentials_error(self):
+        """NoCredentialsError → invalid_credentials."""
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = NoCredentialsError()
-        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts(_client_factory=mock_make_client)
+        result = _check_sts(_client_factory=lambda *a, **kw: mock_client)
 
         assert result.reachable is False
         assert result.mode == "invalid_credentials"
         assert result.environment == "real_aws"
 
-    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("botocore.config.Config")
-    def test_expired_token_client_error(self, _mock_config):
+    def test_expired_token_client_error(self):
+        """ClientError with ExpiredTokenException → invalid_credentials."""
+        from botocore.exceptions import ClientError as _CE
+
         mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = ClientError(
+        mock_client.get_caller_identity.side_effect = _CE(
             {"Error": {"Code": "ExpiredTokenException", "Message": "Token expired"}},
             "GetCallerIdentity",
         )
-        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts(_client_factory=mock_make_client)
+        result = _check_sts(_client_factory=lambda *a, **kw: mock_client)
 
         assert result.reachable is False
         assert result.mode == "invalid_credentials"
@@ -323,6 +323,40 @@ class TestCheckStsConnectionFailures:
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = TimeoutError("Connection timed out")
         mock_make_client = MagicMock(return_value=mock_client)
+
+        result = _check_sts(_client_factory=mock_make_client)
+
+        assert result.reachable is False
+        assert result.mode == "unreachable"
+
+
+# ---------------------------------------------------------------------------
+# STS probe: _client_factory raises → exception propagates (not misclassified)
+# ---------------------------------------------------------------------------
+
+
+class TestCheckStsClientFactoryFailure:
+    """After the refactor, _client_factory errors propagate rather than being
+    silently classified as 'unreachable' or 'invalid_credentials'.
+
+    This is intentional: a factory construction failure is a configuration bug,
+    not a runtime credential/connectivity issue.
+    """
+
+    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
+    def test_client_factory_raising_returns_unreachable(self):
+        """If _client_factory itself raises, _check_sts returns 'unreachable'."""
+        mock_make_client = MagicMock(side_effect=RuntimeError("bad factory config"))
+
+        result = _check_sts(_client_factory=mock_make_client)
+
+        assert result.reachable is False
+        assert result.mode == "unreachable"
+
+    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
+    def test_client_factory_value_error_returns_unreachable(self):
+        """ValueError from factory (e.g. invalid region) → 'unreachable'."""
+        mock_make_client = MagicMock(side_effect=ValueError("Invalid region"))
 
         result = _check_sts(_client_factory=mock_make_client)
 
