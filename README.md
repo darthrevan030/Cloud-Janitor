@@ -15,6 +15,7 @@ Cloud Custodian shows you what's wrong with a YAML rules engine. Cloud Janitor r
 - [Environment Variables](#environment-variables)
 - [Security Hardening](#security-hardening)
 - [Running Modes](#running-modes)
+- [Production Deployment](#production-deployment)
 - [CLI Commands](#cli-commands)
 - [The Approval Gate](#the-approval-gate)
 - [LocalStack & Terraform](#localstack--terraform)
@@ -480,6 +481,30 @@ Interface stubs exist. Setting `JANITOR_BACKEND=gcp` or `JANITOR_BACKEND=azure` 
 
 ---
 
+## Production Deployment
+
+For running Cloud Janitor against a real AWS account on EC2, see the full guide at [`docs/deployment.md`](docs/deployment.md). Key steps:
+
+1. **Launch on EC2 with an instance profile** — no static access keys. The instance role provides credentials via boto3's default chain.
+2. **Set `JANITOR_BACKEND=aws`** — switches from fixture data to live AWS API calls.
+3. **Create two IAM roles** (least-privilege):
+   - **Read_Role** (instance profile) — attach [`iam/janitor-read-policy.json`](iam/janitor-read-policy.json). Grants only `Describe*`/`Get*` actions.
+   - **Remediation_Role** (assumed via STS) — attach [`iam/janitor-remediation-policy.json`](iam/janitor-remediation-policy.json). Grants only the mutation actions Terraform needs.
+4. **Set `JANITOR_REMEDIATION_ROLE_ARN`** — enforces the read/write credential boundary. The orchestrator assumes this role only for `terraform apply`, never for audit scans.
+5. **Configure LLM egress** (optional) — set `JANITOR_LLM_BASE_URL` to a private endpoint (Bedrock, Azure OpenAI, vLLM) for zero third-party egress. Or disable AI entirely with `JANITOR_AI_ENABLED=false`.
+
+```bash
+# Minimal production .env
+JANITOR_BACKEND=aws
+JANITOR_REMEDIATION_ROLE_ARN=arn:aws:iam::123456789012:role/janitor-remediation-role
+JANITOR_LLM_BASE_URL=https://your-bedrock-proxy.internal/v1
+JANITOR_LLM_API_KEY=your-key
+```
+
+The deployment guide covers EC2 setup, IAM trust policies, identity verification, and operational notes in full.
+
+---
+
 ## CLI Commands
 
 Cloud Janitor provides a CLI interface via the `cloud-janitor` command:
@@ -824,7 +849,7 @@ uv run pytest tests/test_orchestrator.py
 uv run pytest tests/test_approval_gate.py -k "test_valid_approval"
 ```
 
-649+ tests (1950+ including all property-based and phase-specific tests). No AWS credentials required — all tests run against fixture data or mocks.
+1950+ tests. No AWS credentials required — all tests run against fixture data or mocks.
 
 The suite uses [Hypothesis](https://hypothesis.readthedocs.io/) for property-based testing. Property tests verify invariants that must hold for *any* input, not just hand-picked examples. See `tests/README.md` for the full test inventory and philosophy.
 

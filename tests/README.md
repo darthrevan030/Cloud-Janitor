@@ -24,14 +24,14 @@ uv run pytest -k "approval"
 |------|-------------|
 | `test_orchestrator.py` | Agent sequencing, pre/post hooks, approval gate, rollback, audit trail |
 | `test_orchestrator_ai_agents.py` | Orchestrator integration with AI agents (anomaly detection, drift, NL queries) |
-| `test_orchestrator_remediation_role.py` | Remediation-role credential wiring into approve/rollback flow (Phase 4) |
+| `test_orchestrator_remediation_role.py` | Remediation-role credential wiring into approve/rollback flow |
 | `test_orchestrator_identity.py` | Identity resolution wiring — STS failure blocks, sandbox fallback, explicit approver bypass |
 | `test_error_states.py` | Dependency blocking, terraform validate failure, approval lockout edge cases |
 | `test_approval_gate.py` | Command parsing (exact-match format, rejection of malformed input, 3-attempt lockout) |
 | `test_audit_logger.py` | Append-only audit log writer (entry schema, file creation, append semantics) |
-| `test_audit_query.py` | Queryable audit trail — filter conjunction, export round-trip, SQL injection prevention (Phase 3f) |
+| `test_audit_query.py` | Queryable audit trail — filter conjunction, export round-trip, SQL injection prevention |
 | `test_audit_query_e2e.py` | End-to-end audit trail: StateStore write → query_audit read-back |
-| `test_remediation_role.py` | `_assume_remediation_role()` unit tests — success/failure/unset paths (Phase 4) |
+| `test_remediation_role.py` | `_assume_remediation_role()` unit tests — success/failure/unset paths |
 | `test_gate_integration.py` | Approval gate persistence and lockout across orchestrator restarts |
 | `test_rollback_flow.py` | Rollback state machine — pending state, confirm, missing file |
 | `test_pre_hook.py` | Pre-remediation hook validation — timeout, non-zero exit, empty rollback |
@@ -66,9 +66,9 @@ uv run pytest -k "approval"
 | `test_mcp_tools_phase_bc.py` | MCP tool endpoints (get_cost_data, get_security_data, check_dependencies, etc.) |
 | `test_mcp_interpret_query.py` | MCP interpret_query tool integration with QueryInterpreter |
 | `test_stub_providers.py` | GCP/Azure provider instantiation — SDK detection, NotImplementedError messages |
-| `test_cost_explorer_cache_props.py` | Cost Explorer cache round-trip, TTL expiry, corrupted file resilience (Phase 5) |
+| `test_cost_explorer_cache_props.py` | Cost Explorer cache round-trip, TTL expiry, corrupted file resilience |
 
-### IAM & Deployment (Phase 4)
+### IAM & Deployment
 
 | File | Description |
 |------|-------------|
@@ -89,7 +89,7 @@ uv run pytest -k "approval"
 | File | Validates |
 |------|-----------|
 | `test_anomaly_detector_properties.py` | Output schema invariants for any resource/finding input |
-| `test_audit_query_properties.py` | Audit query filter conjunction soundness and completeness (Phase 3f) |
+| `test_audit_query_properties.py` | Audit query filter conjunction soundness and completeness |
 | `test_backward_compatibility_properties.py` | FixtureProvider equivalence to original inline implementation |
 | `test_drift_detector_properties.py` | Snapshot storage and drift detection invariants |
 | `test_explainer_properties.py` | Explainer output schema for any finding input |
@@ -106,7 +106,7 @@ uv run pytest -k "approval"
 | `test_query_interpreter_properties.py` | Output schema for any query string |
 | `test_reasoning_logger_properties.py` | JSON validity and sequential append for any unicode |
 | `test_reasoning_panel_properties.py` | Section header transitions on agent name changes |
-| `test_remediation_role_properties.py` | Credential isolation, fail-closed, unset-role fallback (Phase 4) |
+| `test_remediation_role_properties.py` | Credential isolation, fail-closed, unset-role fallback |
 | `test_rollback_failure_props.py` | Rollback failure error propagation for any exit code/stderr |
 | `test_savings_exception_swallowing.py` | Savings tracker exceptions swallowed without blocking approval |
 | `test_savings_tracker_properties.py` | Ledger accumulation invariants |
@@ -123,7 +123,7 @@ uv run pytest -k "approval"
 
 - **`app.py` (Streamlit UI)** — Most Streamlit UI code requires a browser runtime and cannot be unit tested in headless pytest. However, the **Audit Trail Query** logic is extracted into a testable helper and covered by `test_app_audit_trail_ui.py`.
 - **LocalStack-dependent paths** — `tflocal apply/rollback` skipped unless LocalStack is running. Tested manually or in CI.
-- **GCP/Azure live API calls** — Provider tests use mocked SDK clients. Real-account smoke tests are documented in `tests/manual/` (Phase 5, Requirement 18).
+- **GCP/Azure live API calls** — Provider tests use mocked SDK clients. Real-account smoke tests are documented in `tests/manual/`.
 
 ## Adding Tests for a New Agent
 

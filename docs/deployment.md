@@ -1,9 +1,7 @@
 # Cloud Janitor — Enterprise Deployment Guide
 
 This guide covers standing up Cloud Janitor on a shared EC2 instance with
-production-grade IAM, identity, and privacy controls. It consolidates the
-credential-sourcing decisions from Phase 4 (SEC-5, INF-2) with the identity
-and privacy posture implemented in Phase 1 (SEC-3, SEC-1).
+production-grade IAM, identity, and privacy controls.
 
 ---
 
@@ -13,12 +11,10 @@ Cloud Janitor deploys as a **single shared EC2 instance** running the
 orchestrator process, audit agents, and the optional Streamlit dashboard.
 
 **Why not autoscaling / multi-node?** No autoscaling infrastructure exists
-anywhere in the codebase today. This is the same YAGNI reasoning applied in
-`.kiro/specs/phase2-persistent-state/requirements.md` when choosing a
-single-shared-host SQLite `StateStore` over Postgres/Redis — designing
-deployment documentation for infrastructure that does not exist yet would be
-speculative and likely wrong once autoscaling is actually built. When that
-work happens, this guide will be revised to cover the new topology.
+anywhere in the codebase today. Designing deployment documentation for
+infrastructure that does not exist yet would be speculative and likely wrong
+once autoscaling is actually built. When that work happens, this guide will
+be revised to cover the new topology.
 
 **Scope:** one EC2 instance, one instance profile, two IAM roles (read + write),
 one process. Kubernetes, ECS, Lambda, and multi-account hub-spoke topologies
@@ -78,7 +74,7 @@ Cloud Janitor MUST run under an EC2 instance role — not developer credentials
 or static access keys. The instance role is what makes identity verification
 operationally meaningful.
 
-### Phase 1 SEC-3: Fail-Closed Identity Resolution
+### Fail-Closed Identity Resolution
 
 The `core/identity.py` module implements a fail-closed `resolve_actor()`
 function that calls `sts:GetCallerIdentity` before any approval or rollback
@@ -89,9 +85,6 @@ terraform operation is allowed to execute.
 This means the instance role is not merely a credential source — it is the
 identity that gets stamped into every audit-log entry and approval record.
 Without a verifiable role identity, the orchestrator refuses to proceed.
-
-This is implemented in `core/identity.py` (shipped in Phase 1
-`phase1-trust-hardening`).
 
 ---
 
@@ -115,7 +108,7 @@ Grants exactly the AWS API actions called by `AWSProvider`'s scan methods:
 | `elasticache:DescribeCacheClusters` | ElastiCache cost + encryption scan |
 | `elasticache:DescribeReplicationGroups` | Dependency check |
 | `cloudwatch:GetMetricStatistics` | Idle-days calculation |
-| `sts:GetCallerIdentity` | Identity resolution (Phase 1 SEC-3) |
+| `sts:GetCallerIdentity` | Identity resolution |
 | `sts:AssumeRole` | Assume the Remediation_Role (scoped to its ARN) |
 
 No `Create*`, `Delete*`, `Modify*`, `Authorize*`, or `Revoke*` actions are
@@ -182,7 +175,7 @@ Replace `ACCOUNT_ID` with your 12-digit AWS account ID.
 
 ## BYO-Endpoint & Privacy Posture
 
-### LLM Egress Control (Phase 1 SEC-1)
+### LLM Egress Control
 
 The `core/llm_client.py` module implements the privacy posture attestation
 mechanism:
@@ -196,9 +189,6 @@ mechanism:
 For BYO-endpoint deployments (e.g. self-hosted models, Amazon Bedrock proxies,
 or Azure OpenAI behind a VPN), configure `JANITOR_LLM_BASE_URL` and set the
 retention policy to match your endpoint's actual data handling.
-
-This is implemented in `core/llm_client.py` (shipped in Phase 1
-`phase1-trust-hardening`).
 
 ### Operational Security Hardening
 
@@ -254,5 +244,4 @@ phase's implementation plan.
 When running in production (`JANITOR_BACKEND=aws`, no LocalStack endpoint),
 the orchestrator calls `GetCallerIdentity` via `core/identity.py`'s
 `resolve_actor()` before any terraform operation. If identity cannot be
-confirmed, the operation is blocked. This is the fail-closed pattern from
-Phase 1 SEC-3, implemented in `core/identity.py`.
+confirmed, the operation is blocked.
