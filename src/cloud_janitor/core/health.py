@@ -14,6 +14,8 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Literal
 
+from cloud_janitor.mcp_server.backends.aws_provider import _make_client
+
 _PROBE_TIMEOUT_SECONDS = 5
 
 # Distinguishes *why* a probe failed, not just *that* it failed — an
@@ -89,19 +91,14 @@ def _check_sts() -> HealthStatus:
     from botocore.config import Config
     from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError
 
-    from cloud_janitor.mcp_server.backends.aws_provider import _make_client
-
     timeout_config = Config(connect_timeout=_PROBE_TIMEOUT_SECONDS, read_timeout=_PROBE_TIMEOUT_SECONDS)
     try:
         client = _make_client("sts", region=None, config=timeout_config)
         client.get_caller_identity()
         return HealthStatus(True, "real_aws", "healthy", "ok", "sts:GetCallerIdentity")
     except (ClientError, NoCredentialsError) as exc:
-        # Reached AWS (or a credential resolver ran) but was rejected —
-        # this is a credentials/permissions problem, not a network one.
         return HealthStatus(False, "real_aws", "invalid_credentials", str(exc), "sts:GetCallerIdentity")
     except (EndpointConnectionError, OSError, TimeoutError) as exc:
-        # Never reached AWS at all — network/DNS/timeout.
         return HealthStatus(False, "real_aws", "unreachable", str(exc), "sts:GetCallerIdentity")
     except Exception as exc:  # noqa: BLE001 — unexpected shape, still "not reachable"
         return HealthStatus(False, "real_aws", "unreachable", str(exc), "sts:GetCallerIdentity")

@@ -402,7 +402,7 @@ class CostExplorerClient:
             return "USD"
         total_block = results[0].get("Total", {})
         cost_block = total_block.get("UnblendedCost", {})
-        return cost_block.get("Unit", "USD")
+        return str(cost_block.get("Unit", "USD"))
 
     @staticmethod
     def _extract_grouped_amount(response: dict, usage_type_prefix: str) -> float:
@@ -431,7 +431,7 @@ class CostExplorerClient:
         for group in results[0].get("Groups", []):
             usage_type = group["Keys"][-1] if len(group.get("Keys", [])) > 1 else ""
             if usage_type.startswith(usage_type_prefix):
-                return (
+                return str(
                     group.get("Metrics", {})
                     .get("UnblendedCost", {})
                     .get("Unit", "USD")

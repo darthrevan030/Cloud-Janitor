@@ -30,6 +30,6 @@ class SlackWebhookNotifier(Notifier):
         )
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
-                return 200 <= resp.status < 300
+                return bool(200 <= resp.status < 300)
         except (urllib.error.URLError, OSError):
             return False

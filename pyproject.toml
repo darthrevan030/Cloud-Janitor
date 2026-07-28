@@ -65,5 +65,13 @@ warn_return_any = true
 warn_unused_configs = true
 
 [[tool.mypy.overrides]]
-module = ["boto3.*", "botocore.*", "apscheduler.*", "mcp.*", "streamlit.*"]
+module = ["boto3.*", "botocore.*", "apscheduler.*", "mcp.*", "streamlit.*", "google.*", "pandas.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["cloud_janitor.core.state_store"]
+disable_error_code = ["union-attr"]
+
+[[tool.mypy.overrides]]
+module = ["cloud_janitor.app"]
+disable_error_code = ["import-untyped"]

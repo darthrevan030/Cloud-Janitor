@@ -120,7 +120,7 @@ def query_audit(
         clauses.append("run_id IS NULL")
     elif run_id is not None:
         clauses.append("run_id = ?")
-        params.append(run_id)
+        params.append(str(run_id))
 
     if date_from is not None:
         clauses.append("timestamp >= ?")
