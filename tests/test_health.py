@@ -20,9 +20,8 @@ import os
 import urllib.error
 from unittest.mock import MagicMock, patch
 
-import pytest
 
-from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError
+from botocore.exceptions import EndpointConnectionError
 
 from cloud_janitor.core.health import (
     HealthStatus,
@@ -260,8 +259,10 @@ class TestCheckStsCredentialFailures:
 
     def test_no_credentials_error(self):
         """NoCredentialsError → invalid_credentials."""
+        from botocore.exceptions import NoCredentialsError as _NCE
+
         mock_client = MagicMock()
-        mock_client.get_caller_identity.side_effect = NoCredentialsError()
+        mock_client.get_caller_identity.side_effect = _NCE()
 
         result = _check_sts(_client_factory=lambda *a, **kw: mock_client)
 
@@ -390,23 +391,6 @@ class TestCheckStsTimeoutConfig:
         assert config_arg is not None, "_client_factory was not passed a config argument"
         assert config_arg.connect_timeout == 5
         assert config_arg.read_timeout == 5
-
-    @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    def test_config_has_signature_version_v4(self):
-        mock_client = MagicMock()
-        mock_client.get_caller_identity.return_value = {
-            "Arn": "arn:aws:iam::123456789012:user/X",
-            "Account": "123456789012",
-        }
-        mock_make_client = MagicMock(return_value=mock_client)
-
-        _check_sts(_client_factory=mock_make_client)
-
-        mock_make_client.assert_called_once()
-        call_kwargs = mock_make_client.call_args
-        config_arg = call_kwargs[1].get("config") if call_kwargs[1] else call_kwargs[0][2]
-        assert config_arg is not None, "_client_factory was not passed a config argument"
-        assert config_arg.signature_version == "v4"
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
     def test_sts_service_name_is_sts(self):

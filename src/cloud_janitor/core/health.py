@@ -101,7 +101,6 @@ def _check_sts(_client_factory=None) -> HealthStatus:
         timeout_config = Config(
             connect_timeout=_PROBE_TIMEOUT_SECONDS,
             read_timeout=_PROBE_TIMEOUT_SECONDS,
-            signature_version="v4",
         )
         client = _client_factory("sts", region=None, config=timeout_config)
         client.get_caller_identity()
