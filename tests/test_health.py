@@ -240,7 +240,8 @@ class TestCheckStsCredentialFailures:
     """Mocked STS raising ClientError/NoCredentialsError → mode='invalid_credentials'."""
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    def test_client_error_access_denied(self):
+    @patch("botocore.config.Config")
+    def test_client_error_access_denied(self, _mock_config):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = ClientError(
             {"Error": {"Code": "AccessDenied", "Message": "Access denied"}},
@@ -256,7 +257,8 @@ class TestCheckStsCredentialFailures:
         assert "AccessDenied" in result.detail or "Access denied" in result.detail
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    def test_no_credentials_error(self):
+    @patch("botocore.config.Config")
+    def test_no_credentials_error(self, _mock_config):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = NoCredentialsError()
         mock_make_client = MagicMock(return_value=mock_client)
@@ -268,7 +270,8 @@ class TestCheckStsCredentialFailures:
         assert result.environment == "real_aws"
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    def test_expired_token_client_error(self):
+    @patch("botocore.config.Config")
+    def test_expired_token_client_error(self, _mock_config):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = ClientError(
             {"Error": {"Code": "ExpiredTokenException", "Message": "Token expired"}},
