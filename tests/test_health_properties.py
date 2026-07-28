@@ -227,9 +227,9 @@ class TestHealthFailureClassificationPartition:
         exc = exc_factory()
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = exc
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        with patch("cloud_janitor.mcp_server.backends.aws_provider._make_client", return_value=mock_client):
-            result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is False
         assert result.mode == "invalid_credentials"
@@ -242,25 +242,24 @@ class TestHealthFailureClassificationPartition:
         exc = exc_factory()
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = exc
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        with patch("cloud_janitor.mcp_server.backends.aws_provider._make_client", return_value=mock_client):
-            result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is False
         assert result.mode == "unreachable"
         assert result.environment == "real_aws"
 
-    @patch("cloud_janitor.mcp_server.backends.aws_provider._make_client")
-    def test_success_classified_as_healthy(self, mock_make_client):
+    def test_success_classified_as_healthy(self):
         """get_caller_identity success → mode="healthy"."""
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {
             "Arn": "arn:aws:iam::123456789012:user/X",
             "Account": "123456789012",
         }
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is True
         assert result.mode == "healthy"

@@ -14,8 +14,6 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Literal
 
-from cloud_janitor.mcp_server.backends.aws_provider import _make_client
-
 _PROBE_TIMEOUT_SECONDS = 5
 
 # Distinguishes *why* a probe failed, not just *that* it failed — an
@@ -81,19 +79,27 @@ def _check_localstack() -> HealthStatus:
         return HealthStatus(False, "sandbox_localstack", "unreachable", str(exc), url)
 
 
-def _check_sts() -> HealthStatus:
+def _check_sts(_client_factory=None) -> HealthStatus:
     """Probe real AWS via STS GetCallerIdentity with an explicit, short timeout.
 
     Constructs a botocore Config with connect_timeout=5, read_timeout=5
     and passes it to _make_client() so the probe fails fast rather than
     hanging for boto3's much larger, retry-multiplied default timeout.
+
+    Args:
+        _client_factory: Optional callable for testing. If None, uses the
+            real _make_client from aws_provider.
     """
     from botocore.config import Config
     from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError
 
+    if _client_factory is None:
+        from cloud_janitor.mcp_server.backends.aws_provider import _make_client
+        _client_factory = _make_client
+
     timeout_config = Config(connect_timeout=_PROBE_TIMEOUT_SECONDS, read_timeout=_PROBE_TIMEOUT_SECONDS)
     try:
-        client = _make_client("sts", region=None, config=timeout_config)
+        client = _client_factory("sts", region=None, config=timeout_config)
         client.get_caller_identity()
         return HealthStatus(True, "real_aws", "healthy", "ok", "sts:GetCallerIdentity")
     except (ClientError, NoCredentialsError) as exc:

@@ -214,16 +214,15 @@ class TestCheckStsSuccess:
     """Mocked STS get_caller_identity success → mode='healthy'."""
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_sts_success_returns_healthy(self, mock_make_client):
+    def test_sts_success_returns_healthy(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {
             "Arn": "arn:aws:iam::123456789012:user/TestUser",
             "Account": "123456789012",
         }
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is True
         assert result.mode == "healthy"
@@ -241,16 +240,15 @@ class TestCheckStsCredentialFailures:
     """Mocked STS raising ClientError/NoCredentialsError → mode='invalid_credentials'."""
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_client_error_access_denied(self, mock_make_client):
+    def test_client_error_access_denied(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = ClientError(
             {"Error": {"Code": "AccessDenied", "Message": "Access denied"}},
             "GetCallerIdentity",
         )
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is False
         assert result.mode == "invalid_credentials"
@@ -258,29 +256,27 @@ class TestCheckStsCredentialFailures:
         assert "AccessDenied" in result.detail or "Access denied" in result.detail
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_no_credentials_error(self, mock_make_client):
+    def test_no_credentials_error(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = NoCredentialsError()
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is False
         assert result.mode == "invalid_credentials"
         assert result.environment == "real_aws"
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_expired_token_client_error(self, mock_make_client):
+    def test_expired_token_client_error(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = ClientError(
             {"Error": {"Code": "ExpiredTokenException", "Message": "Token expired"}},
             "GetCallerIdentity",
         )
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is False
         assert result.mode == "invalid_credentials"
@@ -295,40 +291,37 @@ class TestCheckStsConnectionFailures:
     """Mocked STS raising connection errors → mode='unreachable'."""
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_endpoint_connection_error(self, mock_make_client):
+    def test_endpoint_connection_error(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = EndpointConnectionError(
             endpoint_url="https://sts.us-east-1.amazonaws.com"
         )
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is False
         assert result.mode == "unreachable"
         assert result.environment == "real_aws"
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_os_error(self, mock_make_client):
+    def test_os_error(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = OSError("Network unreachable")
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is False
         assert result.mode == "unreachable"
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_timeout_error(self, mock_make_client):
+    def test_timeout_error(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.side_effect = TimeoutError("Connection timed out")
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        result = _check_sts()
+        result = _check_sts(_client_factory=mock_make_client)
 
         assert result.reachable is False
         assert result.mode == "unreachable"
@@ -343,36 +336,34 @@ class TestCheckStsTimeoutConfig:
     """Assert _check_sts() passes a Config with connect_timeout=5, read_timeout=5."""
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_config_has_5s_connect_and_read_timeout(self, mock_make_client):
+    def test_config_has_5s_connect_and_read_timeout(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {
             "Arn": "arn:aws:iam::123456789012:user/X",
             "Account": "123456789012",
         }
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        _check_sts()
+        _check_sts(_client_factory=mock_make_client)
 
         mock_make_client.assert_called_once()
         call_kwargs = mock_make_client.call_args
-        # _make_client is called as _make_client("sts", region=None, config=timeout_config)
+        # _client_factory is called as factory("sts", region=None, config=timeout_config)
         config_arg = call_kwargs[1].get("config") if call_kwargs[1] else call_kwargs[0][2]
-        assert config_arg is not None, "_make_client was not passed a config argument"
+        assert config_arg is not None, "_client_factory was not passed a config argument"
         assert config_arg.connect_timeout == 5
         assert config_arg.read_timeout == 5
 
     @patch.dict(os.environ, {"JANITOR_BACKEND": "aws", "AWS_ENDPOINT_URL": ""})
-    @patch("cloud_janitor.core.health._make_client")
-    def test_sts_service_name_is_sts(self, mock_make_client):
+    def test_sts_service_name_is_sts(self):
         mock_client = MagicMock()
         mock_client.get_caller_identity.return_value = {
             "Arn": "arn:aws:iam::123456789012:user/X",
             "Account": "123456789012",
         }
-        mock_make_client.return_value = mock_client
+        mock_make_client = MagicMock(return_value=mock_client)
 
-        _check_sts()
+        _check_sts(_client_factory=mock_make_client)
 
         call_args = mock_make_client.call_args[0]
         assert call_args[0] == "sts"
