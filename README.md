@@ -398,7 +398,9 @@ Cloud Janitor implements defense-in-depth for sensitive operations:
 All child processes (terraform, hooks) receive a **minimal environment** — never the full parent env. Specifically:
 
 - **Terraform children**: receive only `PATH`, AWS credentials, and `AWS_ENDPOINT_URL`. Never receive `OPENROUTER_API_KEY` or `JANITOR_LLM_API_KEY`.
-- **Hook children**: receive only `PATH` and system vars. No cloud credentials, no API keys.
+- **Hook children**: receive `PATH`, Windows process/system variables, the
+  Terraform/LocalStack credential and endpoint variables needed for validation,
+  `TF_CMD`, and `JANITOR_DRY_RUN`. LLM API keys are never passed to hooks.
 
 This prevents secrets from leaking to Terraform providers (which are arbitrary downloaded code) or to hook scripts.
 
@@ -409,6 +411,13 @@ Terraform error output is scrubbed before logging or display. Patterns redacted:
 ### Pre-Remediation Validation
 
 The pre-remediation hook (`hooks/pre-remediation.sh`) **fails closed** — if the hook script is missing, remediation is blocked. This ensures HCL validation cannot be silently bypassed.
+It uses one temporary Terraform workspace and one provider initialization for
+the remediation file plus all rollback files, reusing `TF_PLUGIN_CACHE_DIR`
+under `JANITOR_HOME` (or `HOME`). Set `TF_PLUGIN_DIR` to an existing local
+provider directory to avoid registry access; when it is absent, the hook logs
+that it is using the persistent-cache/registry fallback. The hook logs init and
+validation durations and includes the last 20 lines of Terraform output on
+failure.
 
 ### Dashboard Binding
 
