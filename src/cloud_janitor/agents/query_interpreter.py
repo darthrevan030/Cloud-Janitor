@@ -5,10 +5,9 @@ parameters for the FinOps/SecOps audit pipeline.
 """
 
 import copy
-import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import DEFAULT_MODEL, call_llm, extract_json, get_client
 
 import logging
 
@@ -39,7 +38,6 @@ User query: {query}
 
 Respond with ONLY the JSON object, no markdown formatting or explanation."""
 
-
 class QueryInterpreter:
     """Translates natural language queries into structured scan parameters."""
 
@@ -67,7 +65,7 @@ class QueryInterpreter:
             response = call_llm(
                 client,
                 model=self._model,
-                max_tokens=256,
+                max_tokens=1024,
                 messages=[
                     {"role": "system", "content": "You are a JSON-only query parser. Return only valid JSON."},
                     {"role": "user", "content": prompt},
@@ -75,8 +73,7 @@ class QueryInterpreter:
             )
 
             raw_content = response.choices[0].message.content
-            parsed = json.loads(raw_content)  # type: ignore[arg-type]
-
+            parsed = extract_json(raw_content)
             return self._validate(parsed)
 
         except Exception as exc:

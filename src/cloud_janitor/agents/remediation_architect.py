@@ -329,7 +329,7 @@ class RemediationArchitect:
             f'  depends_on = [aws_ebs_snapshot.pre_remediation_{safe_id}]\n'
             f'\n'
             f'  provisioner "local-exec" {{\n'
-            f'    command = "aws ec2 delete-volume --volume-id {resource_id}"\n'
+            f'    command = "python -m cloud_janitor.aws_actions ec2 delete-volume --volume-id {resource_id}"\n'
             f'  }}\n'
             f'}}'
         )
@@ -402,7 +402,8 @@ class RemediationArchitect:
 
         Note: There is no aws_elasticache_snapshot resource in Terraform.
         We use null_resource + local-exec to create the snapshot and delete
-        the cluster via AWS CLI, with depends_on to enforce ordering.
+        the cluster via the bundled Boto3 action module, with depends_on to
+        enforce ordering.
         null_resource does not support tags — tags are only on the rollback resource.
         """
         resource_id = finding["resource_id"]
@@ -412,7 +413,7 @@ class RemediationArchitect:
             f'# Remediation: ElastiCache {resource_id} — snapshot then delete\n'
             f'resource "null_resource" "snapshot_{safe_id}" {{\n'
             f'  provisioner "local-exec" {{\n'
-            f'    command = "aws elasticache create-snapshot --cache-cluster-id {resource_id} --snapshot-name pre-remediation-{resource_id}"\n'
+            f'    command = "python -m cloud_janitor.aws_actions elasticache create-snapshot --cache-cluster-id {resource_id} --snapshot-name pre-remediation-{resource_id}"\n'
             f'  }}\n'
             f'}}\n'
             f'\n'
@@ -420,7 +421,7 @@ class RemediationArchitect:
             f'  depends_on = [null_resource.snapshot_{safe_id}]\n'
             f'\n'
             f'  provisioner "local-exec" {{\n'
-            f'    command = "aws elasticache delete-cache-cluster --cache-cluster-id {resource_id} --final-snapshot-identifier final-{resource_id}"\n'
+            f'    command = "python -m cloud_janitor.aws_actions elasticache delete-cache-cluster --cache-cluster-id {resource_id} --final-snapshot-identifier final-{resource_id}"\n'
             f'  }}\n'
             f'}}'
         )

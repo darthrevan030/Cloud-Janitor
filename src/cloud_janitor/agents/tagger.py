@@ -9,7 +9,7 @@ Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 1.4, 1.8, 1.9, 1.11
 import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import DEFAULT_MODEL, call_llm, extract_json, get_client
 
 import logging
 
@@ -111,7 +111,7 @@ class ResourceTagger:
             response = call_llm(
                 client,
                 model=self._model,
-                max_tokens=256,
+                max_tokens=512,
                 messages=[
                     {"role": "system", "content": "You are a JSON-only tagging inference engine. Return only valid JSON."},
                     {"role": "user", "content": prompt},
@@ -119,7 +119,7 @@ class ResourceTagger:
             )
 
             raw_content = response.choices[0].message.content
-            parsed = json.loads(raw_content)  # type: ignore[arg-type]
+            parsed = extract_json(raw_content)
 
             return self._validate_single(parsed, existing_tags)
 
@@ -179,7 +179,7 @@ class ResourceTagger:
             response = call_llm(
                 client,
                 model=self._model,
-                max_tokens=256 * len(chunk),
+                max_tokens=max(1024, 256 * len(chunk)),
                 messages=[
                     {"role": "system", "content": "You are a JSON-only tagging inference engine. Return only a valid JSON array."},
                     {"role": "user", "content": prompt},
@@ -187,7 +187,7 @@ class ResourceTagger:
             )
 
             raw_content = response.choices[0].message.content
-            parsed = json.loads(raw_content)  # type: ignore[arg-type]
+            parsed = extract_json(raw_content)
 
             if not isinstance(parsed, list):
                 # Req 1.9: log unexpected structure

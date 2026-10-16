@@ -22,6 +22,8 @@ Includes:
 
 import logging
 import os
+import json
+from typing import Any
 import time
 
 from dotenv import load_dotenv
@@ -31,6 +33,40 @@ load_dotenv()  # loads .env from project root if present, no-op otherwise
 import openai  # noqa: E402
 
 logger = logging.getLogger(__name__)
+
+
+def extract_json(raw: str | None) -> Any:
+    """Extract and decode the first JSON object or array from LLM output.
+
+    Models occasionally add markdown fences or a short explanation around an
+    otherwise valid response. Empty and malformed responses remain errors so
+    callers can apply their existing safe fallback.
+    """
+    if not raw or not raw.strip():
+        logger.error("LLM returned empty JSON output: %r", raw)
+        raise ValueError("LLM returned empty content")
+
+    text = raw.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].lstrip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+
+    decoder = json.JSONDecoder()
+    for index, character in enumerate(text):
+        if character not in "[{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(text[index:])
+            return value
+        except json.JSONDecodeError:
+            continue
+
+    logger.error("Failed to decode JSON from raw LLM output: %r", raw)
+    raise ValueError("LLM output did not contain valid JSON")
 
 # Retry configuration
 _MAX_RETRIES = 3  # 4 total attempts including original

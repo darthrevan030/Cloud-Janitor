@@ -8,7 +8,7 @@ agents would miss.
 import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import DEFAULT_MODEL, call_llm, extract_json, get_client
 
 import logging
 
@@ -130,7 +130,7 @@ class AnomalyDetector:
         response = call_llm(
             client,
             model=self._model,
-            max_tokens=1024,
+            max_tokens=2048,
             messages=[
                 {
                     "role": "system",
@@ -142,14 +142,7 @@ class AnomalyDetector:
 
         raw_content = response.choices[0].message.content
 
-        # Strip markdown code fences if present
-        raw_content = raw_content.strip()  # type: ignore[union-attr]
-        if raw_content.startswith("```"):
-            lines = raw_content.split("\n")
-            lines = [line for line in lines if not line.strip().startswith("```")]
-            raw_content = "\n".join(lines)
-
-        parsed = json.loads(raw_content)
+        parsed = extract_json(raw_content)
 
         # Req 6.6: Invalid structure → return []
         if not isinstance(parsed, list):

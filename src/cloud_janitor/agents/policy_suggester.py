@@ -7,7 +7,7 @@ relevant security and cost checks the user may have missed.
 import json
 import sys
 
-from cloud_janitor.core.llm_client import get_client, call_llm, DEFAULT_MODEL
+from cloud_janitor.core.llm_client import DEFAULT_MODEL, call_llm, extract_json, get_client
 
 import logging
 
@@ -176,15 +176,7 @@ class PolicySuggester:
         )
 
         raw_content = response.choices[0].message.content
-        # Strip markdown code fences if present
-        raw_content = raw_content.strip()  # type: ignore[union-attr]
-        if raw_content.startswith("```"):
-            lines = raw_content.split("\n")
-            # Remove first and last lines (code fences)
-            lines = [line for line in lines if not line.strip().startswith("```")]
-            raw_content = "\n".join(lines)
-
-        parsed = json.loads(raw_content)
+        parsed = extract_json(raw_content)
 
         if not isinstance(parsed, list):
             return []
@@ -213,13 +205,7 @@ class PolicySuggester:
             )
 
             raw_content = response.choices[0].message.content
-            raw_content = raw_content.strip()  # type: ignore[union-attr]
-            if raw_content.startswith("```"):
-                lines = raw_content.split("\n")
-                lines = [line for line in lines if not line.strip().startswith("```")]
-                raw_content = "\n".join(lines)
-
-            parsed = json.loads(raw_content)
+            parsed = extract_json(raw_content)
             if isinstance(parsed, list) and len(parsed) >= 1:
                 return parsed
         except Exception:
