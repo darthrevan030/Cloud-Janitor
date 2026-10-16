@@ -167,7 +167,7 @@ def _build_subprocess_env(kind: str) -> dict[str, str]:
         env["PATH"] = os.environ["PATH"]
 
     # Windows-specific system vars needed for process execution
-    for var in ("SYSTEMROOT", "TEMP", "TMP", "COMSPEC", "HOMEDRIVE", "HOMEPATH"):
+    for var in ("SYSTEMROOT", "TEMP", "TMP", "COMSPEC", "HOMEDRIVE", "HOMEPATH", "HOME"):
         if var in os.environ:
             env[var] = os.environ[var]
 
@@ -198,6 +198,9 @@ def _build_subprocess_env(kind: str) -> dict[str, str]:
             "AWS_ENDPOINT_URL",
             "LOCALSTACK_AUTH_TOKEN",
             "TF_CMD",
+            "JANITOR_HOME",
+            "TF_PLUGIN_DIR",
+            "TF_PLUGIN_CACHE_DIR",
             "JANITOR_DRY_RUN",
         ):
             if var in os.environ:
@@ -1110,24 +1113,26 @@ class Orchestrator:
             return "No rollback file found for validation"
 
         try:
-            for rollback_path in rollback_paths:
-                result = subprocess.run(
-                    [
-                        BASH_CMD,
-                        _to_bash_path(hook_path),
-                        _to_bash_path(remediation_path),
-                        _to_bash_path(rollback_path),
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=180,
-                    cwd=str(self.project_root),
-                    env=_build_subprocess_env("hook"),
-                )
+            result = subprocess.run(
+                [
+                    BASH_CMD,
+                    _to_bash_path(hook_path),
+                    _to_bash_path(remediation_path),
+                    *[_to_bash_path(path) for path in rollback_paths],
+                ],
+                capture_output=True,
+                text=True,
+                timeout=180,
+                cwd=str(self.project_root),
+                env=_build_subprocess_env("hook"),
+            )
 
-                if result.returncode != 0:
-                    error_output = _redact(result.stderr.strip() or result.stdout.strip())
-                    return f"Pre-remediation hook failed: {error_output}"
+            hook_output = _redact(
+                "\n".join(part for part in (result.stdout, result.stderr) if part)
+            )
+            logger.info("[Orchestrator] Pre-remediation hook output:\n%s", hook_output)
+            if result.returncode != 0:
+                return f"Pre-remediation hook failed:\n{hook_output}"
 
         except subprocess.TimeoutExpired:
             return "Pre-remediation hook timed out"

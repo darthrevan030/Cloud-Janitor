@@ -1,59 +1,63 @@
 #!/usr/bin/env bash
-# Trigger: before Remediation Architect surfaces approval prompt
-# Action: validate generated HCL — block if invalid
-# This hook runs automatically; engineers cannot skip it.
-# When JANITOR_DRY_RUN=1, skips init/validate (avoids provider download).
+# Validate all generated HCL before the human approval gate.
+set -euo pipefail
 
-set -e
-
-# Dry-run mode: skip validation entirely (demo/dev convenience)
 if [ "${JANITOR_DRY_RUN:-0}" = "1" ]; then
     echo "[pre-remediation] DRY RUN — skipping HCL validation"
     exit 0
 fi
 
-TF_CMD="${TF_CMD:-tflocal}"
+CACHE_DIR="${TF_PLUGIN_CACHE_DIR:-${JANITOR_HOME:-${HOME:-/tmp}}/.terraform-plugin-cache}"
+mkdir -p "$CACHE_DIR"
+if command -v cygpath >/dev/null 2>&1; then
+    CACHE_DIR="$(cygpath -m "$CACHE_DIR")"
+fi
+export TF_PLUGIN_CACHE_DIR="$CACHE_DIR"
 
-# Verify TF_CMD is actually EXECUTABLE (not just present on PATH).
-# On Windows under Git Bash, a Python entry-point script (e.g. .venv/Scripts/tflocal)
-# can be found by 'command -v' but fails at exec time — wrong interpreter/shebang.
-# '--version' is a cheap way to confirm the binary actually runs.
-if ! $TF_CMD -version >/dev/null 2>&1 && ! $TF_CMD --version >/dev/null 2>&1; then
-    # Fall back to plain 'terraform' which IS a native binary.
-    # The generated HCL doesn't need LocalStack for validation — just syntax checks.
-    if command -v terraform &>/dev/null; then
+TF_CMD="${TF_CMD:-tflocal}"
+if ! command -v "$TF_CMD" >/dev/null 2>&1 ||
+   ! "$TF_CMD" -version >/dev/null 2>&1 && ! "$TF_CMD" --version >/dev/null 2>&1; then
+    if command -v terraform >/dev/null 2>&1; then
         TF_CMD="terraform"
     fi
 fi
+if ! command -v "$TF_CMD" >/dev/null 2>&1; then
+    echo "[pre-remediation] BLOCKED: terraform command not found (TF_CMD=$TF_CMD)"
+    exit 1
+fi
+echo "[pre-remediation] Using TF_CMD=$TF_CMD"
 
 REMEDIATION_FILE="${1:-/tmp/remediation.tf}"
-ROLLBACK_FILE="${2:-/tmp/rollback.tf}"
+shift || true
+ROLLBACK_FILES=("$@")
+if [ "${#ROLLBACK_FILES[@]}" -eq 0 ]; then
+    ROLLBACK_FILES=("/tmp/rollback.tf")
+fi
 
-# validate_hcl copies a .tf file to an isolated temp directory,
-# runs tflocal init + validate, then cleans up.
-# Returns 0 on success, 1 on validation failure.
-validate_hcl() {
-    local hcl_file="$1"
-    local label="$2"
-    local tmp_dir
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 
-    if [ ! -f "$hcl_file" ]; then
-        echo "[pre-remediation] BLOCKED: $label file not found: $hcl_file"
+copy_plan() {
+    local source="$1"
+    local target="$2"
+    if [ ! -f "$source" ]; then
+        echo "[pre-remediation] BLOCKED: plan file not found: $source"
         return 1
     fi
+    cp "$source" "$TMP_DIR/$target"
+}
 
-    tmp_dir=$(mktemp -d)
-    trap "rm -rf '$tmp_dir'" RETURN
+copy_plan "$REMEDIATION_FILE" "remediation.tf" || exit 1
+for rollback_file in "${ROLLBACK_FILES[@]}"; do
+    copy_plan "$rollback_file" "rollback-$(basename "$rollback_file")" || exit 1
+done
 
-    cp "$hcl_file" "$tmp_dir/main.tf"
-
-    # Inject a minimal provider block so terraform init can resolve the AWS provider
-    cat > "$tmp_dir/providers.tf" <<'EOF'
+cat > "$TMP_DIR/providers.tf" <<'EOF'
 terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 4.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -70,38 +74,50 @@ variable "environment" {
 }
 EOF
 
-    echo "[pre-remediation] Initializing $TF_CMD for $label..."
-    tf_output=$($TF_CMD -chdir="$tmp_dir" init -backend=false -input=false 2>&1)
-    if [ $? -ne 0 ]; then
-        echo "[pre-remediation] BLOCKED: $TF_CMD init failed for $label"
-        echo "$tf_output"
-        return 1
+PLUGIN_ARGS=()
+PLUGIN_DIR="${TF_PLUGIN_DIR:-}"
+if [ -n "$PLUGIN_DIR" ] && [ -d "$PLUGIN_DIR" ]; then
+    if command -v cygpath >/dev/null 2>&1; then
+        PLUGIN_DIR="$(cygpath -m "$PLUGIN_DIR")"
     fi
+    PLUGIN_ARGS=(-plugin-dir="$PLUGIN_DIR")
+    echo "[pre-remediation] Using local provider mirror: $PLUGIN_DIR"
+else
+    echo "[pre-remediation] Local provider mirror unavailable; using persistent cache/registry fallback: $CACHE_DIR"
+fi
 
+start_time="$(date +%s)"
+echo "[pre-remediation] Initializing $TF_CMD once for ${#ROLLBACK_FILES[@]} rollback plan(s)..."
+if ! tf_output=$("$TF_CMD" -chdir="$TMP_DIR" init -backend=false -input=false -upgrade=false "${PLUGIN_ARGS[@]}" 2>&1); then
+    echo "[pre-remediation] BLOCKED: $TF_CMD init failed"
+    printf '%s\n' "$tf_output" | tail -n 20
+    exit 1
+fi
+echo "[pre-remediation] init completed in $(( $(date +%s) - start_time ))s"
+
+validate_plan() {
+    local plan_file="$1"
+    local label="$2"
+    local plan_start
+    plan_start="$(date +%s)"
     echo "[pre-remediation] Validating $label..."
-    if ! $TF_CMD -chdir="$tmp_dir" validate >/dev/null 2>&1; then
-        # Full provider-level validate failed (expected for demo HCL with
-        # illustrative resource types). Fall back to syntax parse check:
-        # 'terraform fmt' returns 0 if the file is parseable HCL.
-        echo "[pre-remediation] Provider validation skipped (demo mode), checking HCL syntax..."
-        if ! $TF_CMD fmt -check=false -write=false "$tmp_dir/main.tf" >/dev/null 2>&1; then
+    local validate_output
+    if ! validate_output=$("$TF_CMD" -chdir="$TMP_DIR" validate 2>&1); then
+        printf '%s\n' "$validate_output" | tail -n 20
+        echo "[pre-remediation] Provider validation failed for $label; checking HCL syntax..."
+        local fmt_output
+        if ! fmt_output=$("$TF_CMD" fmt -check=false -write=false "$plan_file" 2>&1); then
+            printf '%s\n' "$fmt_output" | tail -n 20
             echo "[pre-remediation] BLOCKED: $label has HCL syntax errors"
             return 1
         fi
     fi
-
-    return 0
+    echo "[pre-remediation] validate completed for $label in $(( $(date +%s) - plan_start ))s"
 }
 
-echo "[pre-remediation] Validating remediation HCL..."
-if ! validate_hcl "$REMEDIATION_FILE" "remediation.tf"; then
-    exit 1
-fi
-
-echo "[pre-remediation] Validating rollback HCL..."
-if ! validate_hcl "$ROLLBACK_FILE" "rollback.tf"; then
-    exit 1
-fi
+validate_plan "$TMP_DIR/remediation.tf" "remediation.tf" || exit 1
+for rollback_file in "${ROLLBACK_FILES[@]}"; do
+    validate_plan "$TMP_DIR/rollback-$(basename "$rollback_file")" "rollback-$(basename "$rollback_file")" || exit 1
+done
 
 echo "[pre-remediation] Both plans valid. Proceeding to approval prompt."
-exit 0
