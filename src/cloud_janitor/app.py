@@ -893,14 +893,16 @@ else:
     if nl_submitted and nl_query and nl_query.strip():
         with st.spinner("Interpreting query and running audit..."):
             try:
+                st.session_state.agent_status = {"finops": "running", "secops": "idle", "remediation": "idle"}
+                _render_live_feed(st.session_state.agent_status)
                 result = orch.execute_natural_language_audit(nl_query.strip())
                 st.session_state.nl_query_result = result
                 st.session_state.audit_result = result
-                # Cache anomalies and drift from NL audit result
-                if hasattr(result, "anomalies") and result.anomalies:
-                    st.session_state.anomaly_results = result.anomalies
-                if hasattr(result, "drift_report") and result.drift_report:
-                    st.session_state.drift_report = result.drift_report
+                st.session_state.anomaly_results = getattr(result, "anomalies", [])
+                st.session_state.drift_report = getattr(result, "drift_report", None)
+                st.session_state.explanation_cache = {}
+                st.session_state.policy_suggestions = None
+                st.session_state.agent_status = {"finops": "success", "secops": "success", "remediation": "success"}
                 st.success(f"NL Audit complete — {len(result.findings)} finding(s).")
                 st.rerun()
             except Exception as e:
@@ -922,14 +924,20 @@ st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 if st.button("▶  Run Audit", type="primary", use_container_width=False):
     orch = st.session_state.orchestrator
+    st.session_state.agent_status = {"finops": "idle", "secops": "idle", "remediation": "idle"}
+    st.session_state.explanation_cache = {}
+    st.session_state.policy_suggestions = None
+    _render_live_feed(st.session_state.agent_status)
 
     def _on_agent_status(agent_name: str, status: str) -> None:
         st.session_state.setdefault("agent_status", {})[agent_name] = status
+        _render_live_feed(st.session_state.agent_status)
 
     with st.spinner("Running audit pipeline..."):
         result = orch.execute_audit(status_callback=_on_agent_status)
 
-    # Render final agent statuses
+    # Render final agent statuses and persist every result, including empty
+    # anomaly/drift results, so stale panels cannot survive a new audit.
     _render_live_feed(st.session_state.agent_status)
 
     if not result.success:
@@ -943,11 +951,8 @@ if st.button("▶  Run Audit", type="primary", use_container_width=False):
 
     st.session_state.audit_result = result
 
-    # Populate anomaly and drift panels from the audit result
-    if hasattr(result, "anomalies") and result.anomalies:
-        st.session_state.anomaly_results = result.anomalies
-    if hasattr(result, "drift_report") and result.drift_report:
-        st.session_state.drift_report = result.drift_report
+    st.session_state.anomaly_results = getattr(result, "anomalies", [])
+    st.session_state.drift_report = getattr(result, "drift_report", None)
 
     st.success("Audit complete.")
     st.rerun()
@@ -1040,6 +1045,14 @@ st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 st.markdown('<div class="cj-panel-title" style="margin-bottom:8px;">Approval Gate</div>', unsafe_allow_html=True)
 
 audit_result = st.session_state.audit_result
+
+if audit_result is not None and getattr(audit_result, "blocked_plans", None):
+    blocked = audit_result.blocked_plans
+    with st.expander(f"⛔ Blocked Plans ({len(blocked)})", expanded=True):
+        st.warning("These plans remain blocked by dependency or safety validation and cannot be approved.")
+        for plan in blocked:
+            reason = _esc(getattr(plan, "block_reason", "") or "Safety dependency failed")
+            st.markdown(f"**{_esc(plan.resource_id)}** — {reason}")
 
 if audit_result is not None and audit_result.plans:
     plan_resource_ids = [p.resource_id for p in audit_result.plans]
